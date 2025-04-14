@@ -289,11 +289,17 @@ def cf_api_request(method, endpoint, json_data=None, params=None):
     # Ensure headers are always fresh in case token changes (though it shouldn't here)
     request_headers = CF_HEADERS.copy()
 
-    # Mask sensitive data in logs
-    log_data = json.dumps(json_data) if json_data else None
-    if log_data and 'config' in log_data: # Mask token in config if ever present
-         log_data = log_data.replace(tunnel_state.get("token", "dummy_token_not_found"), "***TOKEN***")
-    logging.debug(f"API Request: {method} {url} Params: {params} Data: {log_data}")
+    # --- CORRECTED MASKING LOGIC ---
+    log_data_str = json.dumps(json_data) if json_data else None
+    log_data_masked = log_data_str # Start with the original string
+
+    # Only attempt masking if we have data AND a token exists in the state
+    current_token = tunnel_state.get("token")
+    if log_data_masked and current_token and 'config' in log_data_masked:
+        log_data_masked = log_data_masked.replace(current_token, "***TOKEN***")
+    # --- END CORRECTION ---
+
+    logging.debug(f"API Request: {method} {url} Params: {params} Data: {log_data_masked}") # Log the masked version
 
     try:
         response = requests.request(method, url, headers=request_headers, json=json_data, params=params, timeout=30) # 30 sec timeout
@@ -364,7 +370,6 @@ def cf_api_request(method, endpoint, json_data=None, params=None):
         if "cfd_tunnel" in endpoint and "token" not in endpoint:
             tunnel_state["error"] = error_msg
         raise # Re-raise the original exception
-
 
 def get_zone_id_from_name(zone_name):
     """
