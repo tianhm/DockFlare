@@ -18,32 +18,39 @@ import requests
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] [%(threadName)s] %(message)s')
 load_dotenv()
 
+# Retry Config for CF PUT Tunnel Config
 MAX_CF_UPDATE_RETRIES = 3
 CF_UPDATE_RETRY_DELAY = 2
 CF_UPDATE_BACKOFF_FACTOR = 2
 
+# Cloudflare Config
 CF_API_TOKEN = os.getenv('CF_API_TOKEN')
 TUNNEL_NAME = os.getenv('TUNNEL_NAME')
 CF_ACCOUNT_ID = os.getenv('CF_ACCOUNT_ID')
+CF_ZONE_ID = os.getenv('CF_ZONE_ID') # Added Zone ID
 CF_API_BASE_URL = "https://api.cloudflare.com/client/v4"
 CF_HEADERS = {
     "Authorization": f"Bearer {CF_API_TOKEN}",
     "Content-Type": "application/json",
 }
 
+# App Config
 LABEL_PREFIX = os.getenv('LABEL_PREFIX', 'cloudflare.tunnel')
 GRACE_PERIOD_SECONDS = int(os.getenv('GRACE_PERIOD_SECONDS', 28800))
 CLEANUP_INTERVAL_SECONDS = int(os.getenv('CLEANUP_INTERVAL_SECONDS', 300))
 STATE_FILE_PATH = os.getenv('STATE_FILE_PATH', '/app/data/state.json')
 
+# Cloudflared Agent Config
 CLOUDFLARED_CONTAINER_NAME = os.getenv('CLOUDFLARED_CONTAINER_NAME', f"cloudflared-agent-{TUNNEL_NAME}")
 CLOUDFLARED_IMAGE = "cloudflare/cloudflared:latest"
 CLOUDFLARED_NETWORK_NAME = os.getenv('CLOUDFLARED_NETWORK_NAME', 'cloudflare-net')
 
-if not CF_API_TOKEN or not TUNNEL_NAME or not CF_ACCOUNT_ID:
-    logging.error("FATAL: Missing required environment variables (CF_API_TOKEN, TUNNEL_NAME, CF_ACCOUNT_ID)")
+# Environment Variable Checks
+if not CF_API_TOKEN or not TUNNEL_NAME or not CF_ACCOUNT_ID or not CF_ZONE_ID: # Added CF_ZONE_ID
+    logging.error("FATAL: Missing required environment variables (CF_API_TOKEN, TUNNEL_NAME, CF_ACCOUNT_ID, CF_ZONE_ID)") # Added CF_ZONE_ID
     sys.exit(1)
 
+# Docker Client Setup
 try:
     docker_client = docker.from_env(timeout=10)
     docker_client.ping()
@@ -52,11 +59,13 @@ except Exception as e:
     logging.error(f"FATAL: Failed to connect to Docker daemon: {e}")
     docker_client = None
 
+# Global State
 tunnel_state = { "name": TUNNEL_NAME, "id": None, "token": None, "status_message": "Initializing...", "error": None }
 cloudflared_agent_state = { "container_status": "unknown", "last_action_status": None }
 managed_rules = {}
 state_lock = threading.Lock()
 stop_event = threading.Event()
+
 
 # --- load_state ---
 def load_state():
@@ -97,6 +106,7 @@ def load_state():
         logging.error(f"Error loading state from {STATE_FILE_PATH}: {e}. Starting fresh.", exc_info=True)
         managed_rules = {}
 
+
 # --- save_state ---
 def save_state():
     serializable_state = {}
@@ -119,6 +129,7 @@ def save_state():
         logging.debug(f"Saved state for {len(managed_rules)} rules to {STATE_FILE_PATH}")
     except (IOError, OSError) as e:
         logging.error(f"Error saving state to {STATE_FILE_PATH}: {e}", exc_info=True)
+
 
 # --- cf_api_request ---
 def cf_api_request(method, endpoint, json_data=None, params=None):
@@ -176,6 +187,7 @@ def cf_api_request(method, endpoint, json_data=None, params=None):
              tunnel_state["error"] = error_msg
         raise requests.exceptions.RequestException(error_msg, response=e.response)
 
+
 # --- find_tunnel_via_api ---
 def find_tunnel_via_api(name):
     endpoint = f"/accounts/{CF_ACCOUNT_ID}/cfd_tunnel"
@@ -204,6 +216,7 @@ def find_tunnel_via_api(name):
         tunnel_state["error"] = f"Unexpected error finding tunnel: {e}"
         return None, None
 
+
 # --- get_tunnel_token_via_api ---
 def get_tunnel_token_via_api(tunnel_id):
     endpoint = f"/accounts/{CF_ACCOUNT_ID}/cfd_tunnel/{tunnel_id}/token"
@@ -230,6 +243,7 @@ def get_tunnel_token_via_api(tunnel_id):
          tunnel_state["error"] = f"Unexpected error getting token: {e}"
          raise
 
+
 # --- create_tunnel_via_api ---
 def create_tunnel_via_api(name):
     endpoint = f"/accounts/{CF_ACCOUNT_ID}/cfd_tunnel"
@@ -251,6 +265,7 @@ def create_tunnel_via_api(name):
         logging.error(f"Unexpected error creating tunnel '{name}': {e}", exc_info=True)
         tunnel_state["error"] = f"Unexpected error creating tunnel: {e}"
         return None, None
+
 
 # --- initialize_tunnel ---
 def initialize_tunnel():
@@ -282,6 +297,7 @@ def initialize_tunnel():
         if not tunnel_state.get("error"):
             tunnel_state["error"] = f"Initialization failed unexpectedly: {e}"
         tunnel_state["status_message"] = "Tunnel initialization failed (unexpected error)."
+
 
 # --- get_current_cf_config ---
 def get_current_cf_config():
@@ -322,6 +338,114 @@ def get_current_cf_config():
         logging.error(f"Unexpected exception in get_current_cf_config: {e}", exc_info=True)
         if not tunnel_state.get("error"): tunnel_state["error"] = f"Unexpected error getting tunnel config: {e}"
         return None
+
+
+# --- find_dns_record_id ---
+def find_dns_record_id(zone_id, hostname, tunnel_id):
+    if not zone_id or not hostname or not tunnel_id:
+        logging.error("find_dns_record_id: Missing required arguments.")
+        return None
+
+    expected_content = f"{tunnel_id}.cfargotunnel.com"
+    endpoint = f"/zones/{zone_id}/dns_records"
+    params = {
+        "type": "CNAME",
+        "name": hostname,
+        "content": expected_content,
+        "match": "all"
+    }
+    try:
+        logging.info(f"Searching for DNS record: Type=CNAME, Name={hostname}, Content={expected_content}")
+        response_data = cf_api_request("GET", endpoint, params=params)
+        results = response_data.get("result", [])
+        if results and isinstance(results, list):
+            record_id = results[0].get("id")
+            if record_id:
+                 logging.info(f"Found DNS record for {hostname} with ID: {record_id}")
+                 return record_id
+            else:
+                 logging.warning(f"Found matching DNS record entry for {hostname}, but it lacks an ID: {results[0]}")
+                 return None
+        else:
+            logging.info(f"No matching DNS record found for hostname: {hostname}")
+            return None
+    except requests.exceptions.RequestException as e:
+        logging.error(f"API error finding DNS record for {hostname}: {e}")
+        return None
+    except Exception as e:
+        logging.error(f"Unexpected error finding DNS record for {hostname}: {e}", exc_info=True)
+        return None
+
+
+# --- create_cloudflare_dns_record ---
+def create_cloudflare_dns_record(zone_id, hostname, tunnel_id):
+    if not zone_id or not hostname or not tunnel_id:
+        logging.error("create_cloudflare_dns_record: Missing required arguments.")
+        return None
+
+    record_name = hostname
+    record_content = f"{tunnel_id}.cfargotunnel.com"
+    endpoint = f"/zones/{zone_id}/dns_records"
+    payload = {
+        "type": "CNAME",
+        "name": record_name,
+        "content": record_content,
+        "ttl": 1,
+        "proxied": True
+    }
+
+    try:
+        existing_id = find_dns_record_id(zone_id, hostname, tunnel_id)
+        if existing_id:
+             logging.info(f"DNS CNAME record for {hostname} pointing to {record_content} already exists (ID: {existing_id}). No action needed.")
+             return existing_id
+
+        logging.info(f"Creating DNS CNAME record: Name={record_name}, Content={record_content}, Proxied=True")
+        response_data = cf_api_request("POST", endpoint, json_data=payload)
+        result = response_data.get("result", {})
+        new_record_id = result.get("id")
+        if new_record_id:
+             logging.info(f"Successfully created DNS record for {hostname}. New ID: {new_record_id}")
+             return new_record_id
+        else:
+             logging.error(f"DNS record creation for {hostname} succeeded according to API status, but no ID was returned in result: {result}")
+             return None
+    except requests.exceptions.RequestException as e:
+        logging.error(f"API error creating DNS record for {hostname}: {e}")
+        return None
+    except Exception as e:
+        logging.error(f"Unexpected error creating DNS record for {hostname}: {e}", exc_info=True)
+        return None
+
+
+# --- delete_cloudflare_dns_record ---
+def delete_cloudflare_dns_record(zone_id, hostname, tunnel_id):
+    if not zone_id or not hostname or not tunnel_id:
+        logging.error("delete_cloudflare_dns_record: Missing required arguments.")
+        return False
+
+    dns_record_id = find_dns_record_id(zone_id, hostname, tunnel_id)
+
+    if not dns_record_id:
+        logging.warning(f"Could not find DNS record for {hostname} to delete. Assuming already deleted or never created.")
+        return True
+
+    logging.info(f"Attempting to delete DNS record for {hostname} (ID: {dns_record_id})")
+    endpoint = f"/zones/{zone_id}/dns_records/{dns_record_id}"
+    try:
+        cf_api_request("DELETE", endpoint)
+        logging.info(f"Successfully deleted DNS record for {hostname} (ID: {dns_record_id}).")
+        return True
+    except requests.exceptions.RequestException as e:
+        if e.response is not None and e.response.status_code == 404:
+             logging.warning(f"Attempted to delete DNS record {dns_record_id} for {hostname}, but API returned 404 (already deleted?). Treating as success.")
+             return True
+        logging.error(f"API error deleting DNS record {dns_record_id} for {hostname}: {e}")
+        return False
+    except Exception as e:
+        logging.error(f"Unexpected error deleting DNS record {dns_record_id} for {hostname}: {e}", exc_info=True)
+        return False
+
 
 # --- update_cloudflare_config ---
 def update_cloudflare_config():
@@ -415,15 +539,13 @@ def update_cloudflare_config():
                               except ValueError:
                                   logging.warning(f"Could not parse Retry-After header value '{retry_after}'. Using calculated backoff ({wait_time:.1f}s).")
                     logging.info(f"Retrying Cloudflare update in {wait_time:.1f} seconds...")
-                    # Use stop_event.wait for interruptible sleep
                     interrupted = stop_event.wait(wait_time)
                     if interrupted:
                          logging.warning("Shutdown requested during Cloudflare update retry wait. Aborting.")
                          cloudflared_agent_state["last_action_status"] = f"Error: CF update aborted during retry (shutdown)."
-                         # Ensure error state reflects failure
                          if not tunnel_state.get("error") or "API Error" not in tunnel_state["error"]:
                               tunnel_state["error"] = f"Failed update tunnel config: aborted during retry"
-                         return False # Abort due to shutdown
+                         return False
                     continue
                 else:
                     logging.error(f"Cloudflare API update failed and will not be retried (Retryable: {is_retryable}, Attempt: {attempt + 1}).")
@@ -446,6 +568,7 @@ def update_cloudflare_config():
          return False
     else:
          return True
+
 
 # --- process_container_start ---
 def process_container_start(container):
@@ -527,8 +650,19 @@ def process_container_start(container):
 
         if needs_cf_update:
             logging.info(f"Triggering Cloudflare config update due to change for {hostname}.")
-            if not update_cloudflare_config():
-                logging.error(f"Failed to update Cloudflare config after processing start for {hostname}. State might be inconsistent until next reconciliation.")
+            if update_cloudflare_config():
+                logging.info(f"Tunnel config update successful for {hostname}.")
+                if tunnel_state.get("id") and CF_ZONE_ID:
+                    dns_record_id = create_cloudflare_dns_record(CF_ZONE_ID, hostname, tunnel_state["id"])
+                    if dns_record_id:
+                         logging.info(f"DNS record management successful for {hostname}.")
+                    else:
+                         logging.error(f"CRITICAL: Tunnel config updated for {hostname} but failed to create/verify DNS record!")
+                         cloudflared_agent_state["last_action_status"] = f"Error: Failed creating DNS record for {hostname} after tunnel update."
+                else:
+                     logging.error("Missing Tunnel ID or Zone ID - cannot manage DNS record.")
+            else:
+                logging.error(f"Failed to update Cloudflare tunnel config after processing start for {hostname}. DNS record not managed.")
         elif state_changed_locally:
              logging.debug(f"Local state updated for {hostname} (e.g., container ID), no Cloudflare config change needed.")
     except NotFound:
@@ -537,6 +671,7 @@ def process_container_start(container):
         logging.error(f"Docker API error processing container start ({container_id[:12] if 'container_id' in locals() else 'Unknown'}): {e}", exc_info=True)
     except Exception as e:
         logging.error(f"Unexpected error processing container start ({container_id[:12] if 'container_id' in locals() else 'Unknown'}): {e}", exc_info=True)
+
 
 # --- schedule_container_stop ---
 def schedule_container_stop(container_id):
@@ -563,6 +698,7 @@ def schedule_container_stop(container_id):
             logging.info(f"Stop event for container {container_id[:12]}, but it didn't manage any active rule in the current state.")
         if state_changed:
             save_state()
+
 
 # --- docker_event_listener ---
 def docker_event_listener():
@@ -620,6 +756,7 @@ def docker_event_listener():
          logging.error("Docker event listener stopping after multiple connection/API errors.")
     logging.info("Docker event listener stopped.")
 
+
 # --- cleanup_expired_rules ---
 def cleanup_expired_rules():
     logging.info("Starting cleanup task...")
@@ -627,45 +764,62 @@ def cleanup_expired_rules():
         next_check_time = time.time() + CLEANUP_INTERVAL_SECONDS
         try:
             logging.debug("Running cleanup check for expired rules...")
-            hostnames_to_remove_from_cf = []
+            hostnames_to_process_for_deletion = []
             now_utc = datetime.now(timezone.utc)
             state_changed_in_cleanup = False
+
             with state_lock:
                 for hostname, details in managed_rules.items():
                     if details.get("status") == "pending_deletion":
                         delete_at = details.get("delete_at")
+                        is_expired = False
                         if isinstance(delete_at, datetime):
                              delete_at_utc = delete_at.astimezone(timezone.utc)
                              if delete_at_utc <= now_utc:
-                                 logging.info(f"Rule for {hostname} deletion grace period expired ({delete_at_utc.isoformat()}). Scheduling removal from Cloudflare.")
-                                 hostnames_to_remove_from_cf.append(hostname)
+                                 logging.info(f"Rule for {hostname} deletion grace period expired ({delete_at_utc.isoformat()}). Scheduling for full deletion.")
+                                 is_expired = True
                         else:
-                             logging.warning(f"Rule {hostname} is pending_deletion but delete_at is invalid or missing: {delete_at}. Removing immediately as state is invalid.")
-                             hostnames_to_remove_from_cf.append(hostname)
+                             logging.warning(f"Rule {hostname} is pending_deletion but delete_at is invalid or missing: {delete_at}. Scheduling for immediate full deletion.")
+                             is_expired = True
+                        if is_expired:
+                             hostnames_to_process_for_deletion.append(hostname)
 
-            if hostnames_to_remove_from_cf:
-                logging.info(f"Attempting Cloudflare update to remove expired/invalid rules: {hostnames_to_remove_from_cf}")
-                if update_cloudflare_config():
-                    logging.info(f"Cloudflare config updated successfully. Removing expired/invalid rules from local state: {hostnames_to_remove_from_cf}")
-                    with state_lock:
-                        deleted_count = 0
-                        for hostname in hostnames_to_remove_from_cf:
-                            if hostname in managed_rules:
-                                rule_status = managed_rules[hostname].get("status")
-                                rule_delete_at = managed_rules[hostname].get("delete_at")
-                                if rule_status == "pending_deletion" or not isinstance(rule_delete_at, datetime):
-                                     del managed_rules[hostname]
-                                     deleted_count += 1
-                                     state_changed_in_cleanup = True
+            if hostnames_to_process_for_deletion:
+                logging.info(f"Processing cleanup for: {hostnames_to_process_for_deletion}")
+                processed_hostnames = []
+                dns_delete_success_all = True
+                for hostname in hostnames_to_process_for_deletion:
+                    if tunnel_state.get("id") and CF_ZONE_ID:
+                         logging.info(f"Attempting DNS record deletion for expired rule: {hostname}")
+                         if not delete_cloudflare_dns_record(CF_ZONE_ID, hostname, tunnel_state["id"]):
+                              logging.error(f"Failed to delete DNS record for {hostname}. Tunnel config update will proceed, but DNS record may remain stale.")
+                              dns_delete_success_all = False
+                    else:
+                         logging.error(f"Cannot delete DNS for {hostname}: Missing Tunnel ID or Zone ID.")
+                         dns_delete_success_all = False
+                    processed_hostnames.append(hostname)
+
+                if processed_hostnames:
+                    logging.info(f"Attempting Cloudflare tunnel config update to remove rules: {processed_hostnames}")
+                    if update_cloudflare_config():
+                        logging.info(f"Cloudflare tunnel config updated successfully. Removing rules from local state: {processed_hostnames}")
+                        with state_lock:
+                            deleted_count = 0
+                            for hostname in processed_hostnames:
+                                if hostname in managed_rules and managed_rules[hostname].get("status") == "pending_deletion":
+                                    del managed_rules[hostname]
+                                    deleted_count += 1
+                                    state_changed_in_cleanup = True
                                 else:
-                                     logging.warning(f"Rule {hostname} was scheduled for removal but state changed before local deletion (Status: {rule_status}). No longer removing from state.")
-                            else:
-                                logging.warning(f"Rule {hostname} was scheduled for removal but already removed from state.")
-                        logging.info(f"Removed {deleted_count} rules from local state.")
-                        if state_changed_in_cleanup:
-                            save_state()
+                                    logging.warning(f"Rule {hostname} was scheduled for removal but not found or no longer 'pending_deletion' when removing from state.")
+                            logging.info(f"Removed {deleted_count} rules from local state.")
+                            if state_changed_in_cleanup:
+                                save_state()
+                    else:
+                        logging.error("Failed to update Cloudflare tunnel config during rule cleanup. Rules remain in local state and potentially in Cloudflare. Will retry on next cleanup/reconcile cycle.")
                 else:
-                    logging.error("Failed to update Cloudflare during rule cleanup. Expired rules remain in local state and potentially in Cloudflare. Will retry on next cleanup cycle.")
+                     logging.info("No hostnames ended up being processed for deletion.")
+
             else:
                 logging.debug("No expired rules found requiring cleanup.")
         except Exception as e:
@@ -673,6 +827,7 @@ def cleanup_expired_rules():
         wait_time = max(0, next_check_time - time.time())
         stop_event.wait(wait_time)
     logging.info("Cleanup task stopped.")
+
 
 # --- reconcile_state ---
 def reconcile_state():
@@ -728,6 +883,7 @@ def reconcile_state():
             now_utc = datetime.now(timezone.utc)
             managed_hostnames = set(managed_rules.keys())
             running_hostnames = set(running_labeled_containers.keys())
+            hostnames_requiring_dns_check_on_reactivate = []
 
             for hostname, running_details in running_labeled_containers.items():
                 if hostname in managed_rules:
@@ -736,17 +892,21 @@ def reconcile_state():
                         logging.info(f"[Reconcile] Hostname {hostname} is running but rule was pending deletion. Reactivating.")
                         rule["status"] = "active"; rule["delete_at"] = None; rule["service"] = running_details["service"]; rule["container_id"] = running_details["container_id"]
                         state_changed_locally = True; needs_cf_update = True
+                        hostnames_requiring_dns_check_on_reactivate.append(hostname)
                     elif rule.get("status") == "active":
-                         if rule.get("container_id") != running_details["container_id"]:
+                         container_changed = rule.get("container_id") != running_details["container_id"]
+                         service_changed = rule.get("service") != running_details["service"]
+                         if container_changed:
                              logging.info(f"[Reconcile] Updating container ID for active rule {hostname}.")
                              rule["container_id"] = running_details["container_id"]; state_changed_locally = True
-                         if rule.get("service") != running_details["service"]:
+                         if service_changed:
                               logging.info(f"[Reconcile] Updating service for active rule {hostname}.")
                               rule["service"] = running_details["service"]; state_changed_locally = True; needs_cf_update = True
                 else:
                     logging.info(f"[Reconcile] Found running container for {hostname} but no managed rule. Adding new rule.")
                     managed_rules[hostname] = {"service": running_details["service"], "container_id": running_details["container_id"], "status": "active", "delete_at": None}
                     state_changed_locally = True; needs_cf_update = True
+                    hostnames_requiring_dns_check_on_reactivate.append(hostname)
 
             for hostname in list(managed_hostnames):
                 if hostname not in running_hostnames:
@@ -755,8 +915,6 @@ def reconcile_state():
                          if rule.get("status") == "active":
                               logging.info(f"[Reconcile] Managed rule {hostname} is active but no container found running. Scheduling deletion.")
                               rule["status"] = "pending_deletion"; rule["delete_at"] = now_utc + timedelta(seconds=GRACE_PERIOD_SECONDS); state_changed_locally = True
-                         elif rule.get("status") == "pending_deletion":
-                              logging.debug(f"[Reconcile] Rule {hostname} is pending deletion and container not running. No action needed.")
 
             logging.debug("[Reconcile] Fetching current CF config for final comparison...")
             current_cf_config = get_current_cf_config()
@@ -764,32 +922,41 @@ def reconcile_state():
                 cf_ingress_hostnames = {r.get("hostname") for r in current_cf_config.get("ingress", []) if r.get("hostname") and r.get("service") != "http_status:404"}
                 active_managed_hostnames = {hn for hn, d in managed_rules.items() if d.get("status") == "active"}
                 if cf_ingress_hostnames != active_managed_hostnames:
-                     logging.warning(f"[Reconcile] Mismatch detected between active managed rules ({len(active_managed_hostnames)}) and Cloudflare config ({len(cf_ingress_hostnames)})!")
+                     logging.warning(f"[Reconcile] Mismatch detected between active managed rules ({len(active_managed_hostnames)}) and Cloudflare tunnel config ({len(cf_ingress_hostnames)})!")
                      logging.info(f"[Reconcile] Active Managed State: {sorted(list(active_managed_hostnames))}")
-                     logging.info(f"[Reconcile] Found in Cloudflare: {sorted(list(cf_ingress_hostnames))}")
-                     logging.info("[Reconcile] Marking for Cloudflare update to enforce local state.")
+                     logging.info(f"[Reconcile] Found in Cloudflare Tunnel Config: {sorted(list(cf_ingress_hostnames))}")
+                     logging.info("[Reconcile] Marking for Cloudflare tunnel config update to enforce local state.")
                      needs_cf_update = True
             else:
-                logging.error("[Reconcile] Could not fetch Cloudflare config during reconciliation. Skipping final comparison.")
+                logging.error("[Reconcile] Could not fetch Cloudflare config during reconciliation. Skipping final tunnel config comparison.")
 
             if state_changed_locally:
                 logging.info("[Reconcile] Local state changed during reconciliation. Saving state file.")
                 save_state()
-
             logging.debug("[Reconcile] Releasing state lock.")
 
         if needs_cf_update:
-            logging.info("[Reconcile] Triggering Cloudflare config update based on reconciliation results.")
-            if not update_cloudflare_config():
-                logging.error("[Reconcile] Failed to update Cloudflare config during reconciliation.")
+            logging.info("[Reconcile] Triggering Cloudflare tunnel config update based on reconciliation results.")
+            if update_cloudflare_config():
+                 if hostnames_requiring_dns_check_on_reactivate:
+                      logging.info(f"[Reconcile] Checking/Creating DNS records for newly active rules: {hostnames_requiring_dns_check_on_reactivate}")
+                      for hostname in hostnames_requiring_dns_check_on_reactivate:
+                           if tunnel_state.get("id") and CF_ZONE_ID:
+                                if not create_cloudflare_dns_record(CF_ZONE_ID, hostname, tunnel_state["id"]):
+                                     logging.error(f"[Reconcile] Failed to ensure DNS record exists for reactivated/new rule {hostname} after successful tunnel config update.")
+                           else:
+                                logging.error(f"[Reconcile] Cannot check/create DNS for {hostname}: Missing Tunnel ID or Zone ID.")
+            else:
+                logging.error("[Reconcile] Failed to update Cloudflare tunnel config during reconciliation. DNS checks for reactivated rules skipped.")
         elif state_changed_locally:
-            logging.info("[Reconcile] Reconciliation resulted in local state changes only (no CF update needed).")
+            logging.info("[Reconcile] Reconciliation resulted in local state changes only (no CF tunnel config update needed).")
         else:
             logging.info("[Reconcile] No changes required by reconciliation.")
     except Exception as e:
         logging.error(f"Unexpected error during state reconciliation: {e}", exc_info=True)
     finally:
         logging.info("Reconciliation complete.")
+
 
 # --- get_cloudflared_container ---
 def get_cloudflared_container():
@@ -813,6 +980,7 @@ def get_cloudflared_container():
         logging.error(f"Unexpected error getting container '{CLOUDFLARED_CONTAINER_NAME}': {e}", exc_info=True)
         cloudflared_agent_state["last_action_status"] = f"Error: Unexpected error getting agent: {e}"
         return None
+
 
 # --- update_cloudflared_container_status ---
 def update_cloudflared_container_status():
@@ -858,6 +1026,7 @@ def update_cloudflared_container_status():
             logging.info("Cloudflared agent container not found.")
             cloudflared_agent_state["container_status"] = "not_found"
 
+
 # --- ensure_docker_network_exists ---
 def ensure_docker_network_exists(network_name):
     if not docker_client:
@@ -892,6 +1061,7 @@ def ensure_docker_network_exists(network_name):
         logging.error(f"Unexpected error checking/creating Docker network '{network_name}': {e}", exc_info=True)
         cloudflared_agent_state["last_action_status"] = f"Error: Unexpected error checking network: {e}"
         return False
+
 
 # --- start_cloudflared_container ---
 def start_cloudflared_container():
@@ -1000,6 +1170,7 @@ def start_cloudflared_container():
         logging.info(f"Exiting start_cloudflared_container function (Success: {success_flag}).")
         return success_flag
 
+
 # --- stop_cloudflared_container ---
 def stop_cloudflared_container():
     logging.info(f"Attempting to stop cloudflared agent container '{CLOUDFLARED_CONTAINER_NAME}'...")
@@ -1027,16 +1198,19 @@ def stop_cloudflared_container():
         logging.info(f"Exiting stop_cloudflared_container function (Success: {success_flag}).")
         return success_flag
 
+# Flask App Setup
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
+
 
 # --- get_display_token ---
 def get_display_token(token):
     if not token: return "Not available"
     return f"{token[:5]}...{token[-5:]}" if len(token) > 10 else "Token retrieved (short)"
 
-@app.route('/')
+
 # --- status_page ---
+@app.route('/')
 def status_page():
     update_cloudflared_container_status()
     with state_lock:
@@ -1045,7 +1219,7 @@ def status_page():
         template_agent_state = cloudflared_agent_state.copy()
     display_token = get_display_token(template_tunnel_state.get("token"))
     docker_available = docker_client is not None
-    html_template = """<!DOCTYPE html><html><head><title>Cloudflare Tunnel Manager</title><meta http-equiv="refresh" content="30"><style>body{font-family:sans-serif;padding:20px;background-color:#f4f4f4;color:#333}h1,h2,h3{color:#555}.container{background-color:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1);margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-top:15px}th,td{border:1px solid #ddd;padding:8px;text-align:left;vertical-align:top}th{background-color:#f2f2f2}td pre{margin:0;background-color:transparent;padding:0;white-space:pre-wrap;word-break:break-all; font-family: monospace; font-size: 0.9em;}.status-box{padding:10px;border:1px solid #ccc;border-radius:5px;margin-top:10px;word-wrap:break-word}.error{background-color:#ffebeb;border-color:#ffc2c2;color:#a00}.success{background-color:#e6ffed;border-color:#c3e6cb;color:#155724}.info{background-color:#e7f3fe;border-color:#b8daff;color:#004085}.warning{background-color:#fff3cd;border-color:#ffeeba;color:#856404}.status-active{color:green}.status-pending{color:orange}.button{padding:10px 15px;border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:1em;margin-right:10px}.small-button{padding:5px 10px;font-size:.9em}.start-button{background-color:#28a745}.stop-button{background-color:#dc3545}.delete-button{background-color:#dc3545}.button:disabled{background-color:#ccc;cursor:not-allowed;opacity:.6}form{display:inline-block;margin:0}</style></head><body><h1>Cloudflare Tunnel Manager</h1><div class="container"><h2>Initialization Status</h2><div class="status-box {{'error' if tunnel_state.get('error') else ('success' if tunnel_state.get('token') else 'info')}}"><p><strong>Message:</strong> {{tunnel_state.status_message}}</p>{% if tunnel_state.get('error') %}<p><strong>Error Details:</strong> <pre>{{tunnel_state.error}}</pre></p>{% endif %}</div><h3>Tunnel Details</h3><p><strong>Desired Tunnel Name:</strong> <pre>{{tunnel_state.name}}</pre></p><p><strong>Tunnel ID:</strong> <pre>{{tunnel_state.id if tunnel_state.id else 'Not available'}}</pre></p><p><strong>Tunnel Token:</strong> <pre>{{display_token}}</pre></p></div><div class="container"><h2>Tunnel Agent Control (<pre>{{cloudflared_container_name}}</pre>)</h2><p><strong>Agent Container Status:</strong> <strong style="text-transform:capitalize" class="{{'success' if agent_state.container_status=='running' else ('error' if 'error' in agent_state.container_status or agent_state.container_status=='docker_unavailable' or agent_state.container_status=='dead' else ('warning' if agent_state.container_status=='exited' or agent_state.container_status=='not_found' else 'info'))}}">{{agent_state.container_status.replace('_',' ')}}</strong></p>{% if agent_state.last_action_status %}<div class="status-box {{'error' if 'Error:' in agent_state.last_action_status else ('warning' if 'Warning:' in agent_state.last_action_status else 'info')}}"><strong>Last Action Result:</strong> {{agent_state.last_action_status}}</div>{% endif %}<form action="{{url_for('start_tunnel')}}" method="post" style="margin-right:10px"><button type="submit" class="button start-button" {{'disabled' if not tunnel_state.get('token') or agent_state.container_status=='running' or not docker_available }}>Start Tunnel Agent</button></form><form action="{{url_for('stop_tunnel')}}" method="post"><button type="submit" class="button stop-button" {{'disabled' if agent_state.container_status!='running' or not docker_available }}>Stop Tunnel Agent</button></form></div><div class="container"><h2>Managed Ingress Rules</h2>{% if rules %}<table><thead><tr><th>Hostname</th><th>Service Target</th><th>Status</th><th>Managing Container ID</th><th>Delete Scheduled At (UTC)</th><th>Actions</th></tr></thead><tbody>{% for hostname, details in rules.items() %}<tr><td><pre>{{hostname}}</pre></td><td><pre>{{details.service}}</pre></td><td><strong class="{{'status-active' if details.status=='active' else 'status-pending'}}">{{details.status}}</strong></td><td><pre>{{details.container_id[:12] if details.container_id else 'N/A'}}</pre></td><td>{{details.delete_at if details.status=='pending_deletion' else 'N/A'}}</td><td><form action="{{url_for('force_delete_rule', hostname=hostname)}}" method="post" onsubmit="return confirm('Are you sure you want to force delete the rule for {{hostname}} immediately? This will update Cloudflare.');"><button type="submit" class="button delete-button small-button" {{ 'disabled' if not docker_available }}>Force Delete</button></form></td></tr>{% endfor %}</tbody></table>{% else %}<p>No ingress rules are currently being managed.</p>{% endif %}</div></body></html>"""
+    html_template = """<!DOCTYPE html><html><head><title>Cloudflare Tunnel Manager</title><meta http-equiv="refresh" content="30"><style>body{font-family:sans-serif;padding:20px;background-color:#f4f4f4;color:#333}h1,h2,h3{color:#555}.container{background-color:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1);margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-top:15px}th,td{border:1px solid #ddd;padding:8px;text-align:left;vertical-align:top}th{background-color:#f2f2f2}td pre{margin:0;background-color:transparent;padding:0;white-space:pre-wrap;word-break:break-all; font-family: monospace; font-size: 0.9em;}.status-box{padding:10px;border:1px solid #ccc;border-radius:5px;margin-top:10px;word-wrap:break-word}.error{background-color:#ffebeb;border-color:#ffc2c2;color:#a00}.success{background-color:#e6ffed;border-color:#c3e6cb;color:#155724}.info{background-color:#e7f3fe;border-color:#b8daff;color:#004085}.warning{background-color:#fff3cd;border-color:#ffeeba;color:#856404}.status-active{color:green}.status-pending{color:orange}.button{padding:10px 15px;border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:1em;margin-right:10px}.small-button{padding:5px 10px;font-size:.9em}.start-button{background-color:#28a745}.stop-button{background-color:#dc3545}.delete-button{background-color:#dc3545}.button:disabled{background-color:#ccc;cursor:not-allowed;opacity:.6}form{display:inline-block;margin:0}</style></head><body><h1>Cloudflare Tunnel Manager</h1><div class="container"><h2>Initialization Status</h2><div class="status-box {{'error' if tunnel_state.get('error') else ('success' if tunnel_state.get('token') else 'info')}}"><p><strong>Message:</strong> {{tunnel_state.status_message}}</p>{% if tunnel_state.get('error') %}<p><strong>Error Details:</strong> <pre>{{tunnel_state.error}}</pre></p>{% endif %}</div><h3>Tunnel Details</h3><p><strong>Desired Tunnel Name:</strong> <pre>{{tunnel_state.name}}</pre></p><p><strong>Tunnel ID:</strong> <pre>{{tunnel_state.id if tunnel_state.id else 'Not available'}}</pre></p><p><strong>Tunnel Token:</strong> <pre>{{display_token}}</pre></p></div><div class="container"><h2>Tunnel Agent Control (<pre>{{cloudflared_container_name}}</pre>)</h2><p><strong>Agent Container Status:</strong> <strong style="text-transform:capitalize" class="{{'success' if agent_state.container_status=='running' else ('error' if 'error' in agent_state.container_status or agent_state.container_status=='docker_unavailable' or agent_state.container_status=='dead' else ('warning' if agent_state.container_status=='exited' or agent_state.container_status=='not_found' else 'info'))}}">{{agent_state.container_status.replace('_',' ')}}</strong></p>{% if agent_state.last_action_status %}<div class="status-box {{'error' if 'Error:' in agent_state.last_action_status else ('warning' if 'Warning:' in agent_state.last_action_status else 'info')}}"><strong>Last Action Result:</strong> {{agent_state.last_action_status}}</div>{% endif %}<form action="{{url_for('start_tunnel')}}" method="post" style="margin-right:10px"><button type="submit" class="button start-button" {{'disabled' if not tunnel_state.get('token') or agent_state.container_status=='running' or not docker_available }}>Start Tunnel Agent</button></form><form action="{{url_for('stop_tunnel')}}" method="post"><button type="submit" class="button stop-button" {{'disabled' if agent_state.container_status!='running' or not docker_available }}>Stop Tunnel Agent</button></form></div><div class="container"><h2>Managed Ingress Rules</h2>{% if rules %}<table><thead><tr><th>Hostname</th><th>Service Target</th><th>Status</th><th>Managing Container ID</th><th>Delete Scheduled At (UTC)</th><th>Actions</th></tr></thead><tbody>{% for hostname, details in rules.items() %}<tr><td><pre>{{hostname}}</pre></td><td><pre>{{details.service}}</pre></td><td><strong class="{{'status-active' if details.status=='active' else 'status-pending'}}">{{details.status}}</strong></td><td><pre>{{details.container_id[:12] if details.container_id else 'N/A'}}</pre></td><td>{{details.delete_at if details.status=='pending_deletion' else 'N/A'}}</td><td><form action="{{url_for('force_delete_rule', hostname=hostname)}}" method="post" onsubmit="return confirm('Are you sure you want to force delete the rule and DNS record for {{hostname}} immediately?');"><button type="submit" class="button delete-button small-button" {{ 'disabled' if not docker_available }}>Force Delete</button></form></td></tr>{% endfor %}</tbody></table>{% else %}<p>No ingress rules are currently being managed.</p>{% endif %}</div></body></html>"""
     return render_template_string(html_template,
                                 tunnel_state=template_tunnel_state,
                                 agent_state=template_agent_state,
@@ -1054,47 +1228,67 @@ def status_page():
                                 docker_available=docker_available,
                                 rules=template_rules)
 
-@app.route('/start', methods=['POST'])
+
 # --- start_tunnel ---
+@app.route('/start', methods=['POST'])
 def start_tunnel():
     logging.info("Received request to start tunnel agent via UI.")
     start_cloudflared_container()
     time.sleep(1)
     return redirect(url_for('status_page'))
 
-@app.route('/stop', methods=['POST'])
+
 # --- stop_tunnel ---
+@app.route('/stop', methods=['POST'])
 def stop_tunnel():
     logging.info("Received request to stop tunnel agent via UI.")
     stop_cloudflared_container()
     time.sleep(1)
     return redirect(url_for('status_page'))
 
-@app.route('/force_delete/<hostname>', methods=['POST'])
+
 # --- force_delete_rule ---
+@app.route('/force_delete/<hostname>', methods=['POST'])
 def force_delete_rule(hostname):
     logging.info(f"Received request to force delete rule for hostname: {hostname}")
-    state_changed = False
+    rule_removed_from_state = False
+    dns_delete_success = False
+
+    if tunnel_state.get("id") and CF_ZONE_ID:
+        logging.info(f"Attempting DNS record deletion for force-deleted rule: {hostname}")
+        dns_delete_success = delete_cloudflare_dns_record(CF_ZONE_ID, hostname, tunnel_state["id"])
+        if not dns_delete_success:
+             logging.error(f"Failed to delete DNS record for {hostname} during force delete. Tunnel config update will proceed, but DNS record may remain stale.")
+             cloudflared_agent_state["last_action_status"] = f"Warning: Failed deleting DNS record for {hostname}. Tunnel update proceeding."
+    else:
+        logging.error(f"Cannot delete DNS for {hostname}: Missing Tunnel ID or Zone ID.")
+        cloudflared_agent_state["last_action_status"] = f"Error: Cannot delete DNS for {hostname} (missing config)."
+
     with state_lock:
         if hostname in managed_rules:
             logging.info(f"Force deleting rule for {hostname} from local state.")
             del managed_rules[hostname]
-            state_changed = True
+            rule_removed_from_state = True
             save_state()
         else:
-            logging.warning(f"Attempted force delete for hostname '{hostname}', but it was not found in managed rules.")
-            cloudflared_agent_state["last_action_status"] = f"Warning: Rule {hostname} not found for force delete."
-            return redirect(url_for('status_page'))
-    if state_changed:
-        logging.info(f"Triggering Cloudflare config update after force deleting {hostname}.")
+            logging.warning(f"Attempted force delete for hostname '{hostname}', but it was not found in managed rules (perhaps already deleted or cleaned up).")
+            rule_removed_from_state = True
+
+    if rule_removed_from_state:
+        logging.info(f"Triggering Cloudflare tunnel config update after force deleting {hostname} (or ensuring removal).")
         if update_cloudflare_config():
-            logging.info(f"Cloudflare update successful after force deleting {hostname}.")
-            cloudflared_agent_state["last_action_status"] = f"Successfully force deleted rule for {hostname} and updated Cloudflare."
+            logging.info(f"Cloudflare tunnel config update successful after force deleting {hostname}.")
+            if dns_delete_success:
+                 cloudflared_agent_state["last_action_status"] = f"Successfully force deleted rule and DNS record for {hostname} and updated Cloudflare."
+            else:
+                 cloudflared_agent_state["last_action_status"] = f"Force deleted rule for {hostname} (DNS delete failed earlier, but tunnel config updated)."
         else:
-            logging.error(f"CRITICAL: State saved after force delete of {hostname}, but subsequent Cloudflare update FAILED. Config is inconsistent!")
-            cloudflared_agent_state["last_action_status"] = f"Error: Removed {hostname} locally, but FAILED pushing update to Cloudflare! Reconciliation needed."
+            logging.error(f"CRITICAL: State saved after force delete of {hostname}, DNS delete status: {dns_delete_success}, but subsequent Cloudflare tunnel config update FAILED!")
+            cloudflared_agent_state["last_action_status"] = f"Error: Removed {hostname} locally, DNS delete status: {dns_delete_success}, but FAILED pushing tunnel config update! Reconciliation needed."
+
     time.sleep(1)
     return redirect(url_for('status_page'))
+
 
 # --- run_background_tasks ---
 def run_background_tasks():
@@ -1109,6 +1303,7 @@ def run_background_tasks():
     logging.info("Background threads started.")
     return event_thread, cleanup_thread
 
+
 # --- Main Execution ---
 if __name__ == '__main__':
     logging.info("----------------------------------------------------")
@@ -1118,6 +1313,13 @@ if __name__ == '__main__':
     logging.info("Initial state loading complete.")
     event_thread = None
     cleanup_thread = None
+
+    if not CF_ZONE_ID:
+        logging.error("FATAL: CF_ZONE_ID environment variable is missing. DNS management will fail.")
+        tunnel_state["status_message"] = "Error: CF_ZONE_ID missing."
+        tunnel_state["error"] = "CF_ZONE_ID environment variable must be set."
+        sys.exit(1)
+
     if not docker_client:
          logging.error("Docker client is unavailable at startup. Limited functionality.")
          tunnel_state["status_message"] = "Error: Docker client unavailable."
@@ -1166,6 +1368,9 @@ if __name__ == '__main__':
                   logging.warning("Cleanup thread terminated unexpectedly.")
              if not all_threads_alive:
                   stop_event.set()
+                  break
+             if stop_event.is_set():
+                  logging.info("Stop event detected in main loop.")
                   break
              time.sleep(10)
     except KeyboardInterrupt:
