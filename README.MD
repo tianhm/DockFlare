@@ -89,12 +89,12 @@ Simplifies exposing Docker services via Cloudflare Tunnel by automating configur
       cloudflare.tunnel.enable: "true"
       cloudflare.tunnel.hostname: "my-service.example.com"
       cloudflare.tunnel.service: "http://my-service:8080"
-      cloudflare.tunnel.zonename="other-domain.com"
+      cloudflare.tunnel.zonename: "other-domain.com"
     ```
 
     *   Replace `"my-service.example.com"` with your desired public hostname.
     *   Replace `"http://my-service:8080"` with the internal URL of your service.
-    *   `cloudflare.tunnel.zonename="other-domain.com"`: (Optional) This label is only required when you want to expose the service on a domain different from the primary DNS zone configured via `CF_ZONE_ID` in the `.env` file.  It's used for multi-DNS domain support within the same Cloudflare account.
+    *   Replace `"other-domain.com"`: (Optional) This label is only required when you want to expose the service on a domain different from the primary DNS zone configured via `CF_ZONE_ID` in the `.env` file.  It's used for multi-DNS domain support within the same Cloudflare account.
 
 6. **Restart or redeploy the labeled docker containers**
 
@@ -107,7 +107,7 @@ version: "3.8"
 
 services:
   cloudflare-tunnel-controller:
-    image: <your-dockerhub-username>/cloudflare-tunnel-docker-controller:latest # Replace with your image or build from Dockerfile
+    image: alplat/dockflare:stable # Replace with your image or build from Dockerfile
     restart: unless-stopped
     ports:
       - "5000:5000"
@@ -118,16 +118,6 @@ services:
       - .env
     environment:
       - FLASK_APP=app.py
-
-  # Example service to be tunneled
-  my-service:
-    image: nginx:latest
-    labels:
-      cloudflare.tunnel.enable: "true"
-      cloudflare.tunnel.hostname: "my-service.example.com"  # Replace with your domain
-      cloudflare.tunnel.service: "http://my-service:80"  #Important to keep container name same as declared service name
-    networks:
-      - app-network
 
 networks:
   app-network:
