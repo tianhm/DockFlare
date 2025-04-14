@@ -1728,7 +1728,6 @@ def update_cloudflared_container_status():
          # logging.debug("Agent container not found or Docker unavailable.")
          pass
 
-
 def ensure_docker_network_exists(network_name):
      """Checks if the specified Docker network exists, creates it if not."""
      if not docker_client:
