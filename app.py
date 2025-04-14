@@ -40,7 +40,7 @@ logging.info(f"[DEBUG] CF_HEADERS created: Authorization Header starts with 'Bea
 
 # App Config
 LABEL_PREFIX = os.getenv('LABEL_PREFIX', 'cloudflare.tunnel')
-GRACE_PERIOD_SECONDS = int(os.getenv('GRACE_PERIOD_SECONDS', 28800))
+GRACE_PERIOD_SECONDS = int(os.getenv('GRACE_PERIOD_SECONDS', 7200)) # Default 2 hours
 CLEANUP_INTERVAL_SECONDS = int(os.getenv('CLEANUP_INTERVAL_SECONDS', 300))
 STATE_FILE_PATH = os.getenv('STATE_FILE_PATH', '/app/data/state.json')
 
@@ -79,6 +79,12 @@ stop_event = threading.Event()
 # --- load_state ---
 def load_state():
     global managed_rules
+    global GRACE_PERIOD_SECONDS # Allow modification of the global variable
+
+    # Initialize with default/env value
+    current_default_grace_period = GRACE_PERIOD_SECONDS
+    logging.info(f"Initial default GRACE_PERIOD_SECONDS: {current_default_grace_period}")
+
     state_dir = os.path.dirname(STATE_FILE_PATH)
     if not os.path.exists(state_dir):
         try:
@@ -87,71 +93,87 @@ def load_state():
         except OSError as e:
              logging.error(f"FATAL: Could not create directory for state file {state_dir}: {e}. State persistence will fail.")
              managed_rules = {}
-             return
+             return # Keep initial default grace period
 
     if not os.path.exists(STATE_FILE_PATH):
         logging.info(f"State file '{STATE_FILE_PATH}' not found, starting fresh.")
         managed_rules = {}
-        return
+        return # Keep initial default grace period
+
     try:
         with open(STATE_FILE_PATH, 'r') as f:
             loaded_data = json.load(f)
-        for hostname, rule in loaded_data.items():
-             # Ensure delete_at is converted back to datetime object
-             if rule.get("delete_at") and isinstance(rule.get("delete_at"), str):
-                 try:
-                     if rule["delete_at"].endswith('Z'):
-                        rule["delete_at"] = datetime.fromisoformat(rule["delete_at"].replace('Z', '+00:00'))
-                     else:
-                         dt = datetime.fromisoformat(rule["delete_at"])
-                         rule["delete_at"] = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt.astimezone(timezone.utc)
-                 except ValueError as date_err:
-                     logging.warning(f"Could not parse delete_at for {hostname}: {rule['delete_at']} Error: {date_err}. Setting to None.")
-                     rule["delete_at"] = None
-             elif not isinstance(rule.get("delete_at"), datetime):
-                 rule["delete_at"] = None
-             # Ensure zone_id field exists (for backward compatibility if needed, though saving adds it now)
-             if "zone_id" not in rule:
-                 logging.warning(f"Rule for {hostname} loaded from state is missing 'zone_id'. Will attempt to use default or re-determine on reconcile.")
-                 rule["zone_id"] = None # Mark as unknown for now
-        managed_rules = loaded_data
+
+        # --- Load Grace Period Setting ---
+        loaded_settings = loaded_data.get("settings", {})
+        saved_grace_period = loaded_settings.get("grace_period_seconds")
+        if saved_grace_period is not None:
+            try:
+                # Validate the loaded value
+                saved_grace_period_int = int(saved_grace_period)
+                if saved_grace_period_int >= 0:
+                    GRACE_PERIOD_SECONDS = saved_grace_period_int
+                    logging.info(f"Loaded GRACE_PERIOD_SECONDS from state: {GRACE_PERIOD_SECONDS}")
+                else:
+                    logging.warning(f"Invalid negative grace_period_seconds found in state: {saved_grace_period}. Using default: {current_default_grace_period}")
+                    # Keep the initial default if loaded value is bad
+                    GRACE_PERIOD_SECONDS = current_default_grace_period
+            except (ValueError, TypeError):
+                 logging.warning(f"Invalid non-integer grace_period_seconds found in state: {saved_grace_period}. Using default: {current_default_grace_period}")
+                 GRACE_PERIOD_SECONDS = current_default_grace_period
+        else:
+             logging.info("No grace_period_seconds found in state settings. Using default.")
+             # Keep the initial default if not found in state
+             GRACE_PERIOD_SECONDS = current_default_grace_period
+
+        # --- Load Rules ---
+        loaded_rules = loaded_data.get("rules", {}) # Load rules from nested key
+        parsed_rules = {}
+        for hostname, rule in loaded_rules.items():
+             # ... (existing rule parsing logic for delete_at, zone_id) ...
+             parsed_rules[hostname] = rule # Add parsed rule to temp dict
+        managed_rules = parsed_rules # Assign parsed rules
+
         logging.info(f"Loaded state for {len(managed_rules)} rules from {STATE_FILE_PATH}")
+
     except (json.JSONDecodeError, IOError, OSError) as e:
         logging.error(f"Error loading state from {STATE_FILE_PATH}: {e}. Starting fresh.", exc_info=True)
         managed_rules = {}
-
+        # Revert grace period to initial default on load error
+        GRACE_PERIOD_SECONDS = current_default_grace_period
 
 # --- save_state ---
 def save_state():
-    # No changes needed here specifically, as long as 'zone_id' is added to the
-    # managed_rules dictionary before this is called.
-    serializable_state = {}
+    # Structure state with top-level keys for "settings" and "rules"
+    state_to_save = {
+        "settings": {
+            "grace_period_seconds": GRACE_PERIOD_SECONDS # Save current global value
+        },
+        "rules": {}
+    }
+
+    # Serialize rules under the "rules" key
     for hostname, rule in managed_rules.items():
         rule_copy = rule.copy()
-        # Ensure datetime is converted to ISO 8601 string with Z for UTC
         if rule_copy.get("delete_at") and isinstance(rule_copy["delete_at"], datetime):
             dt_utc = rule_copy["delete_at"].astimezone(timezone.utc)
-            # Format to ISO 8601 with Z, remove microseconds for cleaner output
             rule_copy["delete_at"] = dt_utc.strftime('%Y-%m-%dT%H:%M:%SZ')
-        # Ensure zone_id is present (it should be)
-        if "zone_id" not in rule_copy:
-            logging.warning(f"Attempting to save rule for {hostname} without zone_id!")
-            rule_copy["zone_id"] = None # Save as null if missing
-        serializable_state[hostname] = rule_copy
+        if "zone_id" not in rule_copy: rule_copy["zone_id"] = None
+        state_to_save["rules"][hostname] = rule_copy
+
     try:
         state_dir = os.path.dirname(STATE_FILE_PATH)
         if not os.path.exists(state_dir):
             try: os.makedirs(state_dir, exist_ok=True); logging.info(f"Created directory {state_dir} before saving state.")
-            except OSError as e: logging.error(f"Could not create directory {state_dir} for state file: {e}. Save failed."); return
+            except OSError as e: logging.error(f"Could not create dir {state_dir}: {e}. Save failed."); return
 
         temp_file_path = STATE_FILE_PATH + ".tmp"
         with open(temp_file_path, 'w') as f:
-            json.dump(serializable_state, f, indent=2)
+            json.dump(state_to_save, f, indent=2) # Save the structured state
         os.replace(temp_file_path, STATE_FILE_PATH)
-        logging.debug(f"Saved state for {len(managed_rules)} rules to {STATE_FILE_PATH}")
+        logging.debug(f"Saved state ({len(managed_rules)} rules, grace={GRACE_PERIOD_SECONDS}s) to {STATE_FILE_PATH}")
     except (IOError, OSError) as e:
         logging.error(f"Error saving state to {STATE_FILE_PATH}: {e}", exc_info=True)
-
 
 # --- cf_api_request ---
 # No changes needed in cf_api_request itself
@@ -1097,22 +1119,31 @@ def get_display_token(token):
 # No changes needed (zone_id isn't displayed directly)
 @app.route('/')
 def status_page():
+    # Always update status before rendering
     update_cloudflared_container_status()
+
+    # Prepare data for the template, ensuring thread safety
     with state_lock:
         rules_for_template = {}
         for hn, rule in managed_rules.items():
             rules_for_template[hn] = rule.copy()
         template_tunnel_state = tunnel_state.copy()
         template_agent_state = cloudflared_agent_state.copy()
+        # Get the current grace period from the global variable
+        current_grace_period = GRACE_PERIOD_SECONDS # Read the potentially updated value
+
     display_token = get_display_token(template_tunnel_state.get("token"))
     docker_available = docker_client is not None
+
+    # Use render_template to load and render the HTML file
     return render_template('status_page.html',
                             tunnel_state=template_tunnel_state,
                             agent_state=template_agent_state,
                             display_token=display_token,
                             cloudflared_container_name=CLOUDFLARED_CONTAINER_NAME,
                             docker_available=docker_available,
-                            rules=rules_for_template)
+                            rules=rules_for_template,
+                            current_grace_period_seconds=current_grace_period) # <-- Pass grace period
 
 
 # --- start_tunnel / stop_tunnel ---
@@ -1131,6 +1162,48 @@ def stop_tunnel():
     time.sleep(1)
     return redirect(url_for('status_page'))
 
+# --- update_settings ---
+@app.route('/update_settings', methods=['POST'])
+def update_settings():
+    global GRACE_PERIOD_SECONDS # We need to modify the global variable
+    logging.info("UI request: Update settings.")
+
+    try:
+        submitted_hours_str = request.form.get('grace_period_hours')
+        if submitted_hours_str is None:
+            raise ValueError("Missing 'grace_period_hours' in form submission.")
+
+        # Validate: Convert to float first to allow decimals, then check range
+        submitted_hours = float(submitted_hours_str)
+        if submitted_hours < 0:
+             raise ValueError("Grace period cannot be negative.")
+        # Optional: Add a maximum check? e.g., 1 week = 168 hours
+        # if submitted_hours > 168:
+        #    raise ValueError("Grace period cannot exceed 168 hours (7 days).")
+
+        # Convert valid hours to seconds
+        new_grace_period_seconds = int(submitted_hours * 3600)
+
+        # Update global variable (no lock needed for this specific variable usually,
+        # as it's read by background threads but only written by web requests)
+        GRACE_PERIOD_SECONDS = new_grace_period_seconds
+        logging.info(f"Grace period updated to: {GRACE_PERIOD_SECONDS} seconds ({submitted_hours} hours)")
+
+        # Persist the change immediately
+        with state_lock: # Use lock for saving the file
+            save_state()
+
+        # Provide feedback (can be improved with flash messages)
+        cloudflared_agent_state["last_action_status"] = f"Settings updated: Grace Period set to {submitted_hours} hours."
+
+    except ValueError as e:
+        logging.error(f"Invalid settings submission: {e}")
+        cloudflared_agent_state["last_action_status"] = f"Error updating settings: Invalid value submitted ({e})."
+    except Exception as e:
+        logging.error(f"Unexpected error updating settings: {e}", exc_info=True)
+        cloudflared_agent_state["last_action_status"] = f"Error updating settings: {e}."
+
+    return redirect(url_for('status_page'))
 
 # --- force_delete_rule ---
 # UPDATED for multi-zone support
