@@ -28,6 +28,10 @@ DockFlare automates Cloudflare Tunnel ingress rule management based on Docker co
     *   Start/Stop agent controls.
     *   Managed ingress rule list with status, container ID, deletion time, and "Force Delete" option.
 
+**Modern Web UI showing the status of Ingress Rules and Real Time Monitoring**
+![Web ui example](images/status_web.png)
+
+
 **Core Problem Solved:**
 
 Simplifies exposing Docker services via Cloudflare Tunnel by automating configuration changes based on Docker container lifecycle events.
