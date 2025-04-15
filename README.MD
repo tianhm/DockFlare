@@ -61,83 +61,155 @@ Simplifies exposing Docker services via Cloudflare Tunnel by automating configur
 
 ## Getting Started
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository_url>
-    cd <repository_directory>
-    ```
+There are two main ways to get DockFlare running:
 
-2.  **Configure the .env file:**
+1.  **Quick Start:** Directly use Docker Compose with the provided configuration.
+2.  **From Repository:** Clone the repository first, then configure and run.
 
-    Copy the example configuration: cp .env.example .env, then edit .env to set the required variables.
+Choose the method that best suits your needs.
 
-    ```
-    CF_API_TOKEN=<YOUR_CLOUDFLARE_API_TOKEN>
-    CF_ACCOUNT_ID=<YOUR_CLOUDFLARE_ACCOUNT_ID>
-    CF_ZONE_ID=<YOUR_CLOUDFLARE_ZONE_ID>
-    TUNNEL_NAME=<DESIRED_TUNNEL_NAME>
-    GRACE_PERIOD_SECONDS=28800  # Optional: Default 8 hours (8 * 60 * 60)
-    ```
+---
 
-    *   `CF_API_TOKEN`:  Your Cloudflare API token with `Account:Cloudflare Tunnel:Edit` permissions.
-    *   `CF_ACCOUNT_ID`: Your Cloudflare Account ID.
-    *   `CF_ZONE_ID`: Your Cloudflare Zone ID (the domain where the DNS records will be created).
-    *   `TUNNEL_NAME`: The name you want to give your Cloudflare Tunnel.
-    *   `GRACE_PERIOD_SECONDS`: (Optional) The grace period in seconds before deleting an ingress rule after its associated container stops. Defaults to 8 hours.
-    
-3.  **Run with Docker Compose:**
+### Prerequisites
 
-    ```bash
-    docker-compose up -d
-    ```
+*   Docker: [Install Docker](https://docs.docker.com/engine/install/)
+*   Docker Compose: [Install Docker Compose](https://docs.docker.com/compose/install/)
 
-4.  **Access the Web UI:**
+---
 
-    Open your web browser and navigate to the port you exposed in your `docker-compose.yml` (e.g., `http://localhost:5000`).
+### Option 1: Quick Start (Using Docker Compose)
 
-5.  **Label your Docker containers:**
+This method allows you to run DockFlare quickly without cloning the entire repository.
 
-    Add the necessary labels to your Docker containers:
+1.  **Create `docker-compose.yml`:**
+    Create a file named `docker-compose.yml` in a directory of your choice and paste the following content:
 
     ```yaml
-    labels:
-      cloudflare.tunnel.enable: "true"
-      cloudflare.tunnel.hostname: "my-service.example.com"
-      cloudflare.tunnel.service: "http://my-service:8080"
-      cloudflare.tunnel.zonename: "other-domain.com"
+    version: '3.8'
+    services:
+      cloudflare-tunnel-manager:
+        image: alplat/dockflare:stable # Pre-built image (currently x86_64/amd64 only)
+        container_name: dockflare
+        restart: unless-stopped
+        ports:
+          - "5000:5000" # Exposes the Web UI on port 5000
+        env_file:
+          - .env
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock:ro # Required to monitor Docker events
+          - ./data:/app/data # Persistent storage for state
+        networks:
+          - cloudflare-net
+        environment:
+          - STATE_FILE_PATH=/app/data/state.json # Path to state file inside the container
+          - TZ=Europe/Zurich # Optional: Set your timezone, e.g., America/New_York
+    networks:
+      cloudflare-net:
+        driver: bridge
+        name: cloudflare-net # Creates/uses a dedicated network for the tunnel
     ```
 
-    *   Replace `"my-service.example.com"` with your desired public hostname.
-    *   Replace `"http://my-service:8080"` with the internal URL of your service.
-    *   Replace `"other-domain.com"`: (Optional) This label is only required when you want to expose the service on a domain different from the primary DNS zone configured via `CF_ZONE_ID` in the `.env` file.  It's used for multi-DNS domain support within the same Cloudflare account.
+2.  **Create and Configure `.env`:**
+    Create a file named `.env` in the *same directory* as your `docker-compose.yml`. Add your Cloudflare details:
 
-6. **Restart or redeploy the labeled docker containers**
+    ```dotenv
+    # --- Required Cloudflare Configuration ---
+    CF_API_TOKEN=<YOUR_CLOUDFLARE_API_TOKEN>
+    CF_ACCOUNT_ID=<YOUR_CLOUDFLARE_ACCOUNT_ID>
+    CF_ZONE_ID=<YOUR_CLOUDFLARE_ZONE_ID> # Primary domain for DNS records
+    TUNNEL_NAME=<DESIRED_TUNNEL_NAME>    # e.g., my-dockflare-tunnel
 
-    This will trigger the ingress controller to add rules as specified.
+    # --- Optional Configuration ---
+    GRACE_PERIOD_SECONDS=28800 # Default: 8 hours (8 * 60 * 60). Time before deleting rules for stopped containers.
+    # LOG_LEVEL=INFO           # Optional: Set log level (DEBUG, INFO, WARNING, ERROR). Default: INFO
+    ```
 
-## Example `docker-compose.yml`
+    *   `CF_API_TOKEN`: Your Cloudflare API token. Requires `Account:Cloudflare Tunnel:Edit` permission. [How to create](https://developers.cloudflare.com/api/tokens/create/).
+    *   `CF_ACCOUNT_ID`: Your Cloudflare Account ID. [Find your Account ID](https://developers.cloudflare.com/fundamentals/get-started/basic-tasks/find-account-and-zone-ids/).
+    *   `CF_ZONE_ID`: Your Cloudflare Zone ID for the primary domain where DNS records will be created. [Find your Zone ID](https://developers.cloudflare.com/fundamentals/get-started/basic-tasks/find-account-and-zone-ids/).
+    *   `TUNNEL_NAME`: A unique name for your Cloudflare Tunnel (e.g., `my-app-tunnel`).
+    *   `GRACE_PERIOD_SECONDS`: (Optional) Grace period in seconds before deleting ingress rules after a container stops. Defaults to `28800` (8 hours).
+    *   `LOG_LEVEL`: (Optional) Set the application's logging verbosity. Defaults to `INFO`.
 
-```yaml
-version: '3.8'
-services:
-  cloudflare-tunnel-manager:
-    # build: . # Commented out for not building local docker image
-    container_name: dockflare
-    image: alplat/dockflare:stable
-    restart: unless-stopped
-    ports:
-      - "5000:5000"
-    env_file:
-      - .env
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./data:/app/data
-    networks:
-      - cloudflare-net
-    environment:
-      - STATE_FILE_PATH=/app/data/state.json
+3.  **Run with Docker Compose:**
+    Open your terminal in the directory containing the `docker-compose.yml` and `.env` files, then run:
 
-networks:
-  cloudflare-net:
-    driver: bridge
-    name: cloudflare-net
+    ```bash
+    docker compose up -d
+    ```
+
+---
+
+### Option 2: From Cloned Repository
+
+This method involves cloning the repository, which gives you access to the example files directly.
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/ChrispyBacon-dev/DockFlare.git
+    cd DockFlare
+    ```
+
+2.  **Configure the `.env` file:**
+    Copy the example configuration file and then edit it with your details:
+
+    ```bash
+    cp .env.example .env
+    nano .env # or use your preferred text editor
+    ```
+
+    Fill in the following variables in the `.env` file:
+    ```dotenv
+    # --- Required Cloudflare Configuration ---
+    CF_API_TOKEN=<YOUR_CLOUDFLARE_API_TOKEN>
+    CF_ACCOUNT_ID=<YOUR_CLOUDFLARE_ACCOUNT_ID>
+    CF_ZONE_ID=<YOUR_CLOUDFLARE_ZONE_ID> # Primary domain for DNS records
+    TUNNEL_NAME=<DESIRED_TUNNEL_NAME>    # e.g., my-dockflare-tunnel
+
+    # --- Optional Configuration ---
+    GRACE_PERIOD_SECONDS=28800 # Default: 8 hours (8 * 60 * 60). Time before deleting rules for stopped containers.
+    # LOG_LEVEL=INFO           # Optional: Set log level (DEBUG, INFO, WARNING, ERROR). Default: INFO
+    ```
+    *   Refer to the variable descriptions in **Option 1, Step 2** for details on each setting.
+
+3.  **Run with Docker Compose:**
+    Ensure you are in the `DockFlare` directory (where the `docker-compose.yml` file is located) and run:
+
+    ```bash
+    docker compose up -d
+    ```
+
+---
+
+### Architecture Support
+
+*   **Currently Supported:** The pre-built Docker image (`alplat/dockflare:stable`) is currently only available for `x86_64` / `amd64` architectures.
+*   **Future Support:** `arm64` support (e.g., for Raspberry Pi, Apple Silicon) is planned for a future release.
+
+---
+
+### Next Steps
+
+1.  **Access the Web UI:**
+    Once the container is running, open your web browser and navigate to the port exposed in your `docker-compose.yml` (e.g., `http://localhost:5000` or `http://<your-server-ip>:5000`).
+
+2.  **Label your Docker containers:**
+    To expose services through the Cloudflare Tunnel managed by DockFlare, add labels to your *other* service containers (e.g., in their `docker-compose.yml`):
+
+    ```yaml
+    services:
+      my-web-app:
+        image: nginx:latest # Example service
+        labels:
+          # --- DockFlare Labels ---
+          cloudflare.tunnel.enable: "true" # Required: Tells DockFlare to manage this service
+          cloudflare.tunnel.hostname: "my-service.example.com" # Required: Your public hostname
+          cloudflare.tunnel.service: "http://my-web-app:80" # Required: Internal service URL (use container name/alias and port)
+          # cloudflare.tunnel.zonename: "other-domain.com" # Optional: Use if hostname is on a different zone than CF_ZONE_ID
+    ```
+    *   Replace `"my-service.example.com"` with the desired public hostname (must be within a zone managed by your Cloudflare account).
+    *   Replace `"http://my-web-app:80"` with the internal URL of your service (use the service/container name and the port it listens on *within the Docker network*).
+    *   `cloudflare.tunnel.zonename`: (Optional) Only needed if the `hostname` belongs to a *different* Cloudflare Zone than the one specified by `CF_ZONE_ID` in your `.env` file. Both zones must be under the same Cloudflare Account (`CF_ACCOUNT_ID`).
+
+3.  **Restart or Deploy Labeled Containers:**
+    After adding the labels, (re)start the labeled containers (e.g., `docker-compose up -d my-web-app`). DockFlare will detect the labels and automatically configure the Cloudflare Tunnel ingress rules.
