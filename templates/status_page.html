@@ -1,313 +1,303 @@
 <!DOCTYPE html>
-<html lang="en"> <!-- data-theme will be added by JS -->
+<html lang="en" class="">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="refresh" content="30"> <!-- Auto-refresh every 30 seconds -->
-    <!-- Pico.css CDN Link -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@latest/css/pico.min.css">
-    <title>Dockflare</title> <!-- Changed Title -->
-    <style>
-        /* --- Base & Layout --- */
-        body {
-            padding-top: 1.5rem;
-            padding-bottom: 2rem;
-            display: flex; /* Use flexbox for footer */
-            flex-direction: column; /* Stack elements vertically */
-            min-height: 100vh; /* Ensure body takes at least full viewport height */
+    <title>Dockflare - Status</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+          darkMode: 'class',
+          theme: {
+            extend: {
+              colors: {},
+              fontFamily: {
+                sans: ['Inter var', 'system-ui', 'sans-serif'],
+                mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'],
+              },
+              animation: {
+                'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              }
+            }
+          }
         }
-        main.container {
-            flex-grow: 1; /* Allow main content to grow and push footer down */
-            max-width: 960px; /* Slightly wider max-width */
-            width: 100%; /* Ensure container takes available width */
-            padding-bottom: 2rem; /* Add padding at the bottom to avoid footer collision */
-            margin-left: auto; /* Center container */
-            margin-right: auto;
-        }
-        h1, h2, h3, h4 {
-            margin-top: 1.5em;
-            margin-bottom: 0.6em;
-            color: var(--pico-h_color); /* Ensure headings use theme color */
-        }
-        h1 {
-            margin-top: 0;
-            text-align: center;
-            margin-bottom: 1.5rem; /* More space below main title */
-            font-weight: 600; /* Slightly bolder */
-        }
-        article {
-            margin-bottom: 2rem; /* Increased spacing between sections */
-            padding: 1.5rem; /* Add padding to articles for card-like feel */
-            border: 1px solid var(--pico-card-border-color);
-            border-radius: var(--pico-card-border-radius);
-            background-color: var(--pico-card-background-color);
-            box-shadow: var(--pico-card-box-shadow);
-        }
-        hgroup { margin-bottom: 1rem; } /* Space below hgroups */
-        p { line-height: 1.6; }
-
-        /* --- Code & Pre Styling --- */
-        code {
-            background-color: var(--pico-code-background-color);
-            color: var(--pico-code-color);
-            padding: 0.15em 0.4em;
-            border-radius: var(--pico-border-radius);
-            font-size: 0.9em;
-            font-family: var(--pico-font-family-monospace);
-            word-break: break-word;
-        }
-        td code, h3 code {
-             background-color: transparent;
-             padding: 0;
-             font-family: var(--pico-font-family-monospace);
-             font-size: 0.95em;
-        }
-        pre {
-            background-color: var(--pico-code-background-color);
-            border: 1px solid var(--pico-form-element-border-color);
-            border-radius: var(--pico-border-radius);
-            padding: 0.75rem 1rem;
-            color: var(--pico-color);
-            margin-top: 0.25rem;
-            white-space: pre-wrap;
-            word-break: break-all;
-            font-family: var(--pico-font-family-monospace);
-            font-size: 0.9em;
-            line-height: 1.5;
-        }
-        .token-display { margin-top: 0.5rem; }
-        .token-display strong { display: block; margin-bottom: 0.2rem; }
-
-        /* --- Status Boxes & Indicators --- */
-        .status-box {
-            padding: 1rem 1.25rem;
-            border: 1px solid var(--pico-form-element-border-color);
-            border-radius: var(--pico-border-radius);
-            margin-top: 1rem;
-            margin-bottom: 1rem;
-            word-wrap: break-word;
-            background-color: var(--pico-card-background-color);
-            color: var(--pico-color);
-            border-left-width: 5px;
-            box-shadow: var(--pico-box-shadow-inset);
-        }
-        .status-box p:last-child { margin-bottom: 0; }
-        .status-box strong { color: var(--pico-h_color); }
-        .status-box.error { border-left-color: var(--pico-color-red-600); }
-        .status-box.success { border-left-color: var(--pico-color-green-600); }
-        .status-box.info { border-left-color: var(--pico-color-blue-600); }
-        .status-box.warning { border-left-color: var(--pico-color-amber-600); }
-
-        .status-indicator {
-            display: inline-block;
-            width: 11px; height: 11px;
-            border-radius: 50%;
-            margin-right: 8px;
-            vertical-align: middle;
-            box-shadow: 0 0 3px rgba(0,0,0,0.2);
-        }
-        .status-indicator.running { background-color: var(--pico-color-green-500); }
-        .status-indicator.exited, .status-indicator.dead, .status-indicator.not_found { background-color: var(--pico-color-red-500); }
-        .status-indicator.docker_unavailable { background-color: var(--pico-color-gray-500); }
-        .status-indicator.unknown, .status-indicator.created, .status-indicator.paused { background-color: var(--pico-color-amber-500); }
-
-        .status-active { color: var(--pico-color-green-600); font-weight: 600; }
-        .status-pending { color: var(--pico-color-orange-500); font-weight: 600; }
-
-        /* --- Forms & Buttons --- */
-        form { display: inline-block; margin: 0; }
-        form button { margin: 0; font-weight: 500; }
-        .grid > form > button { width: 100%; }
-        button.delete-button {
-            font-size: 0.85em;
-            padding: 0.4rem 0.6rem;
-            --pico-color: var(--pico-color-red-600);
-            --pico-color-hover: var(--pico-color-red-700);
-            --pico-color-focus: var(--pico-color-red-700);
-        }
-
-        /* --- Table Styling --- */
-        figure {
-             margin: 1.5rem 0;
-             overflow-x: auto;
-        }
-        table { white-space: nowrap; }
-        table th { font-weight: 600; }
-        table td, table th {
-            padding: 0.75rem 1rem;
-            vertical-align: middle;
-        }
-        table tbody tr:hover {
-            background-color: var(--pico-table-row-striping-background-color);
-        }
-        table td:nth-child(1), table td:nth-child(2) { white-space: normal; }
-        table td a {
-            text-decoration: none;
-            color: var(--pico-primary);
-        }
-        table td a:hover {
-            text-decoration: underline;
-            color: var(--pico-primary-hover);
-        }
-        table td a code { color: inherit; background: none; padding: 0; }
-        .countdown-timer {
-            font-size: 0.8em;
-            color: var(--pico-muted-color);
-            display: block;
-            margin-top: 0.2rem;
-        }
-        .absolute-time { font-size: 0.9em; }
-
-        /* --- Theme Toggle Button --- */
-        #theme-toggle {
-            position: fixed; top: 1rem; right: 1rem;
-            z-index: 100;
-            padding: 0.6rem; width: auto; line-height: 1; font-size: 1.3rem;
-            background: var(--pico-card-background-color);
-            border: 1px solid var(--pico-form-element-border-color);
-            border-radius: 50%;
-            color: var(--pico-secondary);
-            cursor: pointer;
-            box-shadow: var(--pico-box-shadow);
-            transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
-        }
-        #theme-toggle:hover {
-            color: var(--pico-secondary-hover);
-            background-color: var(--pico-card-sectioning-background-color);
-            transform: scale(1.1);
-        }
-        #theme-toggle:focus { outline: 2px solid var(--pico-primary-focus); outline-offset: 2px; }
-
-        /* --- Footer Styling --- */
-        footer {
-            margin-top: auto; /* Push footer to bottom with flexbox */
-            padding-top: 1.5rem;
-            padding-bottom: 1rem; /* Padding below footer content */
-            border-top: 1px solid var(--pico-form-element-border-color);
-            text-align: center;
-            font-size: 0.9em;
-            color: var(--pico-muted-color);
-            width: 100%; /* Ensure footer takes full width */
-        }
-        footer a {
-             color: var(--pico-secondary);
-             text-decoration: none;
-        }
-         footer a:hover {
-             color: var(--pico-secondary-hover);
-             text-decoration: underline;
-         }
-        /* Style the sponsor link specifically if using button class */
-        footer a.secondary {
-            text-decoration: none;
-        }
-        footer a.secondary:hover {
-            text-decoration: none;
-        }
-        footer p {
-            margin-bottom: 0.5rem;
-        }
-
-    </style>
+      </script>
+      <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+      <style type="text/tailwindcss">
+        #log-output .log-status { @apply italic text-gray-400 dark:text-gray-500; }
+        #log-output .log-status.error { @apply not-italic text-red-500 dark:text-red-400 font-semibold; }
+        #log-output .log-status.connected { @apply not-italic text-green-500 dark:text-green-400; }
+        #log-output::-webkit-scrollbar { width: 8px; }
+        #log-output::-webkit-scrollbar-track { background: transparent; }
+        #log-output::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.5); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
+        #log-output::-webkit-scrollbar-thumb:hover { background-color: rgba(156, 163, 175, 0.7); }
+        html.dark #log-output::-webkit-scrollbar-thumb { background-color: rgba(107, 114, 128, 0.5); }
+        html.dark #log-output::-webkit-scrollbar-thumb:hover { background-color: rgba(107, 114, 128, 0.7); }
+      </style>
 </head>
-<body>
-    <!-- Theme Toggle Button -->
-    <button id="theme-toggle" aria-label="Toggle theme">🌓</button>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col font-sans transition-colors duration-300">
 
-    <!-- Main Content Area -->
-    <main class="container">
+    <div style="position: fixed; top: 0; left: 0; z-index: 50; pointer-events: none;">
+        <div class="fixed top-6 left-[-38px] sm:top-7 sm:left-[-35px] z-50 transform -rotate-45 bg-amber-500 dark:bg-amber-600 text-black dark:text-white text-xs font-semibold uppercase tracking-wider text-center py-1 w-36 shadow-md">
+             Alpha Build
+        </div>
+    </div>
 
-        <h1>Dockflare</h1>
+    <header class="sticky top-0 z-40 w-full bg-gray-100/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-sm">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <h1 class="text-4xl sm:text-5xl font-bold text-center text-gray-800 dark:text-gray-200">Dockflare</h1>
+        </div>
+    </header>
 
-        <!-- Initialization Status Section -->
-        <article>
-            <hgroup><h2>Initialization Status</h2><h3>Cloudflare API Interaction</h3></hgroup>
-            <div class="status-box {{ 'error' if tunnel_state.get('error') else ('success' if tunnel_state.get('token') else 'info') }}">
-                <p><strong>Status:</strong> {{ tunnel_state.status_message }}</p>
-                {% if tunnel_state.get('error') %}<p><strong>Error Details:</strong> <pre>{{ tunnel_state.error }}</pre></p>{% endif %}
+    <button id="theme-toggle" aria-label="Toggle theme" class="fixed bottom-4 right-4 z-50 p-3 rounded-full bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-900 focus:ring-indigo-500 transition-all duration-200 ease-in-out">
+        <span>🌓</span>
+    </button>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-grow w-full max-w-7xl">
+
+        <section class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden mb-8 sm:mb-12 transition-shadow duration-300 hover:shadow-xl">
+            <div class="px-6 py-5 sm:px-8 sm:py-6">
+                <h2 class="text-2xl sm:text-3xl font-semibold mb-6 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 pb-3">
+                    Tunnel & Agent Status
+                </h2>
+
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold mb-3 text-gray-600 dark:text-gray-400">Cloudflare API & Tunnel Setup</h3>
+                    {% set status_box_class = 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' %}
+                    {% if tunnel_state.get('error') %}
+                      {% set status_box_class = 'border-red-500 bg-red-50 dark:bg-red-900/20' %}
+                    {% elif tunnel_state.get('token') %}
+                      {% set status_box_class = 'border-green-500 bg-green-50 dark:bg-green-900/20' %}
+                    {% endif %}
+                    <div class="status-box p-4 rounded-md border-l-4 {{ status_box_class }} text-gray-700 dark:text-gray-300 text-sm">
+                        <p><strong>API Status:</strong> {{ tunnel_state.status_message }}</p>
+                        {% if tunnel_state.get('error') %}
+                        <div class="mt-3">
+                            <strong class="block mb-1">Error Details:</strong>
+                            <pre class="bg-gray-100 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-words shadow-inner">{{ tunnel_state.error }}</pre>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h4 class="text-md font-semibold mb-3 text-gray-600 dark:text-gray-400">Tunnel Details</h4>
+                    <div class="space-y-2 text-sm">
+                        <p><strong class="inline-block w-36">Desired Name:</strong> <code class="bg-gray-200 dark:bg-gray-700 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded font-mono text-xs">{{ tunnel_state.name }}</code></p>
+                        <p><strong class="inline-block w-36">Tunnel ID:</strong> <code class="bg-gray-200 dark:bg-gray-700 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded font-mono text-xs">{{ tunnel_state.id if tunnel_state.id else 'N/A' }}</code></p>
+                        <div>
+                            <strong class="inline-block w-36 align-top pt-1">Tunnel Token:</strong>
+                            <pre class="inline-block bg-gray-100 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded p-2 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-words align-top shadow-inner max-w-full mt-1 sm:mt-0">{{ display_token }}</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-semibold mb-3 text-gray-600 dark:text-gray-400">Agent Control</h3>
+
+                    {% if agent_state.last_action_status %}
+                        {% set action_box_class = 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' %}
+                        {% if 'Error:' in agent_state.last_action_status %}
+                            {% set action_box_class = 'border-red-500 bg-red-50 dark:bg-red-900/20' %}
+                        {% elif 'Warning:' in agent_state.last_action_status %}
+                             {% set action_box_class = 'border-amber-500 bg-amber-50 dark:bg-amber-900/20' %}
+                        {% endif %}
+                        <div class="status-box p-3 rounded-md border-l-4 {{ action_box_class }} text-gray-700 dark:text-gray-300 text-xs my-4">
+                            <p><strong>Last Action:</strong> {{ agent_state.last_action_status }}</p>
+                        </div>
+                    {% endif %}
+
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mt-2 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-md">
+                         <div class="agent-status-info flex-grow space-y-1.5">
+                            <div class="flex items-center space-x-3">
+                                <strong class="text-sm font-medium flex-shrink-0 w-28">Agent Status:</strong>
+                                {% set indicator_class = 'bg-gray-400' %}
+                                {% if agent_state.container_status == 'running' %} {% set indicator_class = 'bg-green-500 animate-pulse-fast' %}
+                                {% elif agent_state.container_status in ['exited', 'dead', 'not_found'] %} {% set indicator_class = 'bg-red-500' %}
+                                {% elif agent_state.container_status == 'docker_unavailable' %} {% set indicator_class = 'bg-gray-500' %}
+                                {% elif agent_state.container_status in ['unknown', 'created', 'paused', 'restarting'] %}
+                                    {% set indicator_class = 'bg-amber-500' %}
+                                {% endif %}
+                                <span class="status-indicator inline-block flex-shrink-0 w-3 h-3 rounded-full {{ indicator_class }} shadow-sm"></span>
+
+                                {% set status_text_class = 'text-gray-600 dark:text-gray-400' %}
+                                {% if agent_state.container_status=='running' %} {% set status_text_class = 'text-green-600 dark:text-green-400' %}
+                                {% elif 'error' in agent_state.container_status or agent_state.container_status=='docker_unavailable' or agent_state.container_status=='dead' or agent_state.container_status=='not_found' %} {% set status_text_class = 'text-red-600 dark:text-red-400' %}
+                                {% elif agent_state.container_status in ['exited', 'restarting'] %}
+                                    {% set status_text_class = 'text-amber-600 dark:text-amber-400' %}
+                                {% endif %}
+                                <strong class="text-sm font-semibold capitalize {{ status_text_class }}">
+                                    {{ agent_state.container_status.replace('_',' ') }}
+                                </strong>
+                            </div>
+                            <div class="flex items-center text-sm">
+                                <strong class="font-medium text-gray-600 dark:text-gray-400 flex-shrink-0 w-28">Agent Name:</strong>
+                                <code class="ml-3 bg-gray-200 dark:bg-gray-700 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded font-mono text-xs align-middle truncate" title="{{ cloudflared_container_name }}">
+                                    {{ cloudflared_container_name }}
+                                </code>
+                            </div>
+                         </div>
+
+                         <div class="agent-action-button w-full sm:w-auto flex-shrink-0">
+                             {% set base_button_style = 'w-full sm:w-auto inline-flex items-center justify-center px-5 py-2 rounded-md text-white font-semibold shadow-md transition-all duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none' %}
+                             {% set start_button_style = 'bg-green-600 hover:bg-green-700 focus:ring-green-500 disabled:bg-green-300 dark:disabled:bg-green-800' %}
+                             {% set stop_button_style = 'bg-red-600 hover:bg-red-700 focus:ring-red-500 disabled:bg-red-300 dark:disabled:bg-red-800' %}
+                             {% if agent_state.container_status=='running' %}
+                                 <form action="{{ url_for('stop_tunnel') }}" method="post" class="inline-block w-full sm:w-auto">
+                                     <button type="submit" class="{{ base_button_style }} {{ stop_button_style }}" {{ 'disabled' if not docker_available else '' }}>Stop Agent</button>
+                                 </form>
+                             {% else %}
+                                 <form action="{{ url_for('start_tunnel') }}" method="post" class="inline-block w-full sm:w-auto">
+                                     <button type="submit" class="{{ base_button_style }} {{ start_button_style }}" {{ 'disabled' if not tunnel_state.get('token') or not docker_available else '' }}>Start Agent</button>
+                                 </form>
+                             {% endif %}
+                         </div>
+                    </div>
+                </div>
             </div>
-            <h4>Tunnel Details</h4>
-            <p><strong>Desired Tunnel Name:</strong> <code>{{ tunnel_state.name }}</code></p>
-            <p><strong>Tunnel ID:</strong> <code>{{ tunnel_state.id if tunnel_state.id else 'N/A' }}</code></p>
-            <div class="token-display"><strong>Tunnel Token:</strong><pre>{{ display_token }}</pre></div>
-        </article>
+        </section>
 
-        <!-- Tunnel Agent Control Section -->
-        <article>
-            <hgroup><h2>Tunnel Agent Control</h2><h3>Docker Container: <code>{{ cloudflared_container_name }}</code></h3></hgroup>
-            <p><strong>Agent Container Status:</strong> <span class="status-indicator {{ agent_state.container_status }}"></span> <strong style="text-transform: capitalize;" class="{{'success' if agent_state.container_status=='running' else ('error' if 'error' in agent_state.container_status or agent_state.container_status=='docker_unavailable' or agent_state.container_status=='dead' or agent_state.container_status=='not_found' else ('warning' if agent_state.container_status=='exited' else 'info')) }}">{{ agent_state.container_status.replace('_',' ') }}</strong></p>
-            {% if agent_state.last_action_status %}<div class="status-box {{ 'error' if 'Error:' in agent_state.last_action_status else ('warning' if 'Warning:' in agent_state.last_action_status else 'info') }}"><p><strong>Last Action Result:</strong> {{ agent_state.last_action_status }}</p></div>{% endif %}
-            <div class="grid">
-                 <form action="{{ url_for('start_tunnel') }}" method="post"><button type="submit" {{ 'disabled' if not tunnel_state.get('token') or agent_state.container_status=='running' or not docker_available }}>Start Agent</button></form>
-                 <form action="{{ url_for('stop_tunnel') }}" method="post"><button type="submit" class="secondary" {{ 'disabled' if agent_state.container_status!='running' or not docker_available }}>Stop Agent</button></form>
-            </div>
-        </article>
+        <section class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden mb-8 sm:mb-12 transition-shadow duration-300 hover:shadow-xl">
+             <div class="px-6 py-5 sm:px-8 sm:py-6">
+                <h2 class="text-2xl sm:text-3xl font-semibold mb-6 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 pb-3">
+                    Managed Ingress Rules
+                </h2>
 
-        <!-- Managed Ingress Rules Section -->
-        <article>
-            <h2>Managed Ingress Rules</h2>
-            {% if rules %}
-                <figure>
-                    <table role="grid">
-                        <thead><tr><th scope="col">Hostname</th><th scope="col">Service Target</th><th scope="col">Status</th><th scope="col">Container</th><th scope="col">Delete Scheduled (UTC)</th><th scope="col">Actions</th></tr></thead>
-                        <tbody>
-                            {% for hostname, details in rules.items()|sort %}
+                {% if rules %}
+                    <div class="overflow-x-auto -mx-6 sm:-mx-8">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-700/50">
                                 <tr>
-                                    <td><a href="https://{{ hostname }}" target="_blank" rel="noopener noreferrer" title="Open https://{{ hostname }} in new tab"><code>{{ hostname }}</code></a></td>
-                                    <td><code>{{ details.service }}</code></td>
-                                    <td><strong class="{{ 'status-active' if details.status=='active' else 'status-pending' }}">{{ details.status }}</strong></td>
-                                    <td><code title="{{ details.container_id if details.container_id else 'N/A' }}">{{ details.container_id[:12] if details.container_id else 'N/A' }}</code></td>
-                                    {% if details.status=='pending_deletion' and details.delete_at %}<td data-delete-at="{{ details.delete_at.isoformat() }}"><span class="absolute-time">{{ details.delete_at.strftime('%H:%M %d.%m.%Y') }}</span><span class="countdown-timer">(calculating...)</span></td>{% else %}<td>N/A</td>{% endif %}
-                                    <td><form action="{{ url_for('force_delete_rule', hostname=hostname) }}" method="post" onsubmit="return confirm('Are you sure you want to force delete the rule and DNS record for {{ hostname }} immediately? This bypasses the grace period.');"><button type="submit" class="delete-button contrast outline" {{ 'disabled' if not docker_available }}>Delete</button></form></td>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Hostname</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Service Target</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Container</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Delete Scheduled (UTC)</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                                 </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </figure>
-            {% else %}
-                <p>No ingress rules are currently being managed.</p>
-            {% endif %}
-        </article>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                {% for hostname, details in rules.items()|sort %}
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150 ease-in-out">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <a href="https://{{ hostname }}" target="_blank" rel="noopener noreferrer" title="Open https://{{ hostname }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-200 hover:underline">
+                                                <code>{{ hostname }}</code>
+                                            </a>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <code class="text-sm text-gray-700 dark:text-gray-300 font-mono">{{ details.service }}</code>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            {% set status_text_class = 'text-orange-600 dark:text-orange-400' if 'pending' in details.status else 'text-green-600 dark:text-green-400' %}
+                                            {% set status_bg_class = 'bg-orange-100 dark:bg-orange-900/30' if 'pending' in details.status else 'bg-green-100 dark:bg-green-900/30' %}
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ status_bg_class }} {{ status_text_class }}">
+                                                 {{ details.status.replace('_',' ') }}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <code class="text-sm text-gray-500 dark:text-gray-400 font-mono" title="{{ details.container_id if details.container_id else 'N/A' }}">
+                                                {{ details.container_id[:12] if details.container_id else 'N/A' }}
+                                            </code>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                            {% if details.status=='pending_deletion' and details.delete_at %}
+                                                <div data-delete-at="{{ details.delete_at.isoformat() }}">
+                                                    <span class="absolute-time font-medium text-gray-700 dark:text-gray-300">{{ details.delete_at.strftime('%H:%M %d-%b-%Y') }}</span>
+                                                    <span class="countdown-timer block text-xs text-gray-500 dark:text-gray-400">(calculating...)</span>
+                                                </div>
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <form action="{{ url_for('force_delete_rule', hostname=hostname) }}" method="post" onsubmit="return confirm('Are you sure you want to force delete the rule and DNS record for {{ hostname }} immediately? This bypasses the grace period.');">
+                                                <button type="submit"
+                                                        class="px-2 py-1 rounded text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-800 dark:hover:text-red-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-500 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-transparent disabled:text-gray-400"
+                                                        {{ 'disabled' if not docker_available else '' }}>
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-center text-gray-500 dark:text-gray-400 py-8">No ingress rules are currently being managed.</p>
+                {% endif %}
+            </div>
+        </section>
 
-    </main> <!-- end .container -->
+        <section class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden mb-8 sm:mb-12 transition-shadow duration-300 hover:shadow-xl">
+             <div class="px-6 py-5 sm:px-8 sm:py-6">
+                 <h2 class="text-2xl sm:text-3xl font-semibold mb-4 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 pb-3">
+                    Real-time Activity Logs
+                 </h2>
+                <pre id="log-output" aria-live="polite" class="h-96 overflow-y-scroll bg-gray-900 dark:bg-black text-gray-300 dark:text-gray-300 border border-gray-700 dark:border-gray-600 rounded-md p-4 font-mono text-xs leading-relaxed shadow-inner">Connecting to log stream...</pre>
+            </div>
+        </section>
 
-    <!-- Footer Section -->
-    <footer>
-        <div class="container"> <!-- Optional: constrain footer width like main content -->
-            <p>
-                <a href="https://github.com/ChrispyBacon-dev/DockFlare" target="_blank" rel="noopener noreferrer">
+    </main>
+
+    <footer class="text-center py-6 mt-auto text-sm text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <p class="mb-1">
+                <a href="https://github.com/ChrispyBacon-dev/DockFlare" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-200 hover:underline">
                     Dockflare on GitHub
                 </a>
             </p>
+            <p class="mb-1">Enjoying Dockflare? Consider supporting the project!</p>
             <p>
-                Enjoying Dockflare? Consider supporting the project!
-            </p>
-             <p>
-                <a href="https://github.com/sponsors/ChrispyBacon-dev" target="_blank" rel="noopener noreferrer" class="secondary">
-                    ☕ Sponsor ChrispyBacon-dev on GitHub
+                <a href="https://github.com/sponsors/ChrispyBacon-dev" target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-pink-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" /></svg>
+                    Sponsor ChrispyBacon-dev on GitHub
                 </a>
             </p>
         </div>
     </footer>
 
 
-    <!-- JavaScript for Theme Toggle and Countdown Timers (Unchanged) -->
     <script>
-      // --- Theme Toggle Logic ---
       const themeToggleButton = document.getElementById('theme-toggle');
+      const themeToggleIcon = themeToggleButton.querySelector('span');
       const htmlElement = document.documentElement;
-      const setTheme = (theme) => { htmlElement.setAttribute('data-theme', theme); localStorage.setItem('theme', theme); themeToggleButton.textContent = theme === 'dark' ? '☀️' : '🌓'; };
-      const toggleTheme = () => { const currentTheme = htmlElement.getAttribute('data-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); const newTheme = currentTheme === 'dark' ? 'light' : 'dark'; setTheme(newTheme); };
+      const setTheme = (theme) => { localStorage.setItem('theme', theme); if (theme === 'dark') { htmlElement.classList.add('dark'); themeToggleIcon.textContent = '☀️'; } else { htmlElement.classList.remove('dark'); themeToggleIcon.textContent = '🌓'; } };
+      const toggleTheme = () => { const currentTheme = localStorage.getItem('theme') || (htmlElement.classList.contains('dark') ? 'dark' : 'light'); const newTheme = currentTheme === 'dark' ? 'light' : 'dark'; setTheme(newTheme); };
       themeToggleButton.addEventListener('click', toggleTheme);
       const initTheme = () => { const savedTheme = localStorage.getItem('theme'); const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches; if (savedTheme) { setTheme(savedTheme); } else { setTheme(prefersDark ? 'dark' : 'light'); } };
       initTheme();
 
-      // --- Countdown Timer Logic ---
       const countdownElements = document.querySelectorAll('.countdown-timer');
-      function formatTimeDifference(diffMillis) { const totalSeconds = Math.round(Math.abs(diffMillis / 1000)); if (totalSeconds < 60) { return diffMillis >= 0 ? 'in <1m' : 'Expired <1m ago'; } const days = Math.floor(totalSeconds / (3600 * 24)); const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600); const minutes = Math.floor((totalSeconds % 3600) / 60); let parts = []; if (days > 0) parts.push(`${days}d`); if (hours > 0) parts.push(`${hours}h`); if (minutes > 0 || (days === 0 && hours === 0)) parts.push(`${minutes}m`); const timeString = parts.join(' '); return diffMillis >= 0 ? `in ${timeString}` : `Expired ${timeString} ago`; }
-      function updateCountdowns() { const now = new Date(); countdownElements.forEach(span => { const td = span.closest('td'); if (!td) return; const deleteAtISO = td.dataset.deleteAt; if (!deleteAtISO) return; try { const targetDate = new Date(deleteAtISO); if (isNaN(targetDate.getTime())) { throw new Error("Invalid date parsed"); } const diff = targetDate - now; span.textContent = `(${formatTimeDifference(diff)})`; if (diff < 0) { span.classList.add('expired'); } else { span.classList.remove('expired'); } } catch (e) { console.error("Error parsing date for countdown:", deleteAtISO, e); span.textContent = "(invalid date)"; } }); }
-      updateCountdowns();
-      const countdownInterval = setInterval(updateCountdowns, 30000);
+      function formatTimeDifference(diffMillis) { const totalSeconds = Math.round(Math.abs(diffMillis / 1000)); if (totalSeconds < 60) { return diffMillis >= 0 ? 'in <1m' : '<1m ago'; } const days = Math.floor(totalSeconds / (3600 * 24)); const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600); const minutes = Math.floor((totalSeconds % 3600) / 60); let parts = []; if (days > 0) parts.push(`${days}d`); if (hours > 0) parts.push(`${hours}h`); if (minutes > 0 || (days === 0 && hours === 0)) parts.push(`${minutes}m`); const timeString = parts.join(' '); return diffMillis >= 0 ? `in ${timeString}` : `${timeString} ago`; }
+      function updateCountdowns() { const now = new Date(); countdownElements.forEach(span => { const td = span.closest('td[data-delete-at]'); if (!td) return; const deleteAtISO = td.dataset.deleteAt; if (!deleteAtISO) return; try { const targetDate = new Date(deleteAtISO); if (isNaN(targetDate.getTime())) { throw new Error("Invalid date parsed"); } const diff = targetDate - now; span.textContent = `(${formatTimeDifference(diff)})`; if (diff < 0) { span.classList.add('text-red-500'); } else { span.classList.remove('text-red-500'); } } catch (e) { console.error("Error parsing date for countdown:", deleteAtISO, e); span.textContent = "(invalid date)"; } }); }
+      if (countdownElements.length > 0) { updateCountdowns(); const countdownInterval = setInterval(updateCountdowns, 30000); }
+
+      const logOutput = document.getElementById('log-output');
+      const maxLogLines = 250;
+      let initialConnectMessageCleared = false;
+      function addLogLine(message, type = 'log') {
+            if (!initialConnectMessageCleared && logOutput.textContent.includes('Connecting to log stream...')) { logOutput.textContent = ''; initialConnectMessageCleared = true; }
+            const newLogLine = document.createElement('div');
+            newLogLine.textContent = message;
+            newLogLine.classList.add('mb-1');
+            if (type === 'status') { newLogLine.classList.add('log-status'); }
+            else if (type === 'error') { newLogLine.classList.add('log-status', 'error'); }
+            else if (type === 'connected') { newLogLine.classList.add('log-status', 'connected'); }
+            const isScrolledToBottom = logOutput.scrollHeight - logOutput.clientHeight <= logOutput.scrollTop + 10;
+            logOutput.appendChild(newLogLine);
+            while (logOutput.childNodes.length > maxLogLines) { logOutput.removeChild(logOutput.firstChild); }
+            if (isScrolledToBottom) { logOutput.scrollTop = logOutput.scrollHeight; }
+      }
+      function connectEventSource() {
+          if (!!window.EventSource) {
+              const logSource = new EventSource('/stream-logs');
+              logSource.onopen = function() { console.log("Log stream connection opened."); addLogLine("--- Log stream connected ---", 'connected'); };
+              logSource.onmessage = function(event) { try { const data = JSON.parse(event.data); addLogLine(event.data, 'log'); } catch (e) { addLogLine(event.data, 'log'); } };
+              logSource.onerror = function(err) { console.error("EventSource failed:", err); addLogLine("--- Log stream connection error. Retrying in 5s... ---", 'error'); logSource.close(); setTimeout(connectEventSource, 5000); };
+          } else { logOutput.textContent = "Your browser doesn't support Server-Sent Events, cannot display real-time logs."; logOutput.classList.add('text-orange-500', 'font-semibold'); }
+      }
+      connectEventSource();
     </script>
 
 </body>
