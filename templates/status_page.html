@@ -71,24 +71,29 @@
         .agent-status-info { flex-grow: 1; }
         .agent-action-button { margin-left: 1rem; }
 
-        /* Custom Button Styles - Using direct properties */
+        /* === MODIFIED CSS FOR BUTTONS === */
+        /* Custom Button Styles - Using direct properties AND Pico variable */
         button.button-start {
-            color: white; /* Direct text color */
+            --pico-color: white; /* Explicitly set Pico's text color variable */
+            color: white; /* Fallback color (optional but good practice) */
             background-color: var(--button-color-green); /* Base background */
             border-color: var(--button-color-green); /* Base border */
         }
         button.button-start:not(:disabled):hover { /* Apply hover only if not disabled */
+             --pico-color: white; /* Ensure text stays white on hover */
              color: white;
              background-color: var(--button-color-green-hover); /* Hover background */
              border-color: var(--button-color-green-hover); /* Hover border */
         }
 
         button.button-stop {
-             color: white; /* Direct text color */
+             --pico-color: white; /* Explicitly set Pico's text color variable */
+             color: white; /* Fallback color */
              background-color: var(--button-color-red); /* Base background */
              border-color: var(--button-color-red); /* Base border */
         }
          button.button-stop:not(:disabled):hover { /* Apply hover only if not disabled */
+             --pico-color: white; /* Ensure text stays white on hover */
              color: white;
              background-color: var(--button-color-red-hover); /* Hover background */
              border-color: var(--button-color-red-hover); /* Hover border */
@@ -97,12 +102,14 @@
         /* Ensure disabled states use standard Pico disabled style (important!) */
         button.button-start:disabled,
         button.button-stop:disabled {
+            /* These !important overrides are usually fine for disabled state */
             color: var(--pico-form-element-disabled-color) !important;
             background-color: var(--pico-form-element-disabled-background-color) !important;
             border-color: var(--pico-form-element-disabled-border-color) !important;
             cursor: not-allowed;
             opacity: 0.5;
         }
+        /* === END OF MODIFIED CSS FOR BUTTONS === */
 
         button.delete-button { font-size: 0.85em; padding: 0.4rem 0.6rem; --pico-color: var(--pico-color-red-600); --pico-color-hover: var(--pico-color-red-700); --pico-color-focus: var(--pico-color-red-700); }
 
