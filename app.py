@@ -16,15 +16,12 @@ from flask import Flask, jsonify, render_template, redirect, url_for, request, R
 from dotenv import load_dotenv
 import requests
 
-
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] [%(threadName)s] %(message)s')
 load_dotenv()
-
 
 MAX_CF_UPDATE_RETRIES = 3
 CF_UPDATE_RETRY_DELAY = 2
 CF_UPDATE_BACKOFF_FACTOR = 2
-
 
 CF_API_TOKEN = os.getenv('CF_API_TOKEN')
 TUNNEL_NAME = os.getenv('TUNNEL_NAME')
@@ -36,7 +33,6 @@ CF_HEADERS = {
     "Content-Type": "application/json",
 }
 
-
 LABEL_PREFIX = os.getenv('LABEL_PREFIX', 'cloudflare.tunnel')
 GRACE_PERIOD_SECONDS = int(os.getenv('GRACE_PERIOD_SECONDS', 28800))
 CLEANUP_INTERVAL_SECONDS = int(os.getenv('CLEANUP_INTERVAL_SECONDS', 300))
@@ -44,18 +40,15 @@ AGENT_STATUS_UPDATE_INTERVAL_SECONDS = int(os.getenv('AGENT_STATUS_UPDATE_INTERV
 STATE_FILE_PATH = os.getenv('STATE_FILE_PATH', '/app/data/state.json')
 MAX_LOG_QUEUE_SIZE = 200
 
-
 CLOUDFLARED_CONTAINER_NAME = os.getenv('CLOUDFLARED_CONTAINER_NAME', f"cloudflared-agent-{TUNNEL_NAME}")
 CLOUDFLARED_IMAGE = "cloudflare/cloudflared:latest"
 CLOUDFLARED_NETWORK_NAME = os.getenv('CLOUDFLARED_NETWORK_NAME', 'cloudflare-net')
-
 
 if not CF_API_TOKEN or not TUNNEL_NAME or not CF_ACCOUNT_ID:
     logging.error("FATAL: Missing required environment variables (CF_API_TOKEN, TUNNEL_NAME, CF_ACCOUNT_ID)")
     sys.exit(1)
 if not CF_ZONE_ID:
     logging.warning("CF_ZONE_ID not set. DNS management requires 'cloudflare.tunnel.zonename' label on containers.")
-
 
 log_queue = queue.Queue(maxsize=MAX_LOG_QUEUE_SIZE)
 log_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
@@ -79,13 +72,11 @@ class QueueLogHandler(logging.Handler):
             except queue.Full:
                  print("Log queue full, dropping message.", file=sys.stderr)
 
-
 queue_handler = QueueLogHandler(log_queue)
 queue_handler.setFormatter(log_formatter)
 queue_handler.setLevel(logging.INFO)
 root_logger = logging.getLogger()
 root_logger.addHandler(queue_handler)
-
 
 try:
     docker_client = docker.from_env(timeout=10)
@@ -95,14 +86,12 @@ except Exception as e:
     logging.error(f"FATAL: Failed to connect to Docker daemon: {e}")
     docker_client = None
 
-
 tunnel_state = { "name": TUNNEL_NAME, "id": None, "token": None, "status_message": "Initializing...", "error": None }
 cloudflared_agent_state = { "container_status": "unknown", "last_action_status": None }
 managed_rules = {}
 zone_id_cache = {}
 state_lock = threading.Lock()
 stop_event = threading.Event()
-
 
 def load_state():
     global managed_rules
@@ -145,7 +134,6 @@ def load_state():
         logging.error(f"Error loading state from {STATE_FILE_PATH}: {e}. Starting fresh.", exc_info=True)
         managed_rules = {}
 
-
 def save_state():
     serializable_state = {}
     for hostname, rule in managed_rules.items():
@@ -169,7 +157,6 @@ def save_state():
         logging.debug(f"Saved state for {len(managed_rules)} rules to {STATE_FILE_PATH}")
     except (IOError, OSError) as e:
         logging.error(f"Error saving state to {STATE_FILE_PATH}: {e}", exc_info=True)
-
 
 def cf_api_request(method, endpoint, json_data=None, params=None):
     url = f"{CF_API_BASE_URL}{endpoint}"
@@ -229,7 +216,6 @@ def cf_api_request(method, endpoint, json_data=None, params=None):
              tunnel_state["error"] = error_msg
         raise e 
 
-
 def get_zone_id_from_name(zone_name):
     """Retrieves the Zone ID for a given zone name, using cache."""
     global zone_id_cache
@@ -275,7 +261,6 @@ def get_zone_id_from_name(zone_name):
         logging.error(f"Unexpected error looking up zone '{zone_name}': {e}", exc_info=True)
         return None
 
-
 def find_tunnel_via_api(name):
     """Finds an existing tunnel and its token via the API."""
     logging.info(f"Finding tunnel '{name}' via API")
@@ -305,7 +290,6 @@ def find_tunnel_via_api(name):
         tunnel_state["error"] = f"Unexpected error finding tunnel: {e}"
         return None, None
 
-
 def get_tunnel_token_via_api(tunnel_id):
     """Gets the token for a specific tunnel ID."""
     logging.info(f"Getting token for tunnel ID '{tunnel_id}'")
@@ -333,7 +317,6 @@ def get_tunnel_token_via_api(tunnel_id):
          tunnel_state["error"] = f"Unexpected error getting token: {e}"
          raise
 
-
 def create_tunnel_via_api(name):
     """Creates a new tunnel and returns its ID and token."""
     logging.info(f"Creating tunnel '{name}' via API")
@@ -356,7 +339,6 @@ def create_tunnel_via_api(name):
         logging.error(f"Unexpected error creating tunnel '{name}': {e}", exc_info=True)
         tunnel_state["error"] = f"Unexpected error creating tunnel: {e}"
         return None, None
-
 
 def initialize_tunnel():
     """Finds or creates the tunnel and gets its token."""
@@ -392,7 +374,6 @@ def initialize_tunnel():
         if not tunnel_state.get("error"):
             tunnel_state["error"] = f"Initialization failed unexpectedly: {e}"
         tunnel_state["status_message"] = "Tunnel initialization failed (unexpected error)."
-
 
 def get_current_cf_config():
     """Gets the current tunnel configuration from Cloudflare."""
@@ -432,7 +413,6 @@ def get_current_cf_config():
         if not tunnel_state.get("error"):
             tunnel_state["error"] = f"Unexpected error getting tunnel config: {e}"
         return None
-
 
 def find_dns_record_id(zone_id, hostname, tunnel_id):
     """Finds the ID of a specific CNAME DNS record pointing to the tunnel."""
@@ -516,7 +496,6 @@ def create_cloudflare_dns_record(zone_id, hostname, tunnel_id):
         logging.error(f"Unexpected error creating DNS record for {hostname}: {e}", exc_info=True)
         return None
 
-
 def delete_cloudflare_dns_record(zone_id, hostname, tunnel_id):
     """Deletes the specific CNAME DNS record pointing to the tunnel."""
     if not zone_id or not hostname or not tunnel_id:
@@ -543,7 +522,6 @@ def delete_cloudflare_dns_record(zone_id, hostname, tunnel_id):
     except Exception as e:
         logging.error(f"Unexpected error deleting DNS record {dns_record_id} for {hostname}: {e}", exc_info=True)
         return False
-
 
 def update_cloudflare_config():
     """Updates the Cloudflare tunnel ingress configuration if needed."""
@@ -661,7 +639,6 @@ def update_cloudflare_config():
         return False
     else:
         return True
-
 
 def process_container_start(container):
     """Processes a container start event based on labels."""
@@ -799,7 +776,6 @@ def process_container_start(container):
     except Exception as e:
         logging.error(f"Unexpected error processing container start ({container_name}): {e}", exc_info=True)
 
-
 def schedule_container_stop(container_id):
     """Schedules a rule for deletion when its container stops."""
     if not container_id: return
@@ -827,7 +803,6 @@ def schedule_container_stop(container_id):
 
         if state_changed:
             save_state()
-
 
 def docker_event_listener():
     """Listens for Docker start/stop events and processes them."""
@@ -889,7 +864,6 @@ def docker_event_listener():
                             except Exception as e:
                                 logging.error(f"Unexpected error processing start event for {cont_id[:12]} after retrieval: {e}", exc_info=True)
                         
-
                     elif action in ["stop", "die", "destroy", "kill"]:
                          try:
                              schedule_container_stop(cont_id)
@@ -915,7 +889,6 @@ def docker_event_listener():
     if error_count >= max_errors:
         logging.error("Docker event listener stopping after multiple consecutive errors.")
     logging.info("Docker event listener stopped.")
-
 
 def cleanup_expired_rules():
     """Periodically checks for and cleans up expired rules."""
@@ -968,7 +941,6 @@ def cleanup_expired_rules():
                          dns_delete_success_all = False
                          processed_hostnames_for_cf_update.append(hostname)
 
-
                 if processed_hostnames_for_cf_update:
                     logging.info(f"Attempting Cloudflare tunnel config update after processing DNS deletions for: {processed_hostnames_for_cf_update}")
                     if update_cloudflare_config():
@@ -1000,7 +972,6 @@ def cleanup_expired_rules():
         stop_event.wait(wait_duration)
 
     logging.info("Cleanup task stopped.")
-
 
 def reconcile_state():
     """Compares Docker state, local state, and Cloudflare state, making necessary adjustments."""
@@ -1156,7 +1127,6 @@ def reconcile_state():
     finally:
         logging.info("Reconciliation complete.")
 
-
 def get_cloudflared_container():
     """Gets the cloudflared agent container object."""
     if not docker_client:
@@ -1179,7 +1149,6 @@ def get_cloudflared_container():
         logging.error(f"Unexpected error getting container '{CLOUDFLARED_CONTAINER_NAME}': {e}", exc_info=True)
         cloudflared_agent_state["last_action_status"] = f"Error unexpected get agent: {e}"
         return None
-
 
 def update_cloudflared_container_status():
     """Updates the global state with the agent container's current status."""
@@ -1211,7 +1180,6 @@ def update_cloudflared_container_status():
              
              return
 
-    
     container = get_cloudflared_container()
     if container:
         try:
@@ -1413,7 +1381,6 @@ def start_cloudflared_container():
         logging.info(f"Exiting start_cloudflared_container function (Success: {success_flag}).")
         return success_flag
 
-
 def stop_cloudflared_container():
     """Stops the cloudflared agent container."""
     logging.info(f"Attempting to stop agent container '{CLOUDFLARED_CONTAINER_NAME}'...")
@@ -1462,17 +1429,14 @@ def stop_cloudflared_container():
         logging.info(f"Exiting stop_cloudflared_container function (Success: {success_flag}).")
         return success_flag
 
-
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
-
 
 def get_display_token(token):
     """Returns a truncated token for display."""
     if not token:
         return "Not available"
     return f"{token[:5]}...{token[-5:]}" if len(token) > 10 else "Token retrieved (short)"
-
 
 @app.route('/')
 def status_page():
@@ -1503,7 +1467,6 @@ def status_page():
                             docker_available=docker_available,
                             rules=rules_for_template)
 
-
 @app.route('/start-tunnel', methods=['POST'])
 def start_tunnel():
     """Handles request to start the tunnel agent."""
@@ -1512,7 +1475,6 @@ def start_tunnel():
     time.sleep(1)
     return redirect(url_for('status_page'))
 
-
 @app.route('/stop-tunnel', methods=['POST'])
 def stop_tunnel():
     """Handles request to stop the tunnel agent."""
@@ -1520,7 +1482,6 @@ def stop_tunnel():
     stop_cloudflared_container()
     time.sleep(1)
     return redirect(url_for('status_page'))
-
 
 @app.route('/force_delete_rule/<hostname>', methods=['POST'])
 def force_delete_rule(hostname):
@@ -1576,7 +1537,6 @@ def force_delete_rule(hostname):
     time.sleep(1)
     return redirect(url_for('status_page'))
 
-
 @app.route('/stream-logs')
 def stream_logs():
     """Streams log messages using Server-Sent Events."""
@@ -1593,7 +1553,6 @@ def stream_logs():
         finally:
             pass
     return Response(event_stream(), mimetype='text/event-stream')
-
 
 def run_background_tasks():
     """Starts the Docker event listener and cleanup threads."""
@@ -1613,7 +1572,6 @@ def run_background_tasks():
     threads.extend([event_thread, cleanup_thread])
     logging.info("Event Listener and Cleanup threads started.")
     return threads
-
 
 if __name__ == '__main__':
     logging.info("-" * 52)
