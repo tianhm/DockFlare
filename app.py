@@ -552,7 +552,7 @@ def delete_cloudflare_dns_record(zone_id, hostname, tunnel_id):
         return False
 
 def update_cloudflare_config():
-    """Updates the Cloudflare tunnel ingress configuration if needed."""
+    """Updates the Cloudflare tunnel ingress configuration if needed, preserving existing rules."""
     if not tunnel_state.get("id"):
         logging.warning("Cannot update CF config, tunnel ID missing.")
         return False
@@ -562,15 +562,42 @@ def update_cloudflare_config():
 
     with state_lock:
         logging.info("Checking for Cloudflare tunnel config updates...")
-        desired_ingress_rules = []
-        catch_all_rule = {"service": "http_status:404"}
+        # Get current configuration from Cloudflare
+        current_config = get_current_cf_config()
+        if current_config is None:
+            logging.error("Failed to fetch current CF config, aborting update check.")
+            return False
 
+        # Extract current ingress rules
+        current_ingress_rules = current_config.get("ingress", [])
+        
+        # Identify the catch-all rule (usually the last one)
+        catch_all_rule = {"service": "http_status:404"}
+        has_catch_all = False
+        preserved_ingress_rules = []
+        
+        # Process existing rules
+        for rule in current_ingress_rules:
+            if rule.get("service") == catch_all_rule["service"]:
+                # This is the catch-all rule - save it for later
+                catch_all_rule = rule  # Preserve any custom settings in the catch-all
+                has_catch_all = True
+            else:
+                # This is a regular rule - preserve it unless we're going to manage it ourselves
+                hostname = rule.get("hostname")
+                if hostname is None or hostname not in managed_rules:
+                    # This is an external rule we should preserve
+                    preserved_ingress_rules.append(rule)
+                # Rules we manage will be added from our state
+        
+        # Create rules for hostnames we manage
+        our_ingress_rules = []
         for hostname, rule_details in managed_rules.items():
             if rule_details.get("status") == "active":
                 service = rule_details.get("service")
                 if service:
                     no_tls_verify = rule_details.get("no_tls_verify", False)
-                    desired_ingress_rules.append({
+                    our_ingress_rules.append({
                         "hostname": hostname,
                         "service": service,
                         "originRequest": {
@@ -579,37 +606,64 @@ def update_cloudflare_config():
                     })
                 else:
                     logging.warning(f"Rule {hostname} is active but missing 'service' detail. Skipping.")
-
-        desired_ingress_rules.sort(key=lambda x: x.get("hostname", ""))
-
-        logging.debug("Fetching current CF config for comparison...")
-        current_config = get_current_cf_config()
-        if current_config is None:
-            logging.error("Failed to fetch current CF config, aborting update check.")
-            return False
-
-        current_cf_ingress = [r for r in current_config.get("ingress", []) if r.get("service") != catch_all_rule["service"]]
-
-        def rule_to_canonical(rule):
-            items = sorted([(k, v) for k, v in rule.items() if k in ["hostname", "service"]])
-            return tuple(items)
-
-        try:
-             current_cf_set = {rule_to_canonical(r) for r in current_cf_ingress if r.get("hostname") and r.get("service")}
-             desired_set = {rule_to_canonical(r) for r in desired_ingress_rules if r.get("hostname") and r.get("service")}
-        except Exception as e:
-             logging.error(f"Error creating canonical rule sets for comparison: {e}", exc_info=True)
-             return False
-
-        if current_cf_set == desired_set:
-            logging.info("No changes detected in CF tunnel config. Skipping API update.")
-            needs_api_update = False
+        
+        # We need to check if any of our managed rules need to be added or updated
+        current_hostnames = set(rule.get("hostname") for rule in preserved_ingress_rules 
+                              if rule.get("hostname") is not None)
+        our_hostnames = set(rule.get("hostname") for rule in our_ingress_rules 
+                          if rule.get("hostname") is not None)
+        
+        # If our hostnames are different from what exists (for the ones we manage), update is needed
+        needs_api_update = not our_hostnames.issubset(current_hostnames)
+        
+        # If we need to check rule contents, we could do a deeper comparison here
+        if not needs_api_update:
+            # Compare rule contents for hostnames we manage
+            current_rules_by_hostname = {rule.get("hostname"): rule for rule in current_ingress_rules 
+                                       if rule.get("hostname") in our_hostnames}
+            
+            for rule in our_ingress_rules:
+                hostname = rule.get("hostname")
+                if hostname and hostname in current_rules_by_hostname:
+                    current_rule = current_rules_by_hostname[hostname]
+                    if current_rule.get("service") != rule.get("service"):
+                        needs_api_update = True
+                        break
+                    
+                    # Check noTLSVerify settings if present
+                    current_no_tls = (current_rule.get("originRequest", {}) or {}).get("noTLSVerify", False)
+                    our_no_tls = (rule.get("originRequest", {}) or {}).get("noTLSVerify", False)
+                    if current_no_tls != our_no_tls:
+                        needs_api_update = True
+                        break
+        
+        if needs_api_update:
+            logging.info("Change detected. Merging our ingress rules with existing external rules.")
+            
+            # Combine preserved rules and our rules, ensuring no duplicates
+            merged_rules = preserved_ingress_rules.copy()
+            
+            # Add our rules, but avoid duplicating any that might have been caught in preservation
+            for rule in our_ingress_rules:
+                hostname = rule.get("hostname")
+                if hostname:
+                    # Make sure we don't duplicate rules
+                    if not any(r.get("hostname") == hostname for r in merged_rules):
+                        merged_rules.append(rule)
+            
+            # Ensure rules are sorted for consistent output
+            merged_rules.sort(key=lambda x: x.get("hostname", "") if x.get("hostname") else "zzzz")
+            
+            # Always add the catch-all rule at the end
+            if has_catch_all:
+                merged_rules.append(catch_all_rule)
+            else:
+                merged_rules.append({"service": "http_status:404"})
+            
+            final_ingress_rules = merged_rules
+            logging.debug(f"Final merged rules count: {len(final_ingress_rules)}")
         else:
-            logging.info("Change detected. Desired ingress rules differ from current CF config.")
-            logging.debug(f"Current CF rules: {current_cf_set}")
-            logging.debug(f"Desired rules: {desired_set}")
-            needs_api_update = True
-            final_ingress_rules = desired_ingress_rules + [catch_all_rule]
+            logging.info("No changes detected in CF tunnel config. Skipping API update.")
 
     if needs_api_update and final_ingress_rules is not None:
         endpoint = f"/accounts/{CF_ACCOUNT_ID}/cfd_tunnel/{tunnel_state['id']}/configurations"
@@ -1487,11 +1541,13 @@ app.secret_key = os.urandom(24)
 @app.after_request
 def add_security_headers(response):
     """Add security headers to help with reverse proxies and fix CSS loading issues."""
-    # Fix cross-origin issues with reverse proxies
+    # More permissive CSP to ensure CSS and fonts load through reverse proxies
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; style-src 'self' https://rsms.me 'unsafe-inline'; font-src 'self' https://rsms.me; img-src 'self' data:; connect-src 'self'"
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; style-src * 'unsafe-inline'; font-src * data:; img-src 'self' data:; connect-src 'self'"
     response.headers['Referrer-Policy'] = 'no-referrer-when-downgrade'
+    # Fix caching and CORS issues
+    response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
 def get_display_token(token):
@@ -1605,38 +1661,55 @@ def force_delete_rule(hostname):
 
 @app.route('/stream-logs')
 def stream_logs():
-    """Streams log messages using Server-Sent Events."""
+    """Streams log messages using Server-Sent Events with improved connection handling."""
     @stream_with_context
     def event_stream():
-        logging.info("Log stream client connected.")
+        client_id = f"client-{random.randint(1000, 9999)}"
+        logging.info(f"Log stream {client_id} connected.")
         yield f"data: --- Log stream connected ---\n\n"
-        heartbeat_interval = 30  # Send heartbeat every 30 seconds
+        
+        # Send an immediate heartbeat to establish the connection
+        yield f"data: heartbeat\n\n"
+        
+        heartbeat_interval = 15  # More frequent heartbeats (15 seconds)
         last_heartbeat = time.time()
+        
         try:
             while True:
                 current_time = time.time()
-                # Send periodic heartbeats to keep connection alive
+                
+                # Handle heartbeats more aggressively
                 if current_time - last_heartbeat > heartbeat_interval:
                     yield f"data: heartbeat\n\n"
                     last_heartbeat = current_time
                     
                 try:
-                    log_entry = log_queue.get(timeout=3)  # Reduced timeout for better responsiveness
-                    yield f"data: {log_entry}\n\n"
+                    # Very short timeout to prevent blocking waitress threads
+                    log_entry = log_queue.get(timeout=1)  
+                    if log_entry:
+                        yield f"data: {log_entry}\n\n"
                 except queue.Empty:
-                    # No log entry, continue - shorter timeout helps with clean shutdowns
-                    continue
+                    # No log entry available, yield an empty comment to keep connection
+                    yield f": keepalive {int(current_time)}\n\n"
+                
+                # Brief sleep to yield control back to waitress
+                time.sleep(0.01)
+                
         except GeneratorExit:
-            logging.info("Log stream client disconnected.")
+            logging.info(f"Log stream {client_id} disconnected.")
         except Exception as e:
-            logging.error(f"Unexpected error in log stream: {e}", exc_info=True)
+            logging.error(f"Unexpected error in log stream {client_id}: {e}", exc_info=True)
         finally:
-            # Ensure we clean up properly to prevent waitress task queue buildup
-            logging.debug("Log stream connection ended")
+            logging.debug(f"Log stream {client_id} connection ended")
     
     response = Response(event_stream(), mimetype='text/event-stream')
-    response.headers['Cache-Control'] = 'no-cache'
-    response.headers['X-Accel-Buffering'] = 'no'  # Prevents proxy buffering
+    # Enhanced headers for better proxy compatibility
+    response.headers.update({
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',  # For Nginx
+        'Connection': 'keep-alive',
+        'X-Requested-With': 'XMLHttpRequest'
+    })
     return response
 
 def run_background_tasks():
