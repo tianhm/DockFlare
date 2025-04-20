@@ -1250,6 +1250,16 @@ def get_cloudflared_container():
     if not docker_client:
         logging.warning("Docker client unavailable.")
         return None
+        
+    # Skip container checks in external mode
+    if USE_EXTERNAL_CLOUDFLARED:
+        return None
+        
+    # Ensure we have a container name to check
+    if not CLOUDFLARED_CONTAINER_NAME:
+        logging.debug("CLOUDFLARED_CONTAINER_NAME is None or empty, skipping container check.")
+        return None
+        
     try:
         return docker_client.containers.get(CLOUDFLARED_CONTAINER_NAME)
     except NotFound:
