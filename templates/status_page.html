@@ -5,13 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dockflare - Status</title>
     
-    <!-- Load compiled Tailwind CSS first (works with reverse proxy) -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='tailwind.css') }}">
+    <!-- Use a specific version of Tailwind CSS from CDN to ensure stability -->
+    <script src="https://cdn.tailwindcss.com/3.3.5"></script>
     
-    <!-- Fallback to CDN if available -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
+    <!-- Inter font -->
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    
     <script>
         tailwind.config = {
           darkMode: 'class',

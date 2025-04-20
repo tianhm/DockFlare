@@ -1,4 +1,5 @@
 # Use an official Python runtime as a parent image
+# Using slim variant for smaller size
 FROM python:3.13-slim
 
 # Set environment variables for Python
@@ -9,8 +10,10 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Install system dependencies needed for downloading and installing cloudflared
+# Also install cloudflared itself
+# Pinning the version is recommended for reproducibility
+# renovate: datasource=github-releases depName=cloudflare/cloudflared versioning=semver
 ENV CLOUDFLARED_VERSION="2024.1.5"
-
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     ca-certificates \
@@ -30,22 +33,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm cloudflared-$CLOUDFLARED_ARCH.deb && \
     cloudflared --version && \
     mkdir -p /root/.cloudflared && \
-    echo "Created /root/.cloudflared directory"
-
-# Create static directory and copy files
-RUN mkdir -p /app/static
-COPY static/ /app/static/
-COPY templates/ /app/templates/
+    echo "Created /root/.cloudflared directory" # Optional: confirmation log
 
 # Install Python dependencies
+# Copy requirements file first to leverage Docker cache
 COPY requirements.txt .
+# Install packages specified in requirements.txt
+# --no-cache-dir reduces layer size
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code
+# Copy the rest of the application code into the container
+# In this case, just app.py
 COPY app.py .
 
-# Expose port 5000
+COPY templates /app/templates
+# Inform Docker that the container listens on port 5000 at runtime
+# This is documentation; actual mapping is done in docker-compose.yml or `docker run -p`
 EXPOSE 5000
 
-# Run the application
+# Define the command to run the application when the container starts
+# It runs the Flask development server defined in app.py
+# Environment variables (like CF_API_TOKEN) are expected to be passed in at runtime (e.g., via docker-compose)
 CMD ["python", "app.py"]
