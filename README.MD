@@ -162,6 +162,60 @@ This method involves cloning the repository, which gives you access to the examp
 
 ---
 
+## External Cloudflared Container Integration
+
+DockFlare can now work with existing cloudflared containers instead of creating its own. This is useful if:
+
+1. You already have a cloudflared container running elsewhere
+2. You want to manage tunnels separately from DNS/ingress rules
+3. You prefer to configure cloudflared with custom parameters
+
+### Using an External Cloudflared Container
+
+To use an external cloudflared container:
+
+1. **Enable External Mode:** Set `USE_EXTERNAL_CLOUDFLARED=true` in your `.env` file
+2. **Provide Tunnel ID:** Set `EXTERNAL_TUNNEL_ID` to the ID of your existing tunnel
+
+Your `.env` file should include:
+
+```dotenv
+# --- External Cloudflared Configuration ---
+USE_EXTERNAL_CLOUDFLARED=true
+EXTERNAL_TUNNEL_ID=your-external-tunnel-id # The UUID of your existing tunnel
+```
+
+### How External Mode Works
+
+When external mode is enabled, DockFlare:
+
+- Does NOT create or manage a cloudflared container
+- Only manages DNS records and tunnel ingress rules
+- Uses the provided external tunnel ID for all operations
+- Still detects Docker containers with appropriate labels and adds them to the tunnel configuration
+
+The Web UI will display "External Mode" when using an existing cloudflared container.
+
+### Creating an External Tunnel
+
+If you need to create a tunnel for external mode:
+
+1. Create a tunnel using the cloudflared CLI:
+   ```bash
+   cloudflared tunnel create my-tunnel-name
+   ```
+
+2. Note the Tunnel ID (UUID) and use it for `EXTERNAL_TUNNEL_ID`
+
+3. Run cloudflared separately with:
+   ```bash
+   cloudflared tunnel --no-autoupdate run --token your-tunnel-token
+   ```
+
+This approach gives you more control over how cloudflared runs while letting DockFlare handle the DNS and ingress configuration.
+
+---
+
 ### Next Steps
 
 1.  **Access the Web UI:**

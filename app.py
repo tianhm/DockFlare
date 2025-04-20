@@ -40,6 +40,9 @@ AGENT_STATUS_UPDATE_INTERVAL_SECONDS = int(os.getenv('AGENT_STATUS_UPDATE_INTERV
 STATE_FILE_PATH = os.getenv('STATE_FILE_PATH', '/app/data/state.json')
 MAX_LOG_QUEUE_SIZE = 200
 
+# External cloudflared container configuration
+USE_EXTERNAL_CLOUDFLARED = os.getenv('USE_EXTERNAL_CLOUDFLARED', 'false').lower() in ['true', '1', 't', 'yes']
+EXTERNAL_TUNNEL_ID = os.getenv('EXTERNAL_TUNNEL_ID')
 CLOUDFLARED_CONTAINER_NAME = os.getenv('CLOUDFLARED_CONTAINER_NAME', f"cloudflared-agent-{TUNNEL_NAME}")
 CLOUDFLARED_IMAGE = "cloudflare/cloudflared:latest"
 CLOUDFLARED_NETWORK_NAME = os.getenv('CLOUDFLARED_NETWORK_NAME', 'cloudflare-net')
@@ -49,6 +52,9 @@ if not CF_API_TOKEN or not TUNNEL_NAME or not CF_ACCOUNT_ID:
     sys.exit(1)
 if not CF_ZONE_ID:
     logging.warning("CF_ZONE_ID not set. DNS management requires 'cloudflare.tunnel.zonename' label on containers.")
+
+if USE_EXTERNAL_CLOUDFLARED and not EXTERNAL_TUNNEL_ID:
+    logging.warning("USE_EXTERNAL_CLOUDFLARED is enabled but EXTERNAL_TUNNEL_ID is not set. This may cause issues with DNS record management.")
 
 log_queue = queue.Queue(maxsize=MAX_LOG_QUEUE_SIZE)
 log_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
@@ -347,6 +353,28 @@ def initialize_tunnel():
     tunnel_state["error"] = None
     tunnel_id = None
     token = None
+    
+    # If external cloudflared is configured, use its tunnel ID
+    if USE_EXTERNAL_CLOUDFLARED:
+        logging.info("External cloudflared configuration detected")
+        if EXTERNAL_TUNNEL_ID:
+            tunnel_id = EXTERNAL_TUNNEL_ID
+            logging.info(f"Using external tunnel ID: {tunnel_id}")
+            tunnel_state["id"] = tunnel_id
+            
+            # For external tunnels, we don't need the token since we don't manage the container
+            # But for DNS record management we need the tunnel ID
+            tunnel_state["token"] = None
+            tunnel_state["status_message"] = "Using external tunnel (DNS management only)."
+            logging.info(f"External tunnel '{TUNNEL_NAME}' (ID: {tunnel_id}) initialized for DNS management only.")
+            return
+        else:
+            logging.warning("USE_EXTERNAL_CLOUDFLARED is enabled but EXTERNAL_TUNNEL_ID is not provided.")
+            tunnel_state["status_message"] = "Error: External tunnel config missing tunnel ID."
+            tunnel_state["error"] = "External cloudflared enabled but missing tunnel ID"
+            return
+    
+    # Regular tunnel initialization (non-external mode)
     try:
         tunnel_id, token = find_tunnel_via_api(TUNNEL_NAME)
 
@@ -1456,6 +1484,16 @@ def stop_cloudflared_container():
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
+@app.after_request
+def add_security_headers(response):
+    """Add security headers to help with reverse proxies and fix CSS loading issues."""
+    # Fix cross-origin issues with reverse proxies
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; style-src 'self' https://rsms.me 'unsafe-inline'; font-src 'self' https://rsms.me; img-src 'self' data:; connect-src 'self'"
+    response.headers['Referrer-Policy'] = 'no-referrer-when-downgrade'
+    return response
+
 def get_display_token(token):
     """Returns a truncated token for display."""
     if not token:
@@ -1482,6 +1520,8 @@ def status_page():
 
     display_token = get_display_token(template_tunnel_state.get("token"))
     docker_available = docker_client is not None
+    external_cloudflared = USE_EXTERNAL_CLOUDFLARED
+    external_tunnel_id = EXTERNAL_TUNNEL_ID
 
     return render_template('status_page.html',
                             tunnel_state=template_tunnel_state,
@@ -1489,6 +1529,8 @@ def status_page():
                             display_token=display_token,
                             cloudflared_container_name=CLOUDFLARED_CONTAINER_NAME,
                             docker_available=docker_available,
+                            external_cloudflared=external_cloudflared,
+                            external_tunnel_id=external_tunnel_id,
                             rules=rules_for_template)
 
 @app.route('/start-tunnel', methods=['POST'])
@@ -1568,20 +1610,34 @@ def stream_logs():
     def event_stream():
         logging.info("Log stream client connected.")
         yield f"data: --- Log stream connected ---\n\n"
+        heartbeat_interval = 30  # Send heartbeat every 30 seconds
+        last_heartbeat = time.time()
         try:
             while True:
+                current_time = time.time()
+                # Send periodic heartbeats to keep connection alive
+                if current_time - last_heartbeat > heartbeat_interval:
+                    yield f"data: heartbeat\n\n"
+                    last_heartbeat = current_time
+                    
                 try:
-                    log_entry = log_queue.get(timeout=10)  # Add timeout to prevent indefinite blocking
+                    log_entry = log_queue.get(timeout=3)  # Reduced timeout for better responsiveness
                     yield f"data: {log_entry}\n\n"
                 except queue.Empty:
-                    continue  # No log entry, continue waiting
+                    # No log entry, continue - shorter timeout helps with clean shutdowns
+                    continue
         except GeneratorExit:
             logging.info("Log stream client disconnected.")
         except Exception as e:
             logging.error(f"Unexpected error in log stream: {e}", exc_info=True)
         finally:
-            pass
-    return Response(event_stream(), mimetype='text/event-stream')
+            # Ensure we clean up properly to prevent waitress task queue buildup
+            logging.debug("Log stream connection ended")
+    
+    response = Response(event_stream(), mimetype='text/event-stream')
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['X-Accel-Buffering'] = 'no'  # Prevents proxy buffering
+    return response
 
 def run_background_tasks():
     """Starts the Docker event listener and cleanup threads."""
