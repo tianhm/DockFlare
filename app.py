@@ -36,6 +36,9 @@ CF_HEADERS = {
 USE_EXTERNAL_CLOUDFLARED = os.getenv('USE_EXTERNAL_CLOUDFLARED', 'false').lower() in ['true', '1', 't', 'yes']
 EXTERNAL_TUNNEL_ID = os.getenv('EXTERNAL_TUNNEL_ID')
 
+# Network scanning configuration
+SCAN_ALL_NETWORKS = os.getenv('SCAN_ALL_NETWORKS', 'false').lower() in ['true', '1', 't', 'yes']
+
 # Settings that are only required when NOT using external cloudflared
 TUNNEL_NAME = os.getenv('TUNNEL_NAME') if not USE_EXTERNAL_CLOUDFLARED else "external-tunnel"
 CLOUDFLARED_NETWORK_NAME = os.getenv('CLOUDFLARED_NETWORK_NAME', 'cloudflare-net') if not USE_EXTERNAL_CLOUDFLARED else None
@@ -1099,7 +1102,7 @@ def reconcile_state():
     try:
         running_labeled_containers = {}
         try:
-             containers = docker_client.containers.list(sparse=False)
+             containers = docker_client.containers.list(sparse=False, all=SCAN_ALL_NETWORKS)
              logging.debug(f"[Reconcile] Found {len(containers)} running containers.")
              for c in containers:
                  try:
