@@ -49,6 +49,9 @@ CLOUDFLARED_NETWORK_NAME = os.getenv('CLOUDFLARED_NETWORK_NAME', 'cloudflare-net
 EXTERNAL_HOSTNAME = os.getenv('EXTERNAL_HOSTNAME', None)
 BASE_URL = os.getenv('BASE_URL', '/')
 
+app = Flask(__name__)
+
+# Ensure the app is defined before any decorators or configurations
 if EXTERNAL_HOSTNAME:
     @app.before_request
     def set_external_hostname():
@@ -1467,7 +1470,6 @@ def stop_cloudflared_container():
         logging.info(f"Exiting stop_cloudflared_container function (Success: {success_flag}).")
         return success_flag
 
-app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
 # Apply ProxyFix to trust headers from reverse proxies
