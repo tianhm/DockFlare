@@ -1468,6 +1468,10 @@ if BASE_URL:
     parsed_url = urlparse(BASE_URL)
     app.config['SERVER_NAME'] = parsed_url.netloc
     app.config['PREFERRED_URL_SCHEME'] = parsed_url.scheme
+    # Force Flask to use external URLs and respect X-Forwarded headers
+    app.config['PREFERRED_URL_SCHEME'] = parsed_url.scheme
+    app.config['APPLICATION_ROOT'] = '/'
+    app.config['USE_X_SENDFILE'] = False
     logging.info(f"Configured SERVER_NAME as {parsed_url.netloc} and PREFERRED_URL_SCHEME as {parsed_url.scheme}.")
 else:
     logging.warning("BASE_URL not set. Flask may generate incorrect URLs for static assets.")
