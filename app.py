@@ -1541,12 +1541,13 @@ app.secret_key = os.urandom(24)
 @app.after_request
 def add_security_headers(response):
     """Add security headers to help with reverse proxies and fix CSS loading issues."""
-    # More permissive CSP to ensure CSS and fonts load through reverse proxies
+    # Very permissive CSP to ensure all resources load through reverse proxies
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; style-src * 'unsafe-inline'; font-src * data:; img-src 'self' data:; connect-src 'self'"
+    # Allow everything from CDN for maximum compatibility with reverse proxies
+    response.headers['Content-Security-Policy'] = "default-src * 'unsafe-inline' 'unsafe-eval'; img-src * data:;"
     response.headers['Referrer-Policy'] = 'no-referrer-when-downgrade'
-    # Fix caching and CORS issues
+    # Fix CORS issues
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
@@ -1703,11 +1704,10 @@ def stream_logs():
             logging.debug(f"Log stream {client_id} connection ended")
     
     response = Response(event_stream(), mimetype='text/event-stream')
-    # Enhanced headers for better proxy compatibility
+    # Enhanced headers for better proxy compatibility - avoid hop-by-hop headers
     response.headers.update({
         'Cache-Control': 'no-cache, no-transform',
         'X-Accel-Buffering': 'no',  # For Nginx
-        'Connection': 'keep-alive',
         'X-Requested-With': 'XMLHttpRequest'
     })
     return response
