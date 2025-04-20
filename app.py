@@ -55,12 +55,13 @@ app = Flask(__name__)
 if EXTERNAL_HOSTNAME:
     @app.before_request
     def set_external_hostname():
-        request.environ['HTTP_HOST'] = EXTERNAL_HOSTNAME
+        if request.is_secure:
+            request.environ['HTTP_HOST'] = f"https://{EXTERNAL_HOSTNAME}"
+        else:
+            request.environ['HTTP_HOST'] = f"http://{EXTERNAL_HOSTNAME}"
 
 if BASE_URL != '/':
     app.config['APPLICATION_ROOT'] = BASE_URL
-    logging.info(f"Application root set to: {BASE_URL}")
-
 if not CF_API_TOKEN or not TUNNEL_NAME or not CF_ACCOUNT_ID:
     logging.error("FATAL: Missing required environment variables (CF_API_TOKEN, TUNNEL_NAME, CF_ACCOUNT_ID)")
     sys.exit(1)
