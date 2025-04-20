@@ -14,13 +14,24 @@ WORKDIR /app
 # Pinning the version is recommended for reproducibility
 # renovate: datasource=github-releases depName=cloudflare/cloudflared versioning=semver
 ENV CLOUDFLARED_VERSION="2024.1.5"
+ENV NODE_VERSION=16
+
+# Install dependencies in one step to keep the layer size down
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     ca-certificates \
-    nodejs \
-    npm \
+    curl \
+    gnupg \
     # Clean up apt cache to reduce image size
     && rm -rf /var/lib/apt/lists/* \
+    # Install Node.js with proper repository setup
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_VERSION.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/* \
+    # Verify node and npm are installed correctly
+    && node --version && npm --version \
     # Dynamically determine architecture and download the appropriate cloudflared binary
     && ARCH=$(dpkg --print-architecture) && \
     if [ "$ARCH" = "amd64" ]; then \
@@ -42,8 +53,8 @@ COPY static/ /app/static/
 COPY tailwind.config.js /app/
 
 # Install Tailwind CSS and build the CSS
-RUN npm install -D tailwindcss@latest postcss@latest autoprefixer@latest && \
-    npx tailwindcss -c tailwind.config.js -i /app/static/main.css -o /app/static/tailwind.css --minify
+RUN npm install -g tailwindcss postcss autoprefixer && \
+    tailwindcss -c tailwind.config.js -i /app/static/main.css -o /app/static/tailwind.css --minify
 
 # Install Python dependencies
 # Copy requirements file first to leverage Docker cache
