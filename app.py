@@ -1734,4 +1734,3 @@ if __name__ == '__main__':
         logging.info("Exiting Dockflare application.")
         exit_code = 1 if tunnel_state.get("error") or cloudflared_agent_state.get("container_status") == "docker_unavailable" else 0
         sys.exit(exit_code)
-``` 
