@@ -15,6 +15,7 @@ from docker.errors import NotFound, APIError
 from flask import Flask, jsonify, render_template, redirect, url_for, request, Response, stream_with_context
 from dotenv import load_dotenv
 import requests
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] [%(threadName)s] %(message)s')
 load_dotenv()
@@ -1455,6 +1456,10 @@ def stop_cloudflared_container():
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
+
+# Apply ProxyFix middleware to handle forwarded headers universally
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
+logging.info("Reverse proxy support enabled via ProxyFix.")
 
 def get_display_token(token):
     """Returns a truncated token for display."""

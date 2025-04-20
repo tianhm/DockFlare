@@ -155,6 +155,14 @@ This method involves cloning the repository, which gives you access to the examp
 
 ---
 
+### Reverse Proxy Support
+
+DockFlare supports running behind a reverse proxy (e.g., Traefik) with HTTPS. Forwarded headers (e.g., `X-Forwarded-Proto`) are handled automatically, so no additional configuration is required.
+
+Ensure your reverse proxy forwards the full URL, including the protocol (e.g., `https://dockflare.example.com`).
+
+---
+
 ### Architecture Support
 
 *   **Currently Supported:** The pre-built Docker image (`alplat/dockflare:stable`) now supports both `x86_64` / `amd64` and `arm64` architectures.
