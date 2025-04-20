@@ -30,7 +30,7 @@
         }
       </script>
       <!-- Inter font CSS with integrity attribute -->
-      <link rel="stylesheet" href="https://rsms.me/inter/inter.css" integrity="" crossorigin="anonymous">
+      <link rel="stylesheet" href="https://rsms.me/inter/inter.css" crossorigin="anonymous">
       <style type="text/tailwindcss">
         #log-output .log-status { @apply italic text-gray-400 dark:text-gray-500; }
         #log-output .log-status.error { @apply not-italic text-red-500 dark:text-red-400 font-semibold; }
@@ -331,27 +331,27 @@
               const logStreamUrl = new URL('/stream-logs', window.location.href).href;
               console.log("Connecting log stream to:", logStreamUrl);
               const logSource = new EventSource(logStreamUrl);
-              
-              logSource.onopen = function() { 
-                  console.log("Log stream connection opened."); 
-                  addLogLine("--- Log stream connected ---", 'connected'); 
+
+              logSource.onopen = function() {
+                  console.log("Log stream connection opened.");
+                  addLogLine("--- Log stream connected ---", 'connected');
               };
-              
-              logSource.onmessage = function(event) { 
+
+              logSource.onmessage = function(event) {
                   console.log("Log received:", event.data.substring(0, 50) + (event.data.length > 50 ? "..." : ""));
                   // Don't try to parse as JSON - our logs are plain text
-                  addLogLine(event.data, 'log'); 
+                  addLogLine(event.data, 'log');
               };
-              
-              logSource.onerror = function(err) { 
-                  console.error("EventSource failed:", err); 
-                  addLogLine("--- Log stream connection error. Retrying in 5s... ---", 'error'); 
-                  logSource.close(); 
-                  setTimeout(connectEventSource, 5000); 
+
+              logSource.onerror = function(err) {
+                  console.error("EventSource failed:", err);
+                  addLogLine("--- Log stream connection error. Retrying in 5s... ---", 'error');
+                  logSource.close();
+                  setTimeout(connectEventSource, 5000);
               };
-          } else { 
-              logOutput.textContent = "Your browser doesn't support Server-Sent Events, cannot display real-time logs."; 
-              logOutput.classList.add('text-orange-500', 'font-semibold'); 
+          } else {
+              logOutput.textContent = "Your browser doesn't support Server-Sent Events, cannot display real-time logs.";
+              logOutput.classList.add('text-orange-500', 'font-semibold');
           }
       }
       connectEventSource();

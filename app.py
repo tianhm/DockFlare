@@ -1387,6 +1387,66 @@ def stop_cloudflared_container():
         logging.info(f"Exiting stop_cloudflared_container function (Success: {success_flag}).")
         return success_flag
 
+def update_cloudflare_config():
+    """Updates the Cloudflare tunnel ingress configuration if needed."""
+    if not tunnel_state.get("id"):
+        logging.warning("Cannot update CF config, tunnel ID missing.")
+        return False
+
+    final_ingress_rules = None
+    needs_api_update = False
+
+    with state_lock:
+        logging.info("Checking for Cloudflare tunnel config updates...")
+        desired_ingress_rules = []
+        catch_all_rule = {"service": "http_status:404"}
+
+        for hostname, rule_details in managed_rules.items():
+            if rule_details.get("status") == "active":
+                service = rule_details.get("service")
+                if service:
+                    no_tls_verify = rule_details.get("no_tls_verify", False)
+                    desired_ingress_rules.append({
+                        "hostname": hostname,
+                        "service": service,
+                        "originRequest": {
+                            "noTLSVerify": no_tls_verify
+                        }
+                    })
+                else:
+                    logging.warning(f"Rule {hostname} is active but missing 'service' detail. Skipping.")
+
+        desired_ingress_rules.sort(key=lambda x: x.get("hostname", ""))
+
+        logging.debug("Fetching current CF config for comparison...")
+        current_config = get_current_cf_config()
+        if current_config is None:
+            logging.error("Failed to fetch current CF config, aborting update check.")
+            return False
+
+        current_cf_ingress = [r for r in current_config.get("ingress", []) if r.get("service") != catch_all_rule["service"]]
+
+        def rule_to_canonical(rule):
+            items = sorted([(k, v) for k, v in rule.items() if k in ["hostname", "service"]])
+            return tuple(items)
+
+        try:
+             current_cf_set = {rule_to_canonical(r) for r in current_cf_ingress if r.get("hostname") and r.get("service")}
+             desired_set = {rule_to_canonical(r) for r in desired_ingress_rules if r.get("hostname") and r.get("service")}
+        except Exception as e:
+             logging.error(f"Error creating canonical rule sets for comparison: {e}", exc_info=True)
+             return False
+
+        if current_cf_set == desired_set:
+            logging.info("No changes detected in CF tunnel config. Skipping API update.")
+            needs_api_update = False
+        else:
+            logging.info("Change detected. Desired ingress rules differ from current CF config.")
+            logging.debug(f"Current CF rules: {current_cf_set}")
+            logging.debug(f"Desired rules: {desired_set}")
+            needs_api_update = True
+            final_ingress_rules = desired_ingress_rules + [catch_all_rule]
+
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
