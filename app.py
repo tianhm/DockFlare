@@ -1570,10 +1570,15 @@ def stream_logs():
         yield f"data: --- Log stream connected ---\n\n"
         try:
             while True:
-                log_entry = log_queue.get(block=True)
-                yield f"data: {log_entry}\n\n"
+                try:
+                    log_entry = log_queue.get(timeout=10)  # Add timeout to prevent indefinite blocking
+                    yield f"data: {log_entry}\n\n"
+                except queue.Empty:
+                    continue  # No log entry, continue waiting
         except GeneratorExit:
             logging.info("Log stream client disconnected.")
+        except Exception as e:
+            logging.error(f"Unexpected error in log stream: {e}", exc_info=True)
         finally:
             pass
     return Response(event_stream(), mimetype='text/event-stream')
@@ -1658,24 +1663,30 @@ if __name__ == '__main__':
         logging.info("Flask server started using waitress on 0.0.0.0:5000.")
 
         while True:
-             all_threads_alive = True
-             if flask_thread and not flask_thread.is_alive():
-                 logging.error("Flask server thread terminated unexpectedly!")
-                 all_threads_alive = False
-             if agent_status_thread and not agent_status_thread.is_alive():
-                 logging.warning("Agent status updater thread terminated.")
-             for bg_thread in background_threads:
-                 if bg_thread and not bg_thread.is_alive():
-                      logging.warning(f"{bg_thread.name} thread terminated.")
+            try:
+                all_threads_alive = True
+                if flask_thread and not flask_thread.is_alive():
+                    logging.error("Flask server thread terminated unexpectedly!")
+                    all_threads_alive = False
+                if agent_status_thread and not agent_status_thread.is_alive():
+                    logging.warning("Agent status updater thread terminated.")
+                for bg_thread in background_threads:
+                    if bg_thread and not bg_thread.is_alive():
+                        logging.warning(f"{bg_thread.name} thread terminated.")
 
-             if not all_threads_alive:
-                 logging.error("A critical thread (Flask server) terminated. Initiating shutdown.")
-                 stop_event.set()
-                 break
-             if stop_event.is_set():
-                 logging.info("Stop event detected by main thread.")
-                 break
-             time.sleep(10)
+                if not all_threads_alive:
+                    logging.error("A critical thread (Flask server) terminated. Initiating shutdown.")
+                    stop_event.set()
+                    break
+                if stop_event.is_set():
+                    logging.info("Stop event detected by main thread.")
+                    break
+
+                time.sleep(10)
+            except Exception as e:
+                logging.error(f"Unexpected error in main thread monitoring loop: {e}", exc_info=True)
+                stop_event.set()
+                break
 
     except ImportError:
         logging.warning("Waitress not found. Using Flask development server (not recommended for production). Install using: pip install waitress")
