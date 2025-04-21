@@ -152,7 +152,6 @@ services:
 | `EXTERNAL_TUNNEL_ID` | Tunnel ID for external cloudflared mode | (Required if `USE_EXTERNAL_CLOUDFLARED=true`) |
 | `SCAN_ALL_NETWORKS` | Scan containers across all Docker networks | false |
 | `CLOUDFLARED_NETWORK_NAME` | Docker network for cloudflared agent | cloudflare-net |
-| `CLOUDFLARED_CONTAINER_NAME` | Name for the cloudflared agent container | cloudflared-agent-{TUNNEL_NAME} |
 | `STATE_FILE_PATH` | Path for state persistence | /app/data/state.json |
 
 ### Container Labels
