@@ -370,99 +370,41 @@
           });
       });
 
-            // Protocol-aware event source connection with better error handling and reliability
-      function connectEventSource() {
-          if (!!window.EventSource) {
-              // Close any existing connection first
-              if (window.activeLogSource) {
-                  try {
-                      window.activeLogSource.close();
-                  } catch (e) {
-                      console.error("Error closing previous EventSource:", e);
-                  }
-                  window.activeLogSource = null;
-              }
-              
-              // Use current protocol + host for connection
-              const currentProtocol = window.location.protocol;
-              const currentHost = window.location.host;
-              const logStreamUrl = `${currentProtocol}//${currentHost}/stream-logs`;
-              
-              // Add timestamp to prevent caching
-              const uniqueUrl = `${logStreamUrl}?t=${new Date().getTime()}`;
-              
-              console.log("Connecting log stream to:", uniqueUrl);
-              
-              // Create new EventSource with correct protocol
-              try {
-                  window.activeLogSource = new EventSource(uniqueUrl);
-                  
-                  // Set higher timeout for connection
-                  const connectionTimeout = setTimeout(() => {
-                      console.error("EventSource connection timeout after 10s");
-                      if (window.activeLogSource) {
-                          window.activeLogSource.close();
-                          // Wait before reconnecting
-                          setTimeout(connectEventSource, 3000);
-                      }
-                  }, 10000);
-                  
-                  window.activeLogSource.onopen = function() {
-                      console.log("Log stream connection opened successfully.");
-                      clearTimeout(connectionTimeout);
-                      addLogLine("--- Log stream connected ---", 'connected');
-                      
-                      // Reset backoff delay on successful connection
-                      window.reconnectDelay = 5000;
-                  };
-                  
-                  window.activeLogSource.onmessage = function(event) {
-                      // Clear timeout on any message
-                      clearTimeout(connectionTimeout);
-                      
-                      if (event.data === "heartbeat") {
-                          console.log("Heartbeat received");
-                          return;
-                      }
-                      
-                      addLogLine(event.data, 'log');
-                  };
-                  
-                  window.activeLogSource.onerror = function(err) {
-                      console.error("EventSource failed:", err);
-                      clearTimeout(connectionTimeout);
-                      
-                      addLogLine("--- Log stream connection error. Retrying in 5s... ---", 'error');
-                      
-                      // Clean up
-                      if (window.activeLogSource) {
-                          window.activeLogSource.close();
-                          window.activeLogSource = null;
-                      }
-                      
-                      // Exponential backoff with max of 30 seconds
-                      window.reconnectDelay = window.reconnectDelay ? 
-                          Math.min(window.reconnectDelay * 1.5, 30000) : 5000;
-                          
-                      console.log(`Reconnecting in ${window.reconnectDelay/1000}s...`);
-                      setTimeout(connectEventSource, window.reconnectDelay);
-                  };
-              } catch (e) {
-                  console.error("Error creating EventSource:", e);
-                  addLogLine("--- Failed to establish log stream. Browser error. ---", 'error');
-                  setTimeout(connectEventSource, 5000);
-              }
-              
-              // Ensure cleanup on page unload
-              window.addEventListener('beforeunload', function() {
-                  if (window.activeLogSource) {
-                      window.activeLogSource.close();
-                  }
-              });
-          } else {
-              logOutput.textContent = "Your browser doesn't support Server-Sent Events, cannot display real-time logs.";
-              logOutput.classList.add('text-orange-500', 'font-semibold');
+            function connectEventSource() {
+          if (!window.EventSource) {
+              console.error("EventSource not supported");
+              return;
           }
+          
+          // Close existing connection
+          if (window.activeLogSource) {
+              window.activeLogSource.close();
+          }
+          
+          // Use current protocol and host
+          const currentProtocol = window.location.protocol;
+          const currentHost = window.location.host;
+          const streamUrl = `${currentProtocol}//${currentHost}/stream-logs?t=${Date.now()}`;
+          
+          console.log("Connecting to logs:", streamUrl);
+          
+          // Create new connection
+          window.activeLogSource = new EventSource(streamUrl);
+          
+          window.activeLogSource.onopen = function() {
+              console.log("Log stream connected");
+          };
+          
+          window.activeLogSource.onmessage = function(event) {
+              if (event.data === "heartbeat") return;
+              addLogLine(event.data);
+          };
+          
+          window.activeLogSource.onerror = function() {
+              console.error("Log stream error - reconnecting in 5s");
+              window.activeLogSource.close();
+              setTimeout(connectEventSource, 5000);
+          };
       }
 
       const themeToggleButton = document.getElementById('theme-toggle');

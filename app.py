@@ -1783,29 +1783,29 @@ def force_delete_rule(hostname):
 @app.route('/stream-logs')
 def stream_logs():
     """Stream logs with better compatibility across environments and proxies."""
+    # Capture request data within the request context
+    client_id = f"client-{random.randint(1000, 9999)}"
+    proto_info = request.headers.get('X-Forwarded-Proto', 'none')
+    host_info = request.headers.get('X-Forwarded-Host', request.host)
+    is_secure = proto_info == 'https' or request.is_secure
+    
+    # Log connection info while still in the request context
+    logging.info(f"Log stream {client_id} connected. X-Forwarded-Proto: {proto_info}, Host: {host_info}, is_secure: {is_secure}")
+    
     def event_stream():
-        client_id = f"client-{random.randint(1000, 9999)}"
-        
-        # Log connection info for debugging
-        proto_info = request.headers.get('X-Forwarded-Proto', 'none')
-        host_info = request.headers.get('X-Forwarded-Host', request.host)
-        is_secure = proto_info == 'https' or request.is_secure
-        
-        logging.info(f"Log stream {client_id} connected. X-Forwarded-Proto: {proto_info}, Host: {host_info}, is_secure: {is_secure}")
-        
         # Send welcome message and immediate heartbeat
         yield f"data: --- Log stream connected (client {client_id}) ---\n\n"
         yield f"data: heartbeat\n\n"
         
-        # More frequent heartbeats (5 seconds)
-        heartbeat_interval = 5
+        # More frequent heartbeats (3 seconds for better reliability)
+        heartbeat_interval = 3
         last_heartbeat = time.time()
 
         try:
             while True:
                 current_time = time.time()
                 
-                # More frequent heartbeats to keep connections alive through proxies
+                # Send frequent heartbeats to keep connections alive through proxies
                 if current_time - last_heartbeat > heartbeat_interval:
                     yield f"data: heartbeat\n\n"
                     last_heartbeat = current_time
@@ -1819,7 +1819,7 @@ def stream_logs():
                     # Keep connection alive with frequent comments
                     yield f": keepalive {int(current_time)}\n\n"
                 
-                # Yield more often to prevent thread blocking
+                # Shorter sleep to prevent thread blocking
                 time.sleep(0.05)
                 
         except GeneratorExit:
@@ -1839,6 +1839,7 @@ def stream_logs():
         'Expires': '0',
         'X-Accel-Buffering': 'no',  # Important for Nginx
         'Content-Type': 'text/event-stream; charset=utf-8',
+        'Connection': 'keep-alive'  # Add explicit Connection: keep-alive header
     })
     
     # Add CORS headers
@@ -1848,12 +1849,8 @@ def stream_logs():
         'Access-Control-Allow-Headers': 'Content-Type, X-Requested-With',
     })
     
-    # Remove problematic headers that cause issues with proxies
-    for header in ['Transfer-Encoding', 'Connection']:
-        if header in response.headers:
-            del response.headers[header]
-    
-    # Do not set content-length for streaming responses
+    # Do not remove Connection header - important for streaming
+    # Only remove Content-Length if it exists
     if 'Content-Length' in response.headers:
         del response.headers['Content-Length']
     
