@@ -361,46 +361,40 @@ def create_tunnel_via_api(name):
         tunnel_state["error"] = f"Unexpected error creating tunnel: {e}"
         return None, None
 
-def initialize_tunnel():
+ddef initialize_tunnel():
     """Finds or creates the tunnel and gets its token."""
     logging.info("Initializing tunnel...")
     tunnel_state["status_message"] = f"Checking for tunnel '{TUNNEL_NAME}' via API..."
     tunnel_state["error"] = None
     tunnel_id = None
     token = None
+    try:
+        tunnel_id, token = find_tunnel_via_api(TUNNEL_NAME)
 
-    # If external cloudflared is configured, use its tunnel ID
-    if USE_EXTERNAL_CLOUDFLARED:
-        logging.info("External cloudflared configuration detected")
-        if EXTERNAL_TUNNEL_ID:
-            tunnel_id = EXTERNAL_TUNNEL_ID
-            logging.info(f"Using external tunnel ID: {tunnel_id}")
+        if not tunnel_id and not tunnel_state.get("error"):
+            tunnel_state["status_message"] = f"Tunnel '{TUNNEL_NAME}' not found. Creating via API..."
+            tunnel_id, token = create_tunnel_via_api(TUNNEL_NAME)
+
+        if tunnel_id and token:
             tunnel_state["id"] = tunnel_id
-
-            # For external tunnels, we don't need the token since we don't manage the container
-            # But for DNS record management we need the tunnel ID
-            tunnel_state["token"] = None
-            tunnel_state["status_message"] = "Using external tunnel (DNS management only)."
-
-            # Ensure containers with DockFlare labels are detected and added to managed rules
-            logging.info("Scanning for containers with DockFlare labels in external mode...")
-            try:
-                containers = docker_client.containers.list(all=SCAN_ALL_NETWORKS)
-                for container in containers:
-                    process_container_start(container)
-            except Exception as e:
-                logging.error(f"Error scanning containers in external mode: {e}", exc_info=True)
-
-            logging.info(f"External tunnel '{TUNNEL_NAME}' (ID: {tunnel_id}) initialized for DNS management only.")
-            return
+            tunnel_state["token"] = token
+            tunnel_state["status_message"] = "Tunnel setup complete (using API)."
+            tunnel_state["error"] = None
+            logging.info(f"Tunnel '{TUNNEL_NAME}' initialized successfully. ID: {tunnel_id}")
+        elif not tunnel_state.get("error"):
+             tunnel_state["status_message"] = "Tunnel initialization failed."
+             tunnel_state["error"] = "Failed to find/create tunnel or retrieve token. Check logs."
+             logging.error(f"Tunnel initialization failed for '{TUNNEL_NAME}'. Could not get ID and Token.")
         else:
-            logging.warning("USE_EXTERNAL_CLOUDFLARED is enabled but EXTERNAL_TUNNEL_ID is not provided.")
-            tunnel_state["status_message"] = "Error: External tunnel config missing tunnel ID."
-            tunnel_state["error"] = "External cloudflared enabled but missing tunnel ID"
-            return
-    
-    # Regular tunnel initialization code remains the same
-    # ...existing code...
+             tunnel_state["status_message"] = "Tunnel initialization failed (see error details)."
+
+        logging.info(f"Tunnel init completed. State: ID={tunnel_state.get('id')}, Token Present={bool(tunnel_state.get('token'))}, Error={tunnel_state.get('error')}")
+
+    except Exception as e:
+        logging.error(f"Unhandled exception during tunnel initialization: {e}", exc_info=True)
+        if not tunnel_state.get("error"):
+            tunnel_state["error"] = f"Initialization failed unexpectedly: {e}"
+        tunnel_state["status_message"] = "Tunnel initialization failed (unexpected error)."
 
 def get_current_cf_config():
     """Gets the current tunnel configuration from Cloudflare."""
@@ -1765,8 +1759,7 @@ def force_delete_rule(hostname):
         # Return a more helpful error for GET requests
         flash("Delete operations require a POST request. If you're seeing this message, there may be an issue with your browser's form submission.", "error")
         return redirect(url_for('status_page'))
-        
-    # Existing code continues below
+
     logging.info(f"UI request: Force delete rule for hostname: {hostname}")
     rule_removed_from_state = False
     dns_delete_success = False
