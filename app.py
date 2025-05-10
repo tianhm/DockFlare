@@ -53,6 +53,10 @@ EXTERNAL_TUNNEL_ID = os.getenv('EXTERNAL_TUNNEL_ID')
 
 # Network scanning configuration
 SCAN_ALL_NETWORKS = os.getenv('SCAN_ALL_NETWORKS', 'false').lower() in ['true', '1', 't', 'yes']
+# Tunnel DNS Scanning to show DNS entrys for other 
+# for function get_dns_records_for_tunnel
+TUNNEL_DNS_SCAN_ZONE_NAMES_STR = os.getenv('TUNNEL_DNS_SCAN_ZONE_NAMES', '')
+TUNNEL_DNS_SCAN_ZONE_NAMES = [name.strip() for name in TUNNEL_DNS_SCAN_ZONE_NAMES_STR.split(',') if name.strip()]
 
 # Settings that are only required when NOT using external cloudflared
 TUNNEL_NAME = os.getenv("TUNNEL_NAME", "dockflared-tunnel")
@@ -2085,6 +2089,82 @@ def update_cloudflare_config():
     # If we reached here, either there were no changes or the update was successful
     return True
 
+def get_all_account_cloudflare_tunnels():
+    if not CF_ACCOUNT_ID:
+        logging.warning("CF_ACCOUNT_ID is not configured. Cannot list all Cloudflare tunnels from the account.")
+        return []
+    if not CF_API_TOKEN:
+        logging.error("Cloudflare API token not configured. Cannot list all account tunnels.")
+        return []
+
+    endpoint = f"/accounts/{CF_ACCOUNT_ID}/cfd_tunnel"
+    params = {
+        "is_deleted": "false"
+    }
+
+    logging.info(f"Attempting to list all Cloudflare tunnels for account ID {CF_ACCOUNT_ID} with params: {params}")
+    try:
+        response_data = cf_api_request("GET", endpoint, params=params)
+        tunnels = response_data.get("result", [])
+
+        if isinstance(tunnels, list):
+            logging.info(f"Successfully retrieved {len(tunnels)} Cloudflare tunnels from the account (any status).")
+            
+            desired_statuses = {"healthy", "degraded", "down", "inactive"}
+            filtered_tunnels = [
+                tunnel for tunnel in tunnels if tunnel.get("status") in desired_statuses
+            ]
+            
+            logging.info(f"Returning {len(filtered_tunnels)} tunnels after client-side status check for relevant statuses.")
+            filtered_tunnels.sort(key=lambda t: t.get("name", "").lower())
+            return filtered_tunnels
+        else:
+            logging.error(f"Unexpected data format for account tunnels list: {type(tunnels)}. Expected a list. Response: {response_data}")
+            return []
+    except requests.exceptions.RequestException as e:
+        logging.error(f"API error listing all Cloudflare tunnels for the account: {e}")
+        if hasattr(e, 'response') and e.response is not None:
+            if e.response.status_code == 403:
+                logging.error("Permission denied (403) listing account tunnels. Ensure API token has 'Account:Cloudflare Tunnel:Read' permission for the account.")
+            elif e.response.status_code == 400:
+                logging.error(f"Bad Request (400) listing account tunnels. API Response: {e.response.text}")
+        return []
+    except Exception as e:
+        logging.error(f"Unexpected error listing all Cloudflare tunnels for the account: {e}", exc_info=True)
+        return []
+
+def get_dns_records_for_tunnel(zone_id, tunnel_id):
+    """Fetches CNAME records in a specific zone pointing to a specific tunnel."""
+    if not zone_id or not tunnel_id:
+        logging.warning("get_dns_records_for_tunnel: Missing zone_id or tunnel_id.")
+        return []
+
+    expected_cname_content = f"{tunnel_id}.cfargotunnel.com"
+    
+    endpoint = f"/zones/{zone_id}/dns_records"
+    params = {
+        "type": "CNAME",
+        "content": expected_cname_content,
+        "per_page": 100 # Get up to 100 records, handle pagination if more are expected
+    }
+    logging.info(f"Fetching DNS records for tunnel {tunnel_id} in zone {zone_id} with content {expected_cname_content}")
+    
+    try:
+        response_data = cf_api_request("GET", endpoint, params=params) # Your existing cf_api_request
+        dns_records = response_data.get("result", [])
+        if isinstance(dns_records, list):
+
+            return [{"name": record.get("name"), "id": record.get("id"), "zone_id": zone_id} for record in dns_records if record.get("name")]
+        else:
+            logging.error(f"Unexpected data format for DNS records list in zone {zone_id}: {type(dns_records)}")
+            return []
+    except requests.exceptions.RequestException as e:
+        logging.error(f"API error fetching DNS records for tunnel {tunnel_id} in zone {zone_id}: {e}")
+        return []
+    except Exception as e:
+        logging.error(f"Unexpected error fetching DNS records for tunnel {tunnel_id} in zone {zone_id}: {e}", exc_info=True)
+        return []
+
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 app.config['PREFERRED_URL_SCHEME'] = 'https'  # Default for url_for, but client-side JS will fix
@@ -2144,6 +2224,41 @@ def get_display_token(token):
         return "Not available"
     return f"{token[:5]}...{token[-5:]}" if len(token) > 10 else "Token retrieved (short)"
 
+@app.route('/tunnel-dns-records/<tunnel_id>')
+def tunnel_dns_records(tunnel_id):
+    if not tunnel_id:
+        return jsonify({"error": "Tunnel ID is required"}), 400
+
+    all_found_dns_records = []
+    
+    zone_ids_to_scan = set()
+
+    if CF_ZONE_ID: # Your global CF_ZONE_ID
+        zone_ids_to_scan.add(CF_ZONE_ID)
+
+    for zone_name in TUNNEL_DNS_SCAN_ZONE_NAMES: # The list loaded from env var
+        resolved_zone_id = get_zone_id_from_name(zone_name) # Your existing function
+        if resolved_zone_id:
+            zone_ids_to_scan.add(resolved_zone_id)
+        else:
+            logging.warning(f"Could not resolve Zone ID for configured scan name: {zone_name}")
+    
+    if not zone_ids_to_scan:
+        logging.warning(f"No Zone IDs configured or resolved for DNS scan for tunnel {tunnel_id}.")
+
+        return jsonify({"dns_records": [], "message": "No zones configured for DNS scan."})
+
+    for zone_id in zone_ids_to_scan:
+        records_in_zone = get_dns_records_for_tunnel(zone_id, tunnel_id)
+        if records_in_zone: # records_in_zone is a list of dicts
+
+            all_found_dns_records.extend(records_in_zone)
+    
+    all_found_dns_records.sort(key=lambda r: r.get("name", "").lower())
+    
+    logging.info(f"Found {len(all_found_dns_records)} DNS records for tunnel {tunnel_id} across {len(zone_ids_to_scan)} zones.")
+    return jsonify({"dns_records": all_found_dns_records})
+
 @app.context_processor
 def inject_protocol():
     """Inject protocol info into all templates with more reliable detection."""
@@ -2195,7 +2310,7 @@ def status_page():
     docker_available = docker_client is not None
     external_cloudflared = USE_EXTERNAL_CLOUDFLARED
     external_tunnel_id = EXTERNAL_TUNNEL_ID
-
+    all_account_tunnels_list = get_all_account_cloudflare_tunnels()
     return render_template('status_page.html',
                         tunnel_state=template_tunnel_state,
                         agent_state=template_agent_state,
@@ -2205,7 +2320,11 @@ def status_page():
                         docker_available=docker_available,
                         external_cloudflared=external_cloudflared,
                         external_tunnel_id=external_tunnel_id,
-                        rules=rules_for_template)
+                        rules=rules_for_template,
+                        all_account_tunnels=all_account_tunnels_list,
+                        CF_ACCOUNT_ID_CONFIGURED=bool(CF_ACCOUNT_ID), # Pass boolean flag
+                        ACCOUNT_ID_FOR_DISPLAY=CF_ACCOUNT_ID if CF_ACCOUNT_ID else "Not Configured" # Pass actual ID or placeholder
+                        )
 
 @app.route('/ping')
 def ping():

@@ -29,6 +29,10 @@ DockFlare automates Cloudflare Tunnel ingress rule management based on Docker co
   - Tunnel & agent status.
   - Start/Stop agent controls.
   - Managed ingress rule list with status, container ID, deletion time, and "Force Delete" option.
+ - **List of all Cloudflare Tunnels on Account (NEW)**: Shows all tunnels on the configured Cloudflare account (not just the one managed by this DockFlare instance), including their name, ID, status, creation date, and active connections. Users can click a '+' icon next to each tunnel to dynamically load and view its associated CNAME DNS records found within the configured zones.
+  - Real-time activity logs streamed directly to the browser.
+  - Dark/Light mode toggle.
+  - Basic reconciliation status display.
 - **Real-time Log Streaming**: View logs in real-time using Server-Sent Events (SSE).
 - **Content Security Policy (CSP)**: Ensures secure loading of resources and compatibility with reverse proxies.
 
