@@ -319,7 +319,44 @@ def get_zone_id_from_name(zone_name):
     except Exception as e:
         logging.error(f"Unexpected error looking up zone '{zone_name}': {e}", exc_info=True)
         return None
+zone_details_by_id_cache = {} 
 
+def get_zone_details_by_id(zone_id):
+    global zone_details_by_id_cache
+    if not zone_id:
+        logging.warning("get_zone_details_by_id called with empty zone_id.")
+        return None
+
+    with state_lock: # Protect cache access
+        if zone_id in zone_details_by_id_cache:
+            # Optionally add TTL logic here if needed
+            logging.debug(f"Zone details for ID '{zone_id}' found in cache.")
+            return zone_details_by_id_cache[zone_id]
+
+    logging.info(f"Zone details for ID '{zone_id}' not in cache. Querying Cloudflare API...")
+    endpoint = f"/zones/{zone_id}"
+
+    try:
+        response_data = cf_api_request("GET", endpoint)
+        if response_data and response_data.get("success"):
+            zone_data = response_data.get("result")
+            if zone_data and isinstance(zone_data, dict) and zone_data.get("name"):
+                logging.info(f"Found zone details for ID '{zone_id}': Name '{zone_data['name']}'")
+                with state_lock: # Protect cache write
+                    zone_details_by_id_cache[zone_id] = zone_data 
+                return zone_data
+            else:
+                logging.error(f"API returned success for zone ID '{zone_id}' but result is missing or malformed: {zone_data}")
+                return None
+        else:
+            logging.error(f"API call failed or returned success=false for zone ID '{zone_id}': {response_data}")
+            return None
+    except requests.exceptions.RequestException as e:
+        logging.error(f"API error looking up zone ID '{zone_id}': {e}")
+        return None
+    except Exception as e:
+        logging.error(f"Unexpected error looking up zone ID '{zone_id}': {e}", exc_info=True)
+        return None
 def find_tunnel_via_api(name):
     """Finds an existing tunnel and its token via the API."""
     logging.info(f"Finding tunnel '{name}' via API")
@@ -1957,6 +1994,7 @@ def _run_reconciliation():
         duration = app.reconciliation_info["completed_at"] - app.reconciliation_info["start_time"]
         watchdog.cancel()
         logging.info(f"[Reconcile Thread] Reconciliation complete. Duration: {duration:.2f} seconds. Status: {app.reconciliation_info['status']}")
+
 def get_cloudflared_container():
     """Gets the cloudflared agent container object."""
     if not docker_client:
@@ -2697,17 +2735,16 @@ def inject_protocol():
 @app.route('/')
 def status_page():
     """Renders the main status dashboard page."""
-    # Initialize all variables that will be passed to the template outside the lock first
     rules_for_template = {}
     template_tunnel_state = {}
     template_agent_state = {}
-    initialization_status = {} # Ensure this is always defined
+    initialization_status = {} 
     
     tld_policy_exists = False
     account_email_for_tld = None
     relevant_zone_name_for_tld_policy = None
 
-    with state_lock: # Lock for accessing shared mutable state
+    with state_lock: 
         for hostname, rule in managed_rules.items():
             rule_copy = copy.deepcopy(rule)
             if rule_copy.get("delete_at") and isinstance(rule_copy["delete_at"], datetime):
@@ -2721,65 +2758,55 @@ def status_page():
         template_tunnel_state = tunnel_state.copy()
         template_agent_state = cloudflared_agent_state.copy()
         
-        # Initialization status should be based on the current tunnel_state
         initialization_status = {
-            "complete": template_tunnel_state.get("id") is not None, # Use the copied state
-            "in_progress": template_tunnel_state.get("status_message", "").startswith("Initializing") # More robust check
+            "complete": template_tunnel_state.get("id") is not None, 
+            "in_progress": template_tunnel_state.get("status_message", "").startswith("Initializing")
         }
 
-        # --- New logic for TLD Policy Assistant - also needs to be careful with shared state like zone_id_cache ---
-        # Perform checks that might involve API calls or shared cache outside the main loop if possible,
-        # or ensure they are quick/non-blocking if inside. 
-        # For zone_id_cache, reading it is fine within the lock. API calls are made by helper functions.
-
-        if CF_ZONE_ID and docker_client: # docker_client check implies API might be usable
-            cached_zone_name = None
-            if zone_id_cache: # zone_id_cache is protected by state_lock indirectly if modified only with lock
-                for name, data in zone_id_cache.items():
+        if CF_ZONE_ID and docker_client: 
+            cached_zone_name_from_name_cache = None
+            if zone_id_cache: 
+                for name, data in zone_id_cache.items(): # Check existing name->id cache
                     if isinstance(data, tuple) and data[0] == CF_ZONE_ID:
-                        cached_zone_name = name
+                        cached_zone_name_from_name_cache = name
                         break
             
-            if cached_zone_name:
-                relevant_zone_name_for_tld_policy = cached_zone_name
-                logging.debug(f"Using cached zone name '{relevant_zone_name_for_tld_policy}' for CF_ZONE_ID '{CF_ZONE_ID}' for TLD check.")
-            elif TUNNEL_NAME and TUNNEL_NAME.count('.') >= 1:
+            if cached_zone_name_from_name_cache:
+                relevant_zone_name_for_tld_policy = cached_zone_name_from_name_cache
+                logging.debug(f"TLD Check: Using name '{relevant_zone_name_for_tld_policy}' from zone_id_cache for CF_ZONE_ID '{CF_ZONE_ID}'.")
+            else:
+
+                zone_details = get_zone_details_by_id(CF_ZONE_ID)
+                if zone_details and zone_details.get("name"):
+                    relevant_zone_name_for_tld_policy = zone_details["name"]
+                    logging.debug(f"TLD Check: Fetched zone name '{relevant_zone_name_for_tld_policy}' for CF_ZONE_ID '{CF_ZONE_ID}'.")
+
+                    if relevant_zone_name_for_tld_policy not in zone_id_cache:
+                        zone_id_cache[relevant_zone_name_for_tld_policy] = (CF_ZONE_ID, time.time())
+
+            if not relevant_zone_name_for_tld_policy and TUNNEL_NAME and TUNNEL_NAME.count('.') >= 1:
                 parts = TUNNEL_NAME.split('.')
                 potential_zone_name = f"{parts[-2]}.{parts[-1]}"
-                # get_zone_id_from_name makes an API call, ideally its cache is effective
                 resolved_id_for_tunnel_zone = get_zone_id_from_name(potential_zone_name) 
                 if CF_ZONE_ID == resolved_id_for_tunnel_zone:
                      relevant_zone_name_for_tld_policy = potential_zone_name
-                     logging.debug(f"Derived zone name '{relevant_zone_name_for_tld_policy}' from TUNNEL_NAME and it matches CF_ZONE_ID.")
-                # Don't log warning here if it doesn't match, relevant_zone_name_for_tld_policy will remain None
+                     logging.debug(f"TLD Check: Derived zone name '{relevant_zone_name_for_tld_policy}' from TUNNEL_NAME and it matches CF_ZONE_ID.")
             
-            # If still no relevant_zone_name_for_tld_policy, and CF_ZONE_ID is set, it means we couldn't map ID to name easily.
-            # The get_zone_id_from_name function has its own caching for zone name lookups.
-            # We could add a get_zone_name_from_id function that also caches.
-            # For now, the warning about displaying accurate TLD policy will be handled if relevant_zone_name_for_tld_policy remains None.
-
             if relevant_zone_name_for_tld_policy:
-                # check_for_tld_access_policy and get_cloudflare_account_email make API calls.
-                # These are fine to call here; they have their own logging.
                 tld_policy_exists = check_for_tld_access_policy(relevant_zone_name_for_tld_policy)
                 if not tld_policy_exists: 
                     account_email_for_tld = get_cloudflare_account_email()
             else:
-                logging.info("Relevant zone name for TLD policy check could not be determined (CF_ZONE_ID might be set, but its name is not cached or derivable). Skipping TLD policy UI elements.")
+                logging.warning(f"TLD Policy UI: Could not determine zone name for CF_ZONE_ID: {CF_ZONE_ID}. UI elements for TLD assistant will be skipped.")
         else:
             if not CF_ZONE_ID:
                 logging.debug("CF_ZONE_ID not set, TLD policy assistant feature will not be active.")
-            if not docker_client:
-                logging.debug("Docker client not available, TLD policy assistant API calls cannot be made.")
-        # --- End of TLD Policy Logic ---
 
-    # Variables that don't depend on the state_lock can be prepared outside
-    display_token = get_display_token(template_tunnel_state.get("token")) # Uses copied state
+    display_token = get_display_token(template_tunnel_state.get("token")) 
     docker_available = docker_client is not None
     external_cloudflared = USE_EXTERNAL_CLOUDFLARED
     external_tunnel_id = EXTERNAL_TUNNEL_ID
     
-    # get_all_account_cloudflare_tunnels makes API calls, fine to be outside lock
     all_account_tunnels_list = get_all_account_cloudflare_tunnels() 
 
     return render_template('status_page.html',
@@ -2795,11 +2822,10 @@ def status_page():
                         all_account_tunnels=all_account_tunnels_list,
                         CF_ACCOUNT_ID_CONFIGURED=bool(CF_ACCOUNT_ID), 
                         ACCOUNT_ID_FOR_DISPLAY=CF_ACCOUNT_ID if CF_ACCOUNT_ID else "Not Configured",
-                        # New variables for the template
                         relevant_zone_name_for_tld_policy=relevant_zone_name_for_tld_policy,
                         tld_policy_exists=tld_policy_exists,
                         account_email_for_tld=account_email_for_tld,
-                        CF_ZONE_ID_CONFIGURED=bool(CF_ZONE_ID) # Pass this to template for conditional display of TLD section
+                        CF_ZONE_ID_CONFIGURED=bool(CF_ZONE_ID) 
                         )
 
 @app.route('/ping')
