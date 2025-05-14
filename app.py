@@ -2537,7 +2537,6 @@ def get_display_token(token):
 @app.route('/ui_update_access_policy/<path:hostname>', methods=['POST'])
 def ui_update_access_policy(hostname):
     if not docker_client: 
-        
         cloudflared_agent_state["last_action_status"] = "Error: UI Policy Update - Docker client unavailable."
         return redirect(url_for('status_page'))
 
@@ -2548,47 +2547,59 @@ def ui_update_access_policy(hostname):
 
     state_changed_locally = False
     action_status_message = f"Processing UI policy update for {hostname}..."
-    cloudflared_agent_state["last_action_status"] = action_status_message
-
 
     with state_lock:
         current_rule = managed_rules.get(hostname)
+        if not current_rule:
+            logging.error(f"Rule for hostname '{hostname}' not found in managed_rules for UI update.")
+            cloudflared_agent_state["last_action_status"] = f"Error: Rule for {hostname} not found."
+            return redirect(url_for('status_page'))
+
+        current_access_app_id = current_rule.get("access_app_id")
         
-        operation_successful = False 
+        desired_session_duration = request.form.get("session_duration", current_rule.get("access_session_duration", "24h"))
+        desired_app_launcher_visible = request.form.get("app_launcher_visible", str(current_rule.get("access_app_launcher_visible", False))).lower() in ["true", "1", "t", "yes"]
+        desired_allowed_idps_str = request.form.get("allowed_idps", current_rule.get("access_allowed_idps_str"))
+        desired_auto_redirect = request.form.get("auto_redirect", str(current_rule.get("access_auto_redirect", False))).lower() in ["true", "1", "t", "yes"]
+        desired_app_name = f"DockFlare-UI-{hostname}"      
+        cf_access_policies = []       
+        final_policy_type_for_state = new_policy_type 
+        custom_rules_for_hash = None
+        operation_successful = False
 
         if new_policy_type == "none" or new_policy_type == "public_no_policy":
+            
             if current_access_app_id:
                 if delete_cloudflare_access_application(current_access_app_id):
-                    current_rule["access_app_id"] = None
-                    current_rule["access_policy_type"] = None
-                    current_rule["access_app_config_hash"] = None
+                    
                     state_changed_locally = True
                     operation_successful = True
                     action_status_message = f"Success: {hostname} Access App deleted (set to public)."
                 else:
                     action_status_message = f"Error: Failed to delete Access App for {hostname}."
-            else: 
+            else:
+                
                 if current_rule.get("access_policy_type") is not None or current_rule.get("access_app_id") is not None:
-                    state_changed_locally = True 
+                     state_changed_locally = True
                 current_rule["access_app_id"] = None
                 current_rule["access_policy_type"] = None
                 current_rule["access_app_config_hash"] = None
-                operation_successful = True 
+                operation_successful = True
                 action_status_message = f"Info: {hostname} set to public (no existing Access App)."
             final_policy_type_for_state = None
 
         elif new_policy_type == "default_tld":
+            
             if current_access_app_id:
                 if delete_cloudflare_access_application(current_access_app_id):
-                    current_rule["access_app_id"] = None
-                    current_rule["access_policy_type"] = "default_tld"
-                    current_rule["access_app_config_hash"] = None
+                    
                     state_changed_locally = True
                     operation_successful = True
                     action_status_message = f"Success: {hostname} Access App deleted (set to default_tld)."
                 else:
                     action_status_message = f"Error: Failed to delete Access App for {hostname} for default_tld."
-            else: 
+            else:
+                
                 if current_rule.get("access_policy_type") != "default_tld":
                     state_changed_locally = True
                 current_rule["access_app_id"] = None
@@ -2597,24 +2608,40 @@ def ui_update_access_policy(hostname):
                 operation_successful = True
                 action_status_message = f"Info: {hostname} set to default_tld (no existing Access App)."
             final_policy_type_for_state = "default_tld"
-
-        elif new_policy_type in ["bypass", "authenticate_email"]: 
-            
-            if not cf_access_policies: 
-                # ... (error handling) ...
+        
+        elif new_policy_type == "bypass": 
+            cf_access_policies = [{"name": "UI Public Bypass", "decision": "bypass", "include": [{"everyone": {}}]}]
+            custom_rules_for_hash = json.dumps(cf_access_policies) 
+            final_policy_type_for_state = "bypass"
+        
+        elif new_policy_type == "authenticate_email": 
+            if not auth_email:
+                cloudflared_agent_state["last_action_status"] = f"Error: Email address required for 'authenticate_email' policy for {hostname}."
                 return redirect(url_for('status_page'))
-
+            cf_access_policies = [
+                {"name": f"UI Allow Email {auth_email}", "decision": "allow", "include": [{"email": {"email": auth_email}}]},
+                {"name": "UI Deny Fallback", "decision": "deny", "include": [{"everyone": {}}]}
+            ]
+            custom_rules_for_hash = json.dumps(cf_access_policies)
+            final_policy_type_for_state = "authenticate_email"
+                
+        if new_policy_type in ["bypass", "authenticate_email"]: 
+            if not cf_access_policies: 
+                logging.error(f"UI: No policies defined for {hostname} with type {new_policy_type} but expected. Aborting.")
+                cloudflared_agent_state["last_action_status"] = f"Error: Internal - No policies for {new_policy_type}."
+                return redirect(url_for('status_page'))
+            
             new_config_hash = generate_access_app_config_hash(
-                final_policy_type_for_state,
-                desired_session_duration, desired_app_launcher_visible,
-                desired_allowed_idps_str, desired_auto_redirect,
+                final_policy_type_for_state, 
+                desired_session_duration, 
+                desired_app_launcher_visible,
+                desired_allowed_idps_str, 
+                desired_auto_redirect,
                 custom_access_rules_str=custom_rules_for_hash
             )
             allowed_idps_list_for_app = [idp.strip() for idp in desired_allowed_idps_str.split(',') if idp.strip()] if desired_allowed_idps_str else None
 
-
             if current_access_app_id:
-                
                 if current_rule.get("access_policy_type") != final_policy_type_for_state or \
                    current_rule.get("access_app_config_hash") != new_config_hash:
                     logging.info(f"UI: Updating Access App {current_access_app_id} for {hostname} to type '{final_policy_type_for_state}'.")
@@ -2624,7 +2651,7 @@ def ui_update_access_policy(hostname):
                         [hostname], cf_access_policies, allowed_idps_list_for_app, desired_auto_redirect
                     )
                     if updated_app:
-                        current_rule["access_app_id"] = updated_app.get("id")
+                        current_rule["access_app_id"] = updated_app.get("id") 
                         current_rule["access_policy_type"] = final_policy_type_for_state
                         current_rule["access_app_config_hash"] = new_config_hash
                         state_changed_locally = True
@@ -2633,8 +2660,7 @@ def ui_update_access_policy(hostname):
                     else:
                         action_status_message = f"Error: Failed to update Access App for {hostname}."
                 else:
-                                    
-                    operation_successful = True # No actual API change needed, but UI interaction counts.
+                    operation_successful = True 
                     action_status_message = f"Info: Access Policy for {hostname} already matched UI selection."
             else: 
                 logging.info(f"UI: Creating new Access App for {hostname} with type '{final_policy_type_for_state}'.")
@@ -2653,16 +2679,13 @@ def ui_update_access_policy(hostname):
                 else:
                     action_status_message = f"Error: Failed to create Access App for {hostname}."
         
-        
         if operation_successful:
-           
             if not current_rule.get("access_policy_ui_override", False):
                  logging.info(f"Access policy for {hostname} is now UI-managed due to UI interaction.")
                  state_changed_locally = True # Ensure save_state is called if only this flag changes
             current_rule["access_policy_ui_override"] = True
         else:
-           
-            logging.warning(f"UI operation for {hostname} failed. Override flag not set/retained based on this action.")
+            logging.warning(f"UI operation for {hostname} failed or no action taken. Override flag not actively set by this action.")
 
 
         if state_changed_locally:
