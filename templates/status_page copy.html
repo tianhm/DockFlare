@@ -316,38 +316,7 @@
                                                 N/A
                                             {% endif %}
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400" id="access-policy-display-{{ hostname | replace('.', '-') }}">
-                                            {% if details.access_policy_type %}
-                                                <span class="capitalize">
-                                                    {{ details.access_policy_type.replace('_', ' ') if details.access_policy_type != 'pending_label_sync' else 'Pending Label Sync...' }}
-                                                </span>
-                                                {% if details.access_policy_type == 'pending_label_sync' %}
-                                                    <svg class="animate-spin h-4 w-4 text-blue-500 inline-block ml-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                      </svg>
-                                                {% elif details.access_app_id and CF_ACCOUNT_ID_CONFIGURED and ACCOUNT_ID_FOR_DISPLAY != "Not Configured" %}
-                                                    <a href="https://one.dash.cloudflare.com/{{ ACCOUNT_ID_FOR_DISPLAY }}/access/apps/self-hosted/{{ details.access_app_id }}/edit?tab=basic-info" target="_blank" rel="noopener noreferrer" title="Edit Access App in Cloudflare"
-                                                       class="ml-1 inline-block align-middle text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-200">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                        </svg>
-                                                    </a>
-                                                {% elif details.access_policy_type and details.access_policy_type != 'default_tld' and details.access_policy_type != 'None' %}
-                                                    <span class="text-xs text-gray-400 dark:text-gray-500 italic ml-1">(Managed)</span>
-                                                {% endif %}
-                                                
-                                                {# Display UI Override Status #}
-                                                {% if details.access_policy_ui_override %}
-                                                    <span class="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-purple-100 text-purple-800 dark:bg-purple-800/30 dark:text-purple-300 font-medium" title="This policy is managed by the UI and overrides container labels.">UI Override</span>
-                                                {% endif %}
-
-                                            {% elif details.get('status') == 'active' %} 
-                                                <span class="text-gray-400 dark:text-gray-500 italic">None (Public)</span>
-                                            {% else %}
-                                                N/A
-                                            {% endif %}
-                                        </td>
+                                        
                                         {# Status #}
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             {% set status_text_class = 'text-orange-600 dark:text-orange-400' if 'pending' in details.status else 'text-green-600 dark:text-green-400' %}
@@ -368,20 +337,14 @@
                                             {% else %} N/A {% endif %}
                                         </td>
 
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium policy-actions-cell" id="policy-actions-{{ hostname | replace('.', '-') }}">
-                                            <div class="flex items-center space-x-2">
-                                                <button type="button" class="edit-policy-btn px-2 py-1 text-xs rounded text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500" data-hostname="{{ hostname }}">
-                                                    Edit Policy
-                                                </button>
-                                                {% if details.access_policy_ui_override %}
-                                                <form action="{{ url_for('revert_access_policy_to_labels', hostname=hostname) }}" method="POST" onsubmit="return confirm('Are you sure you want to revert the Access Policy for {{ hostname }} to be managed by its container labels? The current UI-set policy will be removed.');" class="protocol-aware-form inline-block">
-                                                    <button type="submit" class="px-2 py-1 text-xs rounded text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-amber-500" title="Revert to label-defined Access Policy">
-                                                        Revert to Labels
-                                                    </button>
-                                                </form>
-                                                {% endif %}
-                                            </div>
-                                            <div class="edit-policy-form hidden mt-2 p-3 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700/30 shadow-sm" style="min-width: 250px; position: absolute; z-index: 10; right: 100px;">
+                                        {# Policy Actions (New Cell) #}
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium policy-actions-cell" id="policy-actions-{{ hostname | replace('.', '-') }}">
+                                            <button type="button" class="edit-policy-btn px-2 py-1 text-xs rounded text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500" data-hostname="{{ hostname }}">
+                                                Edit Policy
+                                            </button>
+                                            <div class="edit-policy-form hidden mt-2 p-3 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700/30 shadow-sm" style="min-width: 250px; position: absolute; z-index: 10; right: 100px; /* Adjust 'right' as needed */">
+                                                {# Added position:absolute and z-index to help form pop over other cells #}
+                                                {# You might need to adjust 'right' or use other positioning techniques based on your table layout #}
                                                 <form action="{{ url_for('ui_update_access_policy', hostname=hostname) }}" method="POST" class="protocol-aware-form space-y-3">
                                                     <div>
                                                         <label for="access_policy_type-{{ hostname | replace('.', '-') }}" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Policy Type:</label>
@@ -394,8 +357,12 @@
                                                     </div>
                                                     <div class="auth-email-field hidden mt-2" id="auth-email-field-{{ hostname | replace('.', '-') }}">
                                                         <label for="auth_email-{{ hostname | replace('.', '-') }}" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Allowed Email:</label>
+                                                        {# Try to pre-fill email if it's a simple email allow policy #}
                                                         {% set prefill_email = '' %}
                                                         {% if details.access_policy_type == 'authenticate_email' or (details.access_policy_type == 'authenticate' and not details.access_custom_rules_str) %}
+                                                            {# This part is tricky: how to get the email from current_rule if it's from a custom rule or complex policy? #}
+                                                            {# For now, leave it blank or try a very simple heuristic if you stored it simply #}
+                                                            {# If you add a specific 'access_auth_email' to managed_rules when set by UI, you can use that here #}
                                                         {% endif %}
                                                         <input type="email" name="auth_email" id="auth_email-{{ hostname | replace('.', '-') }}" placeholder="user@example.com" value="{{ prefill_email }}"
                                                                class="mt-1 block w-full text-xs border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">

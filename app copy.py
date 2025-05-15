@@ -1710,20 +1710,24 @@ def _run_reconciliation():
                                 })
                             idx += 1
                         
-                        for config in hostname_configs_for_container:
-                            hostname_val = config["hostname"] 
+                        for config_item in hostname_configs_for_container:  
+                            hostname_val = config_item["hostname"] 
                             if hostname_val in running_labeled_hostnames_details:
                                 logging.warning(f"[Reconcile] Duplicate hostname '{hostname_val}' found from labels. Using latest encountered: {container_name_val}.")
                             running_labeled_hostnames_details[hostname_val] = {
-                                "service": config["service"], "container_id": container_id_val, "container_name": container_name_val,
-                                "zone_name": config["zone_name"], "no_tls_verify": config["no_tls_verify"],
-                                "access_policy_type": config["access_policy_type"],
-                                "access_app_name": config["access_app_name"],
-                                "access_session_duration": config["access_session_duration"],
-                                "access_app_launcher_visible": config["access_app_launcher_visible"],
-                                "access_allowed_idps_str": config["access_allowed_idps_str"],
-                                "access_auto_redirect": config["access_auto_redirect"],
-                                "access_custom_rules_str": config["access_custom_rules_str"]
+                                "hostname": hostname_val,  
+                                "service": config_item["service"], 
+                                "container_id": container_id_val, 
+                                "container_name": container_name_val,
+                                "zone_name": config_item["zone_name"], 
+                                "no_tls_verify": config_item["no_tls_verify"],
+                                "access_policy_type": config_item["access_policy_type"],
+                                "access_app_name": config_item["access_app_name"],
+                                "access_session_duration": config_item["access_session_duration"],
+                                "access_app_launcher_visible": config_item["access_app_launcher_visible"],
+                                "access_allowed_idps_str": config_item["access_allowed_idps_str"],
+                                "access_auto_redirect": config_item["access_auto_redirect"],
+                                "access_custom_rules_str": config_item["access_custom_rules_str"]
                             }
                     except Exception as e_cont:
                         logging.error(f"[Reconcile] Error processing container {c.id[:12]}: {e_cont}")
@@ -2504,50 +2508,54 @@ def ui_update_access_policy(hostname):
         desired_app_launcher_visible = request.form.get("app_launcher_visible", str(current_rule.get("access_app_launcher_visible", False))).lower() in ["true", "1", "t", "yes"]
         desired_allowed_idps_str = request.form.get("allowed_idps", current_rule.get("access_allowed_idps_str"))
         desired_auto_redirect = request.form.get("auto_redirect", str(current_rule.get("access_auto_redirect", False))).lower() in ["true", "1", "t", "yes"]
-        desired_app_name = f"DockFlare-UI-{hostname}"      
+        
+        desired_app_name = f"DockFlare-{hostname}"
+        
         cf_access_policies = []       
         final_policy_type_for_state = new_policy_type 
         custom_rules_for_hash = None
         operation_successful = False
 
         if new_policy_type == "none" or new_policy_type == "public_no_policy":
-            
             if current_access_app_id:
+                logging.info(f"UI: Setting {hostname} to public. Deleting Access App {current_access_app_id}.")
                 if delete_cloudflare_access_application(current_access_app_id):
-                    
+                    current_rule["access_app_id"] = None
+                    current_rule["access_policy_type"] = None 
+                    current_rule["access_app_config_hash"] = None
                     state_changed_locally = True
                     operation_successful = True
                     action_status_message = f"Success: {hostname} Access App deleted (set to public)."
                 else:
                     action_status_message = f"Error: Failed to delete Access App for {hostname}."
             else:
-                
                 if current_rule.get("access_policy_type") is not None or current_rule.get("access_app_id") is not None:
-                     state_changed_locally = True
-                current_rule["access_app_id"] = None
-                current_rule["access_policy_type"] = None
-                current_rule["access_app_config_hash"] = None
+                    current_rule["access_app_id"] = None
+                    current_rule["access_policy_type"] = None
+                    current_rule["access_app_config_hash"] = None
+                    state_changed_locally = True
                 operation_successful = True
                 action_status_message = f"Info: {hostname} set to public (no existing Access App)."
             final_policy_type_for_state = None
 
         elif new_policy_type == "default_tld":
-            
             if current_access_app_id:
+                logging.info(f"UI: Setting {hostname} to default_tld. Deleting Access App {current_access_app_id}.")
                 if delete_cloudflare_access_application(current_access_app_id):
-                    
+                    current_rule["access_app_id"] = None
+                    current_rule["access_policy_type"] = "default_tld"
+                    current_rule["access_app_config_hash"] = None
                     state_changed_locally = True
                     operation_successful = True
                     action_status_message = f"Success: {hostname} Access App deleted (set to default_tld)."
                 else:
                     action_status_message = f"Error: Failed to delete Access App for {hostname} for default_tld."
             else:
-                
                 if current_rule.get("access_policy_type") != "default_tld":
+                    current_rule["access_app_id"] = None
+                    current_rule["access_policy_type"] = "default_tld"
+                    current_rule["access_app_config_hash"] = None
                     state_changed_locally = True
-                current_rule["access_app_id"] = None
-                current_rule["access_policy_type"] = "default_tld"
-                current_rule["access_app_config_hash"] = None
                 operation_successful = True
                 action_status_message = f"Info: {hostname} set to default_tld (no existing Access App)."
             final_policy_type_for_state = "default_tld"
@@ -2587,7 +2595,7 @@ def ui_update_access_policy(hostname):
             if current_access_app_id:
                 if current_rule.get("access_policy_type") != final_policy_type_for_state or \
                    current_rule.get("access_app_config_hash") != new_config_hash:
-                    logging.info(f"UI: Updating Access App {current_access_app_id} for {hostname} to type '{final_policy_type_for_state}'.")
+                    logging.info(f"UI: Attempting to update Access App. ID: {current_access_app_id}, Target Name: {desired_app_name}, Target Policy: {final_policy_type_for_state}")
                     updated_app = update_cloudflare_access_application(
                         current_access_app_id, hostname, desired_app_name,
                         desired_session_duration, desired_app_launcher_visible,
@@ -2606,7 +2614,7 @@ def ui_update_access_policy(hostname):
                     operation_successful = True 
                     action_status_message = f"Info: Access Policy for {hostname} already matched UI selection."
             else: 
-                logging.info(f"UI: Creating new Access App for {hostname} with type '{final_policy_type_for_state}'.")
+                logging.info(f"UI: Attempting to create Access App. Target Name: {desired_app_name}, Target Policy: {final_policy_type_for_state}")
                 created_app = create_cloudflare_access_application(
                     hostname, desired_app_name,
                     desired_session_duration, desired_app_launcher_visible,
@@ -2625,11 +2633,10 @@ def ui_update_access_policy(hostname):
         if operation_successful:
             if not current_rule.get("access_policy_ui_override", False):
                  logging.info(f"Access policy for {hostname} is now UI-managed due to UI interaction.")
-                 state_changed_locally = True # Ensure save_state is called if only this flag changes
+                 state_changed_locally = True 
             current_rule["access_policy_ui_override"] = True
         else:
-            logging.warning(f"UI operation for {hostname} failed or no action taken. Override flag not actively set by this action.")
-
+            logging.warning(f"UI operation for {hostname} failed or no effective change made that requires API action. Override flag status based on prior state or this action's success.")
 
         if state_changed_locally:
             save_state()

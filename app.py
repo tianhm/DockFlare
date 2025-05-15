@@ -2771,7 +2771,64 @@ def status_page():
                         account_email_for_tld=account_email_for_tld,
                         CF_ZONE_ID_CONFIGURED=bool(CF_ZONE_ID) 
                         )
-                        
+
+@app.route('/revert_access_policy_to_labels/<path:hostname>', methods=['POST'])
+def revert_access_policy_to_labels(hostname):
+    if not docker_client: 
+        cloudflared_agent_state["last_action_status"] = "Error: Revert Policy - Docker client unavailable."
+        return redirect(url_for('status_page'))
+
+    action_status_message = f"Attempting to revert Access Policy for '{hostname}' to label configuration..."
+    logging.info(action_status_message)
+    
+    app_id_to_delete_if_any = None
+    state_changed_for_revert = False
+
+    with state_lock:
+        current_rule = managed_rules.get(hostname)
+
+        if not current_rule:
+            action_status_message = f"Error: Rule for '{hostname}' not found during revert attempt."
+            logging.error(action_status_message)
+            cloudflared_agent_state["last_action_status"] = action_status_message
+            return redirect(url_for('status_page'))
+
+        if not current_rule.get("access_policy_ui_override", False):
+            action_status_message = f"Info: Access Policy for '{hostname}' is already managed by labels. No action taken."
+            logging.info(action_status_message)
+            cloudflared_agent_state["last_action_status"] = action_status_message
+            return redirect(url_for('status_page'))
+
+        app_id_to_delete_if_any = current_rule.get("access_app_id")
+
+        current_rule["access_policy_ui_override"] = False
+        current_rule["access_app_id"] = None
+        current_rule["access_policy_type"] = "pending_label_sync" 
+        current_rule["access_app_config_hash"] = None
+        state_changed_for_revert = True
+        
+        if state_changed_for_revert:
+            save_state()
+            logging.info(f"State for '{hostname}' updated to remove UI override. Awaiting label reprocessing.")
+
+    if app_id_to_delete_if_any:
+        logging.info(f"Reverting policy for '{hostname}': Deleting previously UI-managed Access App ID '{app_id_to_delete_if_any}'.")
+        if delete_cloudflare_access_application(app_id_to_delete_if_any):
+            action_status_message = f"Access Policy for '{hostname}' reverted. UI-managed app deleted. Label config will apply on next reconciliation/restart."
+        else:
+            action_status_message = f"Access Policy for '{hostname}' reverted. Failed to delete UI-managed app '{app_id_to_delete_if_any}'. Label config will apply on next reconciliation/restart."
+            logging.warning(action_status_message)
+    else:
+        action_status_message = f"Access Policy for '{hostname}' reverted. No specific UI-managed app to delete. Label config will apply on next reconciliation/restart."
+
+    logging.info(f"Triggering reconciliation after reverting policy for '{hostname}' to apply label settings.")
+    reconcile_state() 
+    action_status_message += " Reconciliation triggered."
+
+    cloudflared_agent_state["last_action_status"] = action_status_message
+    logging.info(action_status_message)
+    return redirect(url_for('status_page'))
+
 @app.context_processor
 def inject_protocol():
     """Inject protocol info into all templates with more reliable detection."""
@@ -2957,6 +3014,7 @@ def force_delete_rule(hostname):
 
     time.sleep(0.2) 
     return redirect(url_for('status_page'))
+
 @app.route('/stream-logs')
 def stream_logs():
     """Streams log messages using Server-Sent Events with proper WSGI compatibility."""
