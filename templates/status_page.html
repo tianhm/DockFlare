@@ -126,7 +126,7 @@
         <span>🌓</span>
     </button>
 
-    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-grow w-full max-w-7xl">
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-grow w-full max-w-full">
 
         {% if initialization and initialization.in_progress %}
         <div class="alert-banner mb-8 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-500 text-gray-700 dark:text-gray-300 shadow-md">
@@ -339,7 +339,7 @@
                                             {% else %} N/A {% endif %}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium policy-actions-cell" id="policy-actions-{{ hostname | replace('.', '-') }}" style="min-width: 180px;">
-                                            <div style="position: relative;"> {/* Parent div for positioning context */}
+                                            <div style="position: relative;"> 
                                                 <div class="flex items-center space-x-1 sm:space-x-2">
                                                     <button type="button" class="edit-policy-btn px-2 py-1 text-xs rounded text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500" data-hostname="{{ hostname }}">
                                                         Edit
@@ -353,10 +353,9 @@
                                                     {% endif %}
                                                 </div>
                                                 
-                                                {/* Edit Policy Form - now positioned relative to the div above */}
                                                 <div class="edit-policy-form hidden mt-1 p-3 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700/30 shadow-lg" 
                                                      style="min-width: 280px; position: absolute; top: 100%; left: 0; z-index: 50;"> 
-                                                     {/* Increased z-index, adjusted min-width slightly, removed mt-2 for tighter fit if needed */}
+                                                     
                                                     <form action="{{ url_for('ui_update_access_policy', hostname=hostname) }}" method="POST" class="protocol-aware-form space-y-3">
                                                         <div>
                                                             <label for="access_policy_type-{{ hostname | replace('.', '-') }}" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Policy Type:</label>
