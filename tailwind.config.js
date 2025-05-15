@@ -11,11 +11,36 @@ module.exports = {
     require("daisyui"),
   ],
   daisyui: {
-    themes: ["light", "dark"], // Or your preferred themes: true for all, or specific ones
-    // styled: true,         // include daisyUI component styling (default)
-    // base: true,           // include daisyUI base styling (default)
-    // utils: true,          // include daisyUI utility classes (default)
-    // logs: true,           // Show logs (default)
-    // prefix: "dui-",       // Optional prefix for daisyUI classnames
+      themes: [ 
+      "light",
+      "dark",
+      "cupcake",
+      "bumblebee",
+      "emerald",
+      "corporate",
+      "synthwave",
+      "retro",
+      "cyberpunk",
+      "valentine",
+      "halloween",
+      "garden",
+      "forest",
+      "aqua",
+      "lofi",
+      "pastel",
+      "fantasy",
+      "wireframe",
+      "black",
+      "luxury",
+      "dracula",
+      "cmyk",
+      "autumn",
+      "business",
+      "acid",
+      "lemonade",
+      "night",
+      "coffee",
+      "winter",
+    ],
   },
 }
