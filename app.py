@@ -215,6 +215,7 @@ def save_state():
 def cf_api_request(method, endpoint, json_data=None, params=None):
     url = f"{CF_API_BASE_URL}{endpoint}"
     error_msg = None
+    api_call_start_time = time.time()
     try:
         logging.info(f"API Request: {method} {url} Params: {params}")
         if json_data:
@@ -269,6 +270,10 @@ def cf_api_request(method, endpoint, json_data=None, params=None):
         if "cfd_tunnel" in endpoint and tunnel_state.get("id") is None and "token" not in endpoint:
              tunnel_state["error"] = error_msg
         raise e
+    finally:
+        api_call_duration = time.time() - api_call_start_time
+        logging.info(f"API Request to {url} took {api_call_duration:.2f} seconds.")
+
 
 def get_zone_id_from_name(zone_name):
     global zone_id_cache
@@ -388,6 +393,7 @@ def get_tunnel_token_via_api(tunnel_id):
     logging.info(f"Getting token for tunnel ID '{tunnel_id}'")
     endpoint = f"/accounts/{CF_ACCOUNT_ID}/cfd_tunnel/{tunnel_id}/token"
     url = f"{CF_API_BASE_URL}{endpoint}"
+    api_call_start_time = time.time()
     try:
         logging.info(f"API Request: GET {url} (for token)")
         response = requests.request("GET", url, headers={"Authorization": f"Bearer {CF_API_TOKEN}"}, timeout=30)
@@ -409,6 +415,10 @@ def get_tunnel_token_via_api(tunnel_id):
          logging.error(f"Unexpected error getting tunnel token for {tunnel_id}: {e}", exc_info=True)
          tunnel_state["error"] = f"Unexpected error getting token: {e}"
          raise
+    finally:
+        api_call_duration = time.time() - api_call_start_time
+        logging.info(f"API Request to {url} (for token) took {api_call_duration:.2f} seconds.")
+
 
 def create_tunnel_via_api(name):
     logging.info(f"Creating tunnel '{name}' via API")
@@ -2412,7 +2422,13 @@ def get_all_account_cloudflare_tunnels():
     logging.info(f"Attempting to list all Cloudflare tunnels for account ID {CF_ACCOUNT_ID} with params: {params}")
     try:
         response_data = cf_api_request("GET", endpoint, params=params)
-        tunnels = response_data.get("result", [])
+        if response_data and response_data.get("result") is not None:
+            logging.info(f"Raw response size for all tunnels: {len(str(response_data))} characters.")
+        else:
+            logging.warning(f"No result in response_data for all tunnels list or response_data is None.")
+
+        tunnels = response_data.get("result", []) if response_data else []
+
 
         if isinstance(tunnels, list):
             logging.info(f"Successfully retrieved {len(tunnels)} Cloudflare tunnels from the account (any status).")
@@ -3031,10 +3047,8 @@ def status_page():
     external_cloudflared = USE_EXTERNAL_CLOUDFLARED
     external_tunnel_id = EXTERNAL_TUNNEL_ID
 
-    #all_account_tunnels_list = get_all_account_cloudflare_tunnels()
-    all_account_tunnels_list = []
-    logging.info("DEBUG: Skipped calling get_all_account_cloudflare_tunnels() for testing. Using empty list.")
-## troubleshooting
+    all_account_tunnels_list = get_all_account_cloudflare_tunnels()
+
     return render_template('status_page.html',
                         tunnel_state=template_tunnel_state,
                         agent_state=template_agent_state,
@@ -3045,7 +3059,7 @@ def status_page():
                         external_cloudflared=external_cloudflared,
                         external_tunnel_id=external_tunnel_id,
                         rules=rules_for_template,
-                        all_account_tunnels=all_account_tunnels_list, # This will now pass the empty list
+                        all_account_tunnels=all_account_tunnels_list,
                         CF_ACCOUNT_ID_CONFIGURED=bool(CF_ACCOUNT_ID),
                         ACCOUNT_ID_FOR_DISPLAY=CF_ACCOUNT_ID if CF_ACCOUNT_ID else "Not Configured",
                         relevant_zone_name_for_tld_policy=relevant_zone_name_for_tld_policy,
