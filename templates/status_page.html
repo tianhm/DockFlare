@@ -482,15 +482,24 @@
                     </h2>
                     <form action="/temp-add-manual-host-url" method="POST" class="protocol-aware-form space-y-4">
                         <div>
-                            <label for="manual_hostname" class="label">  ADDED 
-                                <span class="label-text">Hostname <span class="text-error">*</span></span>  ADDED 
-                            </label>  ADDED 
+                            <label for="manual_hostname" class="label">
+                                <span class="label-text">Hostname <span class="text-error">*</span></span>
+                            </label>
                             <input type="text" name="manual_hostname"
                                    id="manual_hostname"
                                    placeholder="e.g., mynas.example.com"
                                    class="input input-bordered w-full"
                                    required>
                         </div>
+
+                        <div>  <!-- ADDED THIS BLOCK -->
+                            <label for="manual_service_target" class="label">
+                                <span class="label-text">Service Target URL <span class="text-error">*</span></span>
+                            </label>
+                            <input type="url" id="manual_service_target" name="manual_service_target" placeholder="e.g., https://192.168.1.10:8006 or http://internal-app:3000" class="input input-bordered w-full" required>
+                             <p class="text-xs text-base-content/70 mt-1">Must include protocol (http:// or https://).</p>
+                        </div>  <!-- END ADDED BLOCK -->
+
                         <div class="card-actions justify-end mt-6">
                             <button type="submit" class="btn btn-primary">Add Manual Host</button>
                         </div>
