@@ -3014,6 +3014,7 @@ def tunnel_dns_records(tunnel_id):
 
 @app.route('/')
 def status_page():
+    logging.info(">>> status_page route ENTERED")
     rules_for_template = {}
     template_tunnel_state = {}
     template_agent_state = {}
@@ -3022,8 +3023,10 @@ def status_page():
     tld_policy_exists = False
     account_email_for_tld = None
     relevant_zone_name_for_tld_policy = None
-
+    
+    logging.info(">>> status_page: Preparing template data with state_lock...")
     with state_lock:
+        logging.info(f">>> status_page: state_lock acquired. Processing {len(managed_rules)} managed rules.")
         for hostname, rule in managed_rules.items():
             rule_copy = copy.deepcopy(rule)
             if rule_copy.get("delete_at") and isinstance(rule_copy["delete_at"], datetime):
@@ -3033,16 +3036,17 @@ def status_page():
                       logging.warning(f"Error preparing delete_at ('{rule_copy['delete_at']}') for template: {date_parse_err}")
                       rule_copy["delete_at"] = None
             rules_for_template[hostname] = rule_copy
-
+        logging.info(">>> status_page: Finished processing managed_rules.")
         template_tunnel_state = tunnel_state.copy()
         template_agent_state = cloudflared_agent_state.copy()
-
+        logging.info(">>> status_page: Copied tunnel_state and agent_state.")
         initialization_status = {
             "complete": (template_tunnel_state.get("id") is not None) or \
                         (USE_EXTERNAL_CLOUDFLARED and EXTERNAL_TUNNEL_ID is not None),
             "in_progress": template_tunnel_state.get("status_message", "").startswith("Initializing")
         }
-
+        logging.info(">>> status_page: Prepared initialization_status.")
+        logging.info(">>> status_page: Starting TLD policy check block...")
         if CF_ZONE_ID and docker_client: # docker_client check might be too restrictive for TLD policy display
             cached_zone_name = None
             if zone_id_cache:
@@ -3069,14 +3073,15 @@ def status_page():
         else:
             if not CF_ZONE_ID: logging.debug("CF_ZONE_ID not set, TLD policy assistant will not be active.")
 
-
+    logging.info(">>> status_page: Released state_lock. Preparing remaining variables.")
     display_token = get_display_token(template_tunnel_state.get("token"))
     docker_available = docker_client is not None
     external_cloudflared = USE_EXTERNAL_CLOUDFLARED
     external_tunnel_id = EXTERNAL_TUNNEL_ID
-
+    logging.info(">>> status_page: Calling get_all_account_cloudflare_tunnels()...")
+    
     all_account_tunnels_list = get_all_account_cloudflare_tunnels()
-
+    logging.info(f">>> status_page: Got {len(all_account_tunnels_list)} tunnels. Attempting to render template...")
     return render_template('mini.html',
                         tunnel_state=template_tunnel_state,
                         agent_state=template_agent_state,
