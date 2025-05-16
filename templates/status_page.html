@@ -334,13 +334,15 @@
                 <h2 class="card-title text-2xl sm:text-3xl border-b border-base-300 pb-3 mb-6">
                     Docker-Managed Ingress Rules
                 </h2>
-{% set temp_docker_rules_list = [] %}
+                {% set temp_docker_rules_list = [] %}
                 {% for hostname, details in rules.items() %}
                     {% if details.source is not defined or details.source == 'docker' %}
                         {% set temp_docker_rules_list = temp_docker_rules_list + [(hostname, details)] %}
                     {% endif %}
                 {% endfor %}
                 {% set docker_rules_list = temp_docker_rules_list %}
+
+                {% if docker_rules_list %}
                     <div class="overflow-x-auto -mx-6 sm:-mx-8 pb-24">
                         <table class="table table-zebra table-sm w-full">
                             <thead>
@@ -356,8 +358,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-{% for hostname, details in docker_rules_list|sort(attribute='0') %}
-
+                                {% for hostname, details in docker_rules_list|sort(attribute='0') %}
                                     <tr class="hover">
                                         <td class="p-3 whitespace-nowrap">
                                             {% set status_badge_color = 'badge-warning' if 'pending' in details.status else 'badge-success' %}
@@ -444,7 +445,6 @@
                                             </form>
                                         </td>
                                     </tr>
-                                 {% endif %}
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -465,7 +465,13 @@
                     </button>
                 </h2>
     
-                {% set manual_rules_list = rules|selectattr("source", "equalto", "manual")|list %}
+                {% set manual_rules_list = [] %} {# Use a temporary list for clarity and efficiency #}
+                {% for hostname, details in rules.items() %}
+                    {% if details.source == 'manual' %}
+                        {% set manual_rules_list = manual_rules_list + [(hostname, details)] %}
+                    {% endif %}
+                {% endfor %}
+
                 {% if manual_rules_list %}
                     <div class="overflow-x-auto -mx-6 sm:-mx-8">
                         <table class="table table-zebra table-sm w-full">
@@ -479,8 +485,8 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for hostname, details in rules.items()|sort %}
-                                    {% if details.source == 'manual' %}
+                                {% for hostname, details in manual_rules_list|sort(attribute='0') %} {# Iterate over the pre-filtered list #}
+                                    {# No need for the inner "if details.source == 'manual'" here anymore #}
                                     <tr class="hover">
                                         <td class="p-3 whitespace-nowrap">
                                             <a href="https://{{ hostname }}" target="_blank" rel="noopener noreferrer" title="Open https://{{ hostname }}" class="link link-hover link-primary text-sm">
@@ -521,7 +527,7 @@
                                                             <div class="auth-email-field hidden mt-2" id="auth-email-field-manual-{{ hostname | replace('.', '-') }}">
                                                                 <label for="auth_email-manual-{{ hostname | replace('.', '-') }}" class="block text-xs font-medium opacity-80 mb-1">Allowed Email:</label>
                                                                 <input type="email" name="auth_email" id="auth_email-manual-{{ hostname | replace('.', '-') }}" placeholder="user@example.com" 
-                                                                       value="{% if details.access_policy_type == 'authenticate_email' %}{# Logic to prefill email if stored #}{% endif %}" 
+                                                                       value="{% if details.access_policy_type == 'authenticate_email' %}{% set app_config = details.get('access_app_config', {}) %}{% if app_config and app_config.policies and app_config.policies[0].include and app_config.policies[0].include[0].email %}{{ app_config.policies[0].include[0].email.email }}{% endif %}{% endif %}" 
                                                                        class="input input-bordered input-xs w-full">
                                                             </div>
                                                             <div class="flex items-center justify-end space-x-2 mt-3">
@@ -543,14 +549,13 @@
                                             </form>
                                         </td>
                                     </tr>
-                                    {% endif %}
-                                {% endfor %}
+                                {% endfor %} {# This is the correct endfor for the manual_rules_list loop #}
                             </tbody>
                         </table>
                     </div>
                 {% else %}
                     <p class="text-center opacity-70 py-8">No manual ingress rules have been added yet.</p>
-                {% endif %}
+                {% endif %} {# This is the correct endif for the "if manual_rules_list" #}
             </div>
         </section>
         
