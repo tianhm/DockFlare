@@ -330,78 +330,6 @@
         </section>
 
         <section class="card bg-base-100 shadow-xl mb-8 sm:mb-12 transition-all duration-300 hover:shadow-2xl">
-            <div class="card-body">
-                <h2 class="card-title text-2xl sm:text-3xl border-b border-base-300 pb-3 mb-6">
-                    Add New Manual Host
-                </h2>
-                <form action="/temp-add-manual-host-url"" method="POST" class="protocol-aware-form space-y-4">
-                    <div>
-                        <label for="manual_hostname" class="label">
-                            <span class="label-text">Hostname <span class="text-error">*</span></span>
-                        </label>
-                        <input type="text" id="manual_hostname" name="manual_hostname" placeholder="e.g., mynas.example.com" class="input input-bordered w-full" required>
-                    </div>
-
-                    <div>
-                        <label for="manual_service_target" class="label">
-                            <span class="label-text">Service Target URL <span class="text-error">*</span></span>
-                        </label>
-                        <input type="url" id="manual_service_target" name="manual_service_target" placeholder="e.g., https://192.168.1.10:8006 or http://internal-app:3000" class="input input-bordered w-full" required>
-                         <p class="text-xs text-base-content/70 mt-1">Must include protocol (http:// or https://).</p>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="manual_zone_name" class="label">
-                                <span class="label-text">Cloudflare Zone Name (Optional)</span>
-                            </label>
-                            <input type="text" id="manual_zone_name" name="manual_zone_name" placeholder="e.g., example.com (defaults to CF_ZONE_ID)" class="input input-bordered w-full">
-                            {% if not CF_ZONE_ID_CONFIGURED %}
-                            <p class="text-xs text-warning mt-1">Warning: CF_ZONE_ID is not set. You must provide a zone name.</p>
-                            {% endif %}
-                        </div>
-
-                        <div class="form-control">
-                            <label class="label cursor-pointer justify-start gap-2">
-                                <input type="checkbox" id="manual_no_tls_verify" name="manual_no_tls_verify" value="true" class="checkbox checkbox-sm">
-                                <span class="label-text">Disable TLS Verify (for https to self-signed certs)</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label for="manual_access_policy_type" class="label">
-                            <span class="label-text">Access Policy</span>
-                        </label>
-                        <select name="manual_access_policy_type" id="manual_access_policy_type" class="manual-policy-type-select select select-bordered w-full">
-                            <option value="none" selected>None (Public - No Access App)</option>
-                            <option value="bypass">Bypass (Public Access App)</option>
-                            <option value="authenticate_email">Authenticate by Email</option>
-                            <option value="default_tld">Use Default *.tld Policy (if one exists)</option>
-                        </select>
-                    </div>
-
-                    <div class="manual-auth-email-field hidden mt-2" id="manual_auth_email_field_form">
-                        <label for="manual_auth_email_form" class="label">
-                            <span class="label-text">Allowed Email for Authentication:</span>
-                        </label>
-                        <input type="email" name="manual_auth_email" id="manual_auth_email_form" placeholder="user@example.com" class="input input-bordered w-full">
-                    </div>
-
-                    <input type="hidden" name="session_duration" value="24h">
-                    <input type="hidden" name="app_launcher_visible" value="false">
-                    <input type="hidden" name="allowed_idps" value="">
-                    <input type="hidden" name="auto_redirect" value="false">
-
-                    <div class="card-actions justify-end mt-6">
-                        <button type="submit" class="btn btn-primary">Add Manual Host</button>
-                    </div>
-                </form>
-            </div>
-        </section>
-
-
-        <section class="card bg-base-100 shadow-xl mb-8 sm:mb-12 transition-all duration-300 hover:shadow-2xl">
              <div class="card-body">
                 <h2 class="card-title text-2xl sm:text-3xl border-b border-base-300 pb-3 mb-6">
                     Managed Ingress Rules
@@ -522,10 +450,10 @@
                                                 {% if details.get('management_type') == 'manual' %}
                                                     <button class="btn btn-xs btn-info btn-outline edit-manual-rule-btn"
                                                             data-hostname="{{ hostname }}"
-                                                            data-service="{{ details.get('service', 'TEST_SERVICE_VALUE') }}"
+                                                            data-service="{{ details.service }}"
                                                             data-zone="{{ details.get('zone_name_used', '') }}"
                                                             data-notlsverify="{{ 'true' if details.get('no_tls_verify') else 'false' }}">Edit</button>
-                                                    <form action="/temp-delete-manual-host-url/{{ hostname }}" method="post" onsubmit="return confirm('Are you sure you want to delete the manual rule and DNS record for {{ hostname }}?');" class="protocol-aware-form">
+                                                    <form action="{{ url_for('delete_manual_host', hostname=hostname) }}" method="post" onsubmit="return confirm('Are you sure you want to delete the manual rule and DNS record for {{ hostname }}?');" class="protocol-aware-form">
                                                         <button type="submit" class="btn btn-xs btn-error btn-outline">Delete</button>
                                                     </form>
                                                 {% else %}
@@ -545,6 +473,80 @@
                 {% endif %}
             </div>
         </section>
+
+        
+                <section class="card bg-base-100 shadow-xl mb-8 sm:mb-12 transition-all duration-300 hover:shadow-2xl">
+            <div class="card-body">
+                <h2 class="card-title text-2xl sm:text-3xl border-b border-base-300 pb-3 mb-6">
+                    Add New Manual Host
+                </h2>
+                <form action="{{ url_for('add_manual_host') }}" method="POST" class="protocol-aware-form space-y-4">
+                    <div>
+                        <label for="manual_hostname" class="label">
+                            <span class="label-text">Hostname <span class="text-error">*</span></span>
+                        </label>
+                        <input type="text" id="manual_hostname" name="manual_hostname" placeholder="e.g., mynas.example.com" class="input input-bordered w-full" required>
+                    </div>
+
+                    <div>
+                        <label for="manual_service_target" class="label">
+                            <span class="label-text">Service Target URL <span class="text-error">*</span></span>
+                        </label>
+                        <input type="url" id="manual_service_target" name="manual_service_target" placeholder="e.g., https://192.168.1.10:8006 or http://internal-app:3000" class="input input-bordered w-full" required>
+                         <p class="text-xs text-base-content/70 mt-1">Must include protocol (http:// or https://).</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="manual_zone_name" class="label">
+                                <span class="label-text">Cloudflare Zone Name (Optional)</span>
+                            </label>
+                            <input type="text" id="manual_zone_name" name="manual_zone_name" placeholder="e.g., example.com (defaults to CF_ZONE_ID)" class="input input-bordered w-full">
+                            {% if not CF_ZONE_ID_CONFIGURED %}
+                            <p class="text-xs text-warning mt-1">Warning: CF_ZONE_ID is not set. You must provide a zone name.</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label cursor-pointer justify-start gap-2">
+                                <input type="checkbox" id="manual_no_tls_verify" name="manual_no_tls_verify" value="true" class="checkbox checkbox-sm">
+                                <span class="label-text">Disable TLS Verify (for https to self-signed certs)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="manual_access_policy_type" class="label">
+                            <span class="label-text">Access Policy</span>
+                        </label>
+                        <select name="manual_access_policy_type" id="manual_access_policy_type" class="manual-policy-type-select select select-bordered w-full">
+                            <option value="none" selected>None (Public - No Access App)</option>
+                            <option value="bypass">Bypass (Public Access App)</option>
+                            <option value="authenticate_email">Authenticate by Email</option>
+                            <option value="default_tld">Use Default *.tld Policy (if one exists)</option>
+                        </select>
+                    </div>
+
+                    <div class="manual-auth-email-field hidden mt-2" id="manual_auth_email_field_form">
+                        <label for="manual_auth_email_form" class="label">
+                            <span class="label-text">Allowed Email for Authentication:</span>
+                        </label>
+                        <input type="email" name="manual_auth_email" id="manual_auth_email_form" placeholder="user@example.com" class="input input-bordered w-full">
+                    </div>
+
+                    <input type="hidden" name="session_duration" value="24h">
+                    <input type="hidden" name="app_launcher_visible" value="false">
+                    <input type="hidden" name="allowed_idps" value="">
+                    <input type="hidden" name="auto_redirect" value="false">
+
+                    <div class="card-actions justify-end mt-6">
+                        <button type="submit" class="btn btn-primary">Add Manual Host</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+
 
         <section class="card bg-base-100 shadow-xl mb-8 sm:mb-12 transition-all duration-300 hover:shadow-2xl">
             <div class="card-body">
