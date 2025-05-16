@@ -1,16 +1,15 @@
 import logging
-from flask import Flask, render_template, request, url_for, jsonify, Response # Added jsonify, Response
+from flask import Flask, render_template, request, url_for, jsonify, Response
 import os
 import copy
 from datetime import datetime, timezone
-import time # Added for the cache logic in get_all_account_cloudflare_tunnels
+import time
 
-# --- Minimal example initializations needed by status_page.html shell ---
-# These are simplified. In your full app, they are populated dynamically.
+# --- Minimal example initializations ---
 CF_ACCOUNT_ID_CONFIGURED = True
 ACCOUNT_ID_FOR_DISPLAY = "Test Account ID"
 CF_ZONE_ID_CONFIGURED = True
-docker_client = True # Dummy for now, assuming status_page.html doesn't crash without full Docker logic
+docker_client = True
 
 tunnel_state_minimal = {
     "name": "test-tunnel", "id": "test-id", "token": "test-token-value",
@@ -30,13 +29,10 @@ def get_display_token(token):
 _all_tunnels_cache = []
 _all_tunnels_cache_time = 0
 _ALL_TUNNELS_CACHE_TTL = 120
-# state_lock = threading.Lock() # If you had a separate state_lock, define it. For this test, assuming not critical.
 
 def get_all_account_cloudflare_tunnels():
     global _all_tunnels_cache, _all_tunnels_cache_time
-    # global state_lock # Uncomment if you use state_lock here
     current_time = time.time()
-    # with state_lock: # Uncomment if you use state_lock here
     if _all_tunnels_cache is not None and (current_time - _all_tunnels_cache_time < _ALL_TUNNELS_CACHE_TTL):
         logging.info("Returning all_account_tunnels from cache.")
         return _all_tunnels_cache
@@ -51,7 +47,7 @@ EXTERNAL_TUNNEL_ID = None
 # --- End of minimal initializations ---
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] [%(threadName)s] %(message)s')
-app = Flask(__name__)
+app = Flask(__name__) # Flask will look for a 'static' folder by default
 app.secret_key = os.urandom(24)
 app.config['PREFERRED_URL_SCHEME'] = 'https'
 
@@ -106,15 +102,8 @@ def current_test_route():
     logging.info("Attempting to render ORIGINAL status_page.html (simplified content, more vars + dummy routes)")
     try:
         display_token_val = get_display_token(tunnel_state_minimal.get("token"))
-        # For this test, assume docker_client is not None for 'docker_available'
-        docker_available = True # Or more accurately: docker_client is not None
+        docker_available = docker_client is not None
         all_account_tunnels_list_val = get_all_account_cloudflare_tunnels()
-
-        # These are needed if your status_page.html (even parts of it) use them for static file URLs
-        # If static files are not loading, it's okay for now, focus on ERR_EMPTY_RESPONSE
-        @app.route('/static/<path:filename>')
-        def static_files(filename):
-            return app.send_static_file(filename)
 
         return render_template('status_page.html',
                             tunnel_state=tunnel_state_minimal,
@@ -163,12 +152,10 @@ def ping():
     logging.info("Dummy ping route")
     return jsonify({"status": "ok"})
 
-# Add other dummy routes here if new BuildErrors appear for them
-# For example, for add_manual_host (though the form action is static now)
-@app.route('/temp-add-manual-host-url', methods=['POST']) # Matching static URL
+@app.route('/temp-add-manual-host-url', methods=['POST']) # Matching static URL in simplified HTML
 def add_manual_host_dummy():
-    logging.info("Dummy add_manual_host route reached (via static URL)")
-    return "Dummy add_manual_host reached", 200
+    logging.info("Dummy add_manual_host_dummy route reached (via static URL)")
+    return "Dummy add_manual_host_dummy reached", 200
 
 if __name__ == '__main__':
     logging.info("Starting MODIFIED MINIMAL Flask app for testing status_page.html (more vars + dummy routes).")
