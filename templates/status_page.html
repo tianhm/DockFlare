@@ -476,20 +476,22 @@
 -->
         
 <section class="card bg-base-100 shadow-xl mb-8 sm:mb-12 transition-all duration-300 hover:shadow-2xl">
-            <div class="card-body">
-                <h2 class="card-title text-2xl sm:text-3xl border-b border-base-300 pb-3 mb-6">
-                    Add New Manual Host
-                </h2>
-                <form action="/temp-add-manual-host-url" method="POST" class="protocol-aware-form space-y-4">
-                    <div>
-                        <input type="text" name="manual_hostname">
-                    </div>
-                    <div class="card-actions justify-end mt-6">
-                        <button type="submit" class="btn btn-primary">Add Manual Host</button>
-                    </div>
-                </form>
-            </div>
-        </section>
+                <div class="card-body">
+                    <h2 class="card-title text-2xl sm:text-3xl border-b border-base-300 pb-3 mb-6">
+                        Add New Manual Host
+                    </h2>
+                    <form action="/temp-add-manual-host-url" method="POST" class="protocol-aware-form space-y-4">
+                        <div>
+                            <input type="text" name="manual_hostname"
+                                   id="manual_hostname"  ATTRS ADDED 
+                                   placeholder="e.g., mynas.example.com">  ATTRS ADDED 
+                        </div>
+                        <div class="card-actions justify-end mt-6">
+                            <button type="submit" class="btn btn-primary">Add Manual Host</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
 
         <section class="card bg-base-100 shadow-xl mb-8 sm:mb-12 transition-all duration-300 hover:shadow-2xl">
             <div class="card-body">
