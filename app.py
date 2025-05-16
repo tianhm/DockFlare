@@ -3031,8 +3031,10 @@ def status_page():
     external_cloudflared = USE_EXTERNAL_CLOUDFLARED
     external_tunnel_id = EXTERNAL_TUNNEL_ID
 
-    all_account_tunnels_list = get_all_account_cloudflare_tunnels()
-
+    #all_account_tunnels_list = get_all_account_cloudflare_tunnels()
+    all_account_tunnels_list = []
+    logging.info("DEBUG: Skipped calling get_all_account_cloudflare_tunnels() for testing. Using empty list.")
+## troubleshooting
     return render_template('status_page.html',
                         tunnel_state=template_tunnel_state,
                         agent_state=template_agent_state,
@@ -3043,7 +3045,7 @@ def status_page():
                         external_cloudflared=external_cloudflared,
                         external_tunnel_id=external_tunnel_id,
                         rules=rules_for_template,
-                        all_account_tunnels=all_account_tunnels_list,
+                        all_account_tunnels=all_account_tunnels_list, # This will now pass the empty list
                         CF_ACCOUNT_ID_CONFIGURED=bool(CF_ACCOUNT_ID),
                         ACCOUNT_ID_FOR_DISPLAY=CF_ACCOUNT_ID if CF_ACCOUNT_ID else "Not Configured",
                         relevant_zone_name_for_tld_policy=relevant_zone_name_for_tld_policy,
