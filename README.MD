@@ -85,11 +85,23 @@ DockFlare listens for Docker container events.
          - "5000:5000"  # Web UI port
        env_file:
          - .env  # Load environment variables from .env file
+       environment:
+         - STATE_FILE_PATH=/app/data/state.json
+         - TZ=Europe/Zurich  # Set your timezone here  
        volumes:
          - /var/run/docker.sock:/var/run/docker.sock:ro  # Required to monitor Docker events
          - dockflare_data:/app/data  # Persistent storage for state
        networks:
          - cloudflare-net  # Network for communication with cloudflared agent
+         logging:
+       labels: # Optional keep in mind to set access policy
+         - cloudflare.tunnel.enable=true
+         - cloudflare.tunnel.hostname=dockflare.yourdomain.tld # update your domain 
+         - cloudflare.tunnel.service=http://dockflare:5000 
+       driver: "json-file"
+       options:
+         max-size: "10m"
+         max-file: "2"
    volumes:
      dockflare_data:
    networks:
@@ -97,27 +109,39 @@ DockFlare listens for Docker container events.
    ```
 
 2. **Create `.env` File**:
-
    ```dotenv
-   # Required Cloudflare credentials
-   CF_API_TOKEN=your_cloudflare_api_token
-   CF_ACCOUNT_ID=your_cloudflare_account_id
-   CF_ZONE_ID=your_cloudflare_zone_id
-   
-   # Tunnel configuration
-   TUNNEL_NAME=your_tunnel_name
-   
-   # Optional configuration
-   GRACE_PERIOD_SECONDS=28800  # 8 hours before removing rules after container stops
-   LABEL_PREFIX=cloudflare.tunnel  # Prefix for Docker labels
-   
-   # Optional: External cloudflared mode
-   # USE_EXTERNAL_CLOUDFLARED=true
-   # EXTERNAL_TUNNEL_ID=your_external_tunnel_id
-   
-   # Optional: Scanning configuration
-   # SCAN_ALL_NETWORKS=true  # Scan containers across all Docker networks
-   ```
+# Cloudflare API Token (REQUIRED)
+CF_API_TOKEN=your_cloudflare_api_token
+# Cloudflare Account ID (REQUIRED) - dash.cloudflare.com/ACCOUNT_ID
+CF_ACCOUNT_ID=your_cloudflare_account_id
+# Cloudflare Zone ID (REQUIRED)
+CF_ZONE_ID=your_cloudflare_zone_id
+# Tunnel Name (REQUIRED only when NOT using external cloudflared)
+TUNNEL_NAME=DockFlare-tunnel
+# Use External Cloudflared (OPTIONAL)
+USE_EXTERNAL_CLOUDFLARED=false
+# External Tunnel ID (REQUIRED if USE_EXTERNAL_CLOUDFLARED=true) 
+EXTERNAL_TUNNEL_ID=6ff42ae2-765d-4adf-befc-ca51f8e4e688 # Example Tunnel ID format
+# Docker Network Name (internal cloudflared mode)
+CLOUDFLARED_NETWORK_NAME=cloudflare-net
+# Label Prefix for Docker Containers
+LABEL_PREFIX=cloudflare.tunnel
+# Grace Period for Rule Deletion (seconds, default: 1h)
+GRACE_PERIOD_SECONDS=6000
+# Cleanup Interval (seconds)
+CLEANUP_INTERVAL_SECONDS=300
+# Agent Status Update Interval (seconds)
+AGENT_STATUS_UPDATE_INTERVAL_SECONDS=10
+# Scan All Docker Networks (default: false)
+SCAN_ALL_NETWORKS=false
+# Max Concurrent DNS Operations (default: 3)
+MAX_CONCURRENT_DNS_OPS=3
+# Reconciliation Batch Size (default: 3)
+RECONCILIATION_BATCH_SIZE=3
+# Trusted Proxies (IPs/CIDR ranges)
+# TRUSTED_PROXIES=172.16.0.0/12,192.168.0.0/16
+# Default TLS Verification Setting (skip verification) (default: false)
+DEFAULT_NO_TLS_VERIFY=false
 
 3. **Run DockFlare**:
 
