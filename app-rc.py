@@ -1331,7 +1331,7 @@ def process_container_start(container):
                     if effective_tunnel_id:
                         for config_item_dns in hostnames_to_process: 
                             hostname_dns = config_item_dns["hostname"]
-                            
+                            # Check again if this hostname became manual in the meantime (unlikely but safe)
                             if managed_rules.get(hostname_dns, {}).get("source") == "manual":
                                 continue
 
@@ -1932,8 +1932,8 @@ def _run_reconciliation():
                 logging.info(f"[Reconcile] Unique hostnames for DNS setup: {len(unique_dns_setups)}")
 
                 for hostname_dns, zone_id_dns in unique_dns_setups:
-                    dns_processed +=1 
-                    app.reconciliation_info["status"] = f"DNS for {hostname_dns} ({dns_processed}/{dns_total})" 
+                    dns_processed +=1 # This counter might be slightly off if we have duplicates, but good enough for progress
+                    app.reconciliation_info["status"] = f"DNS for {hostname_dns} ({dns_processed}/{dns_total})" # dns_total is pre-deduplication
                     
                     if time.time() - reconciliation_start > max_total_time - 5:
                         logging.warning("[Reconcile] Timeout reached during DNS setup phase.")
@@ -2346,7 +2346,7 @@ def update_cloudflare_config():
             if rule.get("service"):
                 comp_dict["service"] = rule.get("service")
             if rule.get("originRequest", {}).get("noTLSVerify"):
-                comp_dict["noTLSVerify"] = True 
+                comp_dict["noTLSVerify"] = True # Only include if true
             return comp_dict
 
         current_api_comparable_set = {json.dumps(rule_to_comparable_dict(r), sort_keys=True) for r in current_api_ingress_rules}
@@ -3174,7 +3174,7 @@ def ui_add_manual_rule():
 
         managed_rules[hostname] = {
             "service": processed_service_for_cf,
-            # "original_service_input": service_input, # Optional: display the user's full input later --- need to check on this -> on my open task list don't forget
+            # "original_service_input": service_input, # Optional: display the user's full input later
             "container_id": None, 
             "status": "active",
             "delete_at": None,

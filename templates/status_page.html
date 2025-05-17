@@ -185,7 +185,7 @@
 <body class="min-h-screen flex flex-col font-sans transition-colors duration-300">
     <div style="position: fixed; top: 0; left: 0; z-index: 50; pointer-events: none;">
         <div class="fixed top-6 left-[-38px] sm:top-7 sm:left-[-35px] z-50 transform -rotate-45 bg-indigo-600 text-white text-xs font-semibold tracking-wider text-center py-1 w-36 shadow-md">
-         version 1.6
+         version 1.7
         </div>
     </div>
 
@@ -333,8 +333,13 @@
              <div class="card-body">
                 <h2 class="card-title text-2xl sm:text-3xl border-b border-base-300 pb-3 mb-6">
                     Managed Ingress Rules
+                    <button class="btn btn-sm btn-primary ml-auto" onclick="document.getElementById('add_manual_rule_modal').showModal()">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                        Add Manual Rule
+                    </button>
                 </h2>
-                {% if rules %}
+
+                {% if rules and rules.items() %}
                     <div class="overflow-x-auto -mx-6 sm:-mx-8 pb-24">
                         <table class="table table-zebra table-sm w-full">
                             <thead>
@@ -342,36 +347,44 @@
                                     <th class="p-3 w-1/12">Status</th>
                                     <th class="p-3 w-1/4">Hostname</th> 
                                     <th class="p-3 w-1/5">Service Target</th>
-                                    <th class="p-3 w-1/6">Container</th>
+                                    <th class="p-3 w-1/6">Identifier</th>
                                     <th class="p-3 w-1/5">Access Policy</th>
                                     <th class="p-3 w-1/4">Manage Policy</th>
-                                    <th class="p-3 w-1/6">Expires At (UTC)</th>
+                                    <th class="p-3 w-1/6">Expires At</th>
                                     <th class="p-3 w-auto">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for hostname, details in rules.items()|sort %}
-                                    <tr class="hover">
-                                        
-                                        <td class="p-3 whitespace-nowrap">
-                                            {% set status_badge_color = 'badge-warning' if 'pending' in details.status else 'badge-success' %}
-                                            <span class="badge {{ status_badge_color }} badge-sm badge-outline">{{ details.status.replace('_',' ') }}</span>
+                                    <td class="p-3 whitespace-nowrap">
+                                            {% if details.source == 'manual' %}
+                                                <span class="badge badge-info badge-sm">Manual</span>                                               
+                                            {% else %}
+                                                {% set status_badge_color = 'badge-warning' if 'pending' in details.status else 'badge-success' %}
+                                                <span class="badge {{ status_badge_color }} badge-sm"> 
+                                                    {{ details.status.replace('_',' ') }}
+                                                </span>
+                                            {% endif %}
                                         </td>
-                                        
                                         <td class="p-3 whitespace-nowrap">
                                             <a href="https://{{ hostname }}" target="_blank" rel="noopener noreferrer" title="Open https://{{ hostname }}" class="link link-hover link-primary text-sm">
                                                {{ hostname }}
                                            </a>
                                            {% if hostname.startswith('*.') %}
-                                           <span class="badge badge-info badge-outline badge-xs ml-2">wildcard</span>
+                                           <span class="badge badge-info badge-xs ml-2">wildcard</span>
                                            {% endif %}
                                        </td>
-                                        
                                         <td class="p-3 whitespace-nowrap"><code class="text-xs opacity-80">{{ details.service }}</code></td>
-                                        
-                                        <td class="p-3 whitespace-nowrap"><code class="text-xs opacity-80" title="{{ details.container_id if details.container_id else 'N/A' }}">{{ details.container_id[:12] if details.container_id else 'N/A' }}</code></td>
-                                        
-                                        <td class="p-3 whitespace-nowrap text-sm opacity-80" id="access-policy-display-{{ hostname | replace('.', '-') }}">
+                                        <td class="p-3 whitespace-nowrap">
+                                            {% if details.source == 'manual' %}
+                                                <em class="text-xs opacity-70 italic">Manual Rule</em>
+                                            {% elif details.container_id %}
+                                                <code class="text-xs opacity-80" title="{{ details.container_id }}">{{ details.container_id[:12] }}</code>
+                                            {% else %}
+                                                <span class="text-xs opacity-50">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="p-3 whitespace-nowrap text-sm opacity-80" id="access-policy-display-{{ details.source if details.source else 'docker' }}-{{ hostname | replace('.', '-') }}">
                                             {% if details.access_policy_type %}
                                                 <span class="capitalize">
                                                     {{ details.access_policy_type.replace('_', ' ') if details.access_policy_type != 'pending_label_sync' else 'Pending Label Sync...' }}
@@ -386,35 +399,34 @@
                                                     <span class="badge badge-ghost badge-xs ml-1">(Managed)</span>
                                                 {% endif %}
                                                 {% if details.access_policy_ui_override %}
-                                                    <span class="badge badge-accent badge-outline badge-xs ml-2" title="This policy is managed by the UI and overrides container labels.">UI Override</span>
+                                                <span class="badge badge-warning badge-xs ml-2 animate-pulse" title="This policy is managed by the UI{% if details.source != 'manual' %} and overrides container labels{% endif %}.">UI Override</span>
                                                 {% endif %}
                                             {% elif details.get('status') == 'active' %} 
                                                 <span class="opacity-60 italic">None (Public)</span>
                                             {% else %}
-                                                N/A
+                                                <span class="text-xs opacity-50">N/A</span>
                                             {% endif %}
                                         </td>
-                                        
-                                        <td class="p-3 whitespace-nowrap text-sm policy-actions-cell" id="policy-actions-{{ hostname | replace('.', '-') }}" style="min-width: 180px;">
+                                        <td class="p-3 whitespace-nowrap text-sm policy-actions-cell" id="policy-actions-{{ details.source if details.source else 'docker' }}-{{ hostname | replace('.', '-') }}" style="min-width: 180px;">
                                             <div class="flex items-center space-x-1 sm:space-x-2">
                                                 <div class="dropdown dropdown-end dropdown-hover"> 
-                                                    <button tabindex="0" role="button" class="btn btn-xs btn-info btn-outline" data-hostname="{{ hostname }}">Edit</button> 
+                                                    <button tabindex="0" role="button" class="btn btn-xs btn-info btn-outline" data-hostname="{{ hostname }}">Edit Policy</button> 
                                                     <div tabindex="0" class="dropdown-content z-[50] menu p-3 shadow-xl bg-base-100 dark:bg-base-200 rounded-box w-64 sm:w-72"> 
                                                         <form action="{{ url_for('ui_update_access_policy', hostname=hostname) }}" method="POST" class="protocol-aware-form space-y-3">
                                                             <div>
-                                                                <label for="access_policy_type-{{ hostname | replace('.', '-') }}" class="block text-xs font-medium opacity-80 mb-1">Policy Type:</label>
-                                                                <select name="access_policy_type" id="access_policy_type-{{ hostname | replace('.', '-') }}" class="policy-type-select select select-bordered select-xs w-full" data-hostname="{{ hostname }}">
+                                                                <label for="access_policy_type-{{ details.source if details.source else 'docker' }}-{{ hostname | replace('.', '-') }}" class="block text-xs font-medium opacity-80 mb-1">Policy Type:</label>
+                                                                <select name="access_policy_type" id="access_policy_type-{{ details.source if details.source else 'docker' }}-{{ hostname | replace('.', '-') }}" class="policy-type-select select select-bordered select-xs w-full" data-hostname="{{ hostname }}">
                                                                     <option value="none" {% if not details.access_policy_type %}selected{% endif %}>None (Public - No App)</option>
                                                                     <option value="bypass" {% if details.access_policy_type == 'bypass' %}selected{% endif %}>Bypass (Public App)</option>
-                                                                    <option value="authenticate_email" {% if details.access_policy_type == 'authenticate_email' or (details.access_policy_type == 'authenticate' and not details.access_custom_rules_str and not details.access_allowed_idps_str) %}selected{% endif %}>Authenticate by Email</option>
+                                                                    <option value="authenticate_email" {% if details.access_policy_type == 'authenticate_email' or (details.source != 'manual' and details.access_policy_type == 'authenticate' and not details.access_custom_rules_str and not details.access_allowed_idps_str) %}selected{% endif %}>Authenticate by Email</option>
                                                                     <option value="default_tld" {% if details.access_policy_type == 'default_tld' %}selected{% endif %}>Use Default *.tld Policy</option>
                                                                 </select>
                                                             </div>
-                                                            <div class="auth-email-field hidden mt-2" id="auth-email-field-{{ hostname | replace('.', '-') }}">
-                                                                <label for="auth_email-{{ hostname | replace('.', '-') }}" class="block text-xs font-medium opacity-80 mb-1">Allowed Email:</label>
-                                                                {% set prefill_email = '' %}
-                                                                {% if details.access_policy_type == 'authenticate_email' or (details.access_policy_type == 'authenticate' and not details.access_custom_rules_str) %}{% endif %}
-                                                                <input type="email" name="auth_email" id="auth_email-{{ hostname | replace('.', '-') }}" placeholder="user@example.com" value="{{ prefill_email }}" class="input input-bordered input-xs w-full">
+                                                            <div class="auth-email-field hidden mt-2" id="auth-email-field-{{ details.source if details.source else 'docker' }}-{{ hostname | replace('.', '-') }}">
+                                                                <label for="auth_email-{{ details.source if details.source else 'docker' }}-{{ hostname | replace('.', '-') }}" class="block text-xs font-medium opacity-80 mb-1">Allowed Email:</label>
+                                                                {% set prefill_email_val = '' %}
+                                                                {#  #}
+                                                                <input type="email" name="auth_email" id="auth_email-{{ details.source if details.source else 'docker' }}-{{ hostname | replace('.', '-') }}" placeholder="user@example.com" value="{{ prefill_email_val }}" class="input input-bordered input-xs w-full">
                                                             </div>
                                                             <div class="flex items-center justify-end space-x-2 mt-3">
                                                                 <button type="submit" class="save-policy-btn btn btn-xs btn-primary">Save</button>
@@ -423,26 +435,36 @@
                                                     </div>
                                                 </div>
                                                 {% if details.access_policy_ui_override %}
-                                                <form action="{{ url_for('revert_access_policy_to_labels', hostname=hostname) }}" method="POST" onsubmit="return confirm('Are you sure you want to revert the Access Policy for {{ hostname }} to be managed by its container labels? The current UI-set policy will be removed.');" class="protocol-aware-form inline-block">
-                                                    <button type="submit" class="btn btn-xs btn-warning btn-outline" title="Revert to label-defined Access Policy">Revert</button>
+                                                <form action="{{ url_for('revert_access_policy_to_labels', hostname=hostname) }}" method="POST" 
+                                                      onsubmit="return confirm('Are you sure you want to revert the Access Policy for {{ hostname }}? {% if details.source == "manual" %}The current UI-set policy will be removed, and it will become public or use a TLD policy if one exists.{% else %}The current UI-set policy will be removed, and it will be managed by its container labels.{% endif %}');" 
+                                                      class="protocol-aware-form inline-block">
+                                                    <button type="submit" class="btn btn-xs btn-warning btn-outline" title="Revert to Label/Default Policy">Revert</button>
                                                 </form>
                                                 {% endif %}
                                             </div>
                                         </td>
-                                        
                                         <td class="p-3 whitespace-nowrap text-sm opacity-70">
-                                            {% if details.status=='pending_deletion' and details.delete_at %}
-                                            <div data-delete-at="{{ details.delete_at.isoformat() }}">
-                                                <span class="absolute-time">{{ details.delete_at.strftime('%H:%M %d-%b-%Y') }}</span>
-                                                <span class="countdown-timer block text-xs opacity-80">(calculating...)</span>
-                                            </div>
-                                            {% else %} N/A {% endif %}
+                                            {% if details.source == 'manual' or (details.source != 'manual' and details.status == 'active') %}
+                                                N/A
+                                            {% elif details.source != 'manual' and details.status=='pending_deletion' and details.delete_at %}
+                                                <div data-delete-at="{{ details.delete_at.isoformat() }}">
+                                                    <span class="absolute-time-display"></span> 
+                                                    <span class="countdown-timer block text-xs opacity-80"></span>
+                                                </div>
+                                            {% else %} 
+                                                N/A 
+                                            {% endif %}
                                         </td>
-                                        
                                         <td class="p-3 whitespace-nowrap text-sm" style="min-width: 80px;">
-                                            <form action="{{ url_for('force_delete_rule', hostname=hostname) }}" method="post" onsubmit="return confirm('Are you sure you want to force delete the rule and DNS record for {{ hostname }} immediately? This bypasses the grace period.');" class="protocol-aware-form">
-                                                <button type="submit" class="btn btn-xs btn-error btn-outline" {{ 'disabled' if not docker_available else '' }}>Delete</button>
-                                            </form>
+                                            {% if details.source == 'manual' %}
+                                                <form action="{{ url_for('ui_delete_manual_rule', hostname=hostname) }}" method="post" onsubmit="return confirm('Are you sure you want to delete the manual rule for {{ hostname }}?');" class="protocol-aware-form">
+                                                    <button type="submit" class="btn btn-xs btn-error btn-outline">Delete</button>
+                                                </form>
+                                            {% else %}
+                                                <form action="{{ url_for('force_delete_rule', hostname=hostname) }}" method="post" onsubmit="return confirm('Are you sure you want to force delete the rule and DNS record for {{ hostname }} immediately? This bypasses the grace period.');" class="protocol-aware-form">
+                                                    <button type="submit" class="btn btn-xs btn-error btn-outline" {{ 'disabled' if not docker_available else '' }}>Delete</button>
+                                                </form>
+                                            {% endif %}
                                         </td>
                                     </tr>
                                 {% endfor %}
@@ -545,17 +567,94 @@
             <p class="mb-1"><a href="https://github.com/ChrispyBacon-dev/DockFlare/wiki" target="_blank" rel="noopener noreferrer" class="link link-hover link-primary">DockFlare Documentation</a></p>
             <p class="mb-1">Enjoying DockFlare? Consider supporting the project!</p>
             <p><a href="https://github.com/sponsors/ChrispyBacon-dev" target="_blank" rel="noopener noreferrer" class="inline-flex items-center link link-hover"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-pink-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" /></svg>Sponsor ChrispyBacon-dev on GitHub</a></p>
-            <p class="mt-2 text-xs opacity-60">DockFlare v1.6 (stable)</p>
+            <p class="mt-2 text-xs opacity-60">DockFlare v1.7</p>
         </div>
     </footer>
-
-    <script>
+    <dialog id="add_manual_rule_modal" class="modal">
+      <div class="modal-box w-11/12 max-w-lg">
+        <form method="dialog">
+          <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+        </form>
+        <h3 class="font-bold text-lg mb-4">Add New Manual Ingress Rule</h3>
+        <form action="{{ url_for('ui_add_manual_rule') }}" method="POST" class="space-y-4 protocol-aware-form">
+            <div>
+                <label class="label" for="manual_hostname"><span class="label-text">Hostname (e.g., router.example.com)</span></label>
+                <input type="text" id="manual_hostname" name="manual_hostname" placeholder="mydevice.yourdomain.com" class="input input-bordered w-full" required />
+            </div>
+            <div>
+                <label class="label" for="manual_service"><span class="label-text">Service URL (e.g., http://192.168.1.1:80)</span></label>
+                <input type="text" id="manual_service" name="manual_service" placeholder="http://internal-ip:port" class="input input-bordered w-full" required />
+            </div>
+            <div>
+                <label class="label" for="manual_zone_name"><span class="label-text">Cloudflare Zone Name (Optional if CF_ZONE_ID is set)</span></label>
+                <input type="text" id="manual_zone_name" name="manual_zone_name" placeholder="yourdomain.com" class="input input-bordered w-full" {% if not CF_ZONE_ID_CONFIGURED %}required{% endif %}/>
+                {% if CF_ZONE_ID_CONFIGURED and CF_ZONE_ID %}
+                <div class="text-xs opacity-60 mt-1">If blank, default Zone ID ({{ CF_ZONE_ID[:12] }}...) will be used.</div>
+                {% elif not CF_ZONE_ID_CONFIGURED %}
+                <div class="text-xs text-warning mt-1">CF_ZONE_ID is not set globally, so Zone Name is required here.</div>
+                {% endif %}
+            </div>
+            <div class="form-control">
+              <label class="label cursor-pointer">
+                <span class="label-text">Disable TLS Verification (No TLS Verify)</span>
+                <input type="checkbox" name="manual_no_tls_verify" id="manual_no_tls_verify" class="checkbox checkbox-sm" />
+              </label>
+              <div class="text-xs opacity-60">Check if the service uses a self-signed certificate or HTTP.</div>
+            </div>
+            <div class="modal-action">
+              <button type="submit" class="btn btn-primary">Add Rule</button>
+            </div>
+        </form>
+      </div>
+       <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+     <script>
         const maxLogLines = 250;let initialConnectMessageCleared = false;let activeLogSource = null;let eventSourceHealthCheck = null;let pingInterval = null;
         function addLogLine(message, type = 'log') {const logOutput = document.getElementById('log-output');if (!logOutput) { console.error("Log output element not found when trying to add line."); return; }if (!initialConnectMessageCleared && logOutput.textContent.includes('Connecting to log stream...')) {logOutput.textContent = ''; initialConnectMessageCleared = true;}const newLogLine = document.createElement('div');newLogLine.textContent = message;if (type === 'status') newLogLine.classList.add('text-neutral-content', 'opacity-70', 'italic');else if (type === 'error') newLogLine.classList.add('text-red-400', 'font-semibold');else if (type === 'connected') newLogLine.classList.add('text-green-400');const isScrolledToBottom = logOutput.scrollHeight - logOutput.clientHeight <= logOutput.scrollTop + 10;logOutput.appendChild(newLogLine);while (logOutput.childNodes.length > maxLogLines) logOutput.removeChild(logOutput.firstChild);if (isScrolledToBottom) logOutput.scrollTop = logOutput.scrollHeight;}
         function connectEventSource() {const logOutput = document.getElementById('log-output');if (!logOutput) { console.error("Log output element not found for EventSource setup."); return; }if (!window.EventSource) {console.error("EventSource not supported");logOutput.textContent = "Browser doesn't support Server-Sent Events."; return;}if (activeLogSource) { try { activeLogSource.close(); } catch (e) { console.error("Error closing existing log stream:", e); } activeLogSource = null; }const currentProtocol = window.location.protocol; const currentHost = window.location.host;const timestampParam = Date.now();const streamUrl = `${currentProtocol}//${currentHost}/stream-logs?t=${timestampParam}`;try {activeLogSource = new EventSource(streamUrl);let connectionTimeout;const resetConnectionTimeout = () => {if (connectionTimeout) clearTimeout(connectionTimeout);connectionTimeout = setTimeout(() => {if (activeLogSource) {activeLogSource.close(); activeLogSource = null;addLogLine("--- Log stream connection timeout. Reconnecting... ---", 'error');setTimeout(connectEventSource, 2000);}}, 10000);};resetConnectionTimeout();activeLogSource.onopen = function() {if (connectionTimeout) clearTimeout(connectionTimeout);addLogLine("--- Log stream connected ---", 'connected');};activeLogSource.onmessage = function(event) {resetConnectionTimeout(); if (event.data === "heartbeat") { return; }addLogLine(event.data, 'log');};let retryAttempt = 0;activeLogSource.onerror = function(err) {if (connectionTimeout) clearTimeout(connectionTimeout);addLogLine("--- Log stream connection error. Retrying... ---", 'error');if (activeLogSource) { activeLogSource.close(); activeLogSource = null; }retryAttempt++; const delay = Math.min(5000 * Math.pow(1.5, retryAttempt - 1), 30000);setTimeout(connectEventSource, delay);};} catch (e) {addLogLine("--- Failed to establish log stream connection ---", 'error'); setTimeout(connectEventSource, 5000);}if (eventSourceHealthCheck) clearInterval(eventSourceHealthCheck);eventSourceHealthCheck = setInterval(() => {if (!activeLogSource || activeLogSource.readyState === 2) {connectEventSource();}}, 30000);window.addEventListener('beforeunload', function() {if (activeLogSource) activeLogSource.close(); if (eventSourceHealthCheck) clearInterval(eventSourceHealthCheck);});}
         function checkEnvironment() {const currentProtocol = window.location.protocol; const currentHost = window.location.host;const debugUrl = `${currentProtocol}//${currentHost}/debug`;fetch(debugUrl).then(response => response.json()).then(data => { alert("Env debug info logged to console."); }).catch(error => console.error("Failed to fetch environment info:", error));}
         function formatTimeDifference(diffMillis) {const totalSeconds = Math.round(Math.abs(diffMillis / 1000)); if (totalSeconds < 60) return diffMillis >= 0 ? 'in <1m' : '<1m ago';const days = Math.floor(totalSeconds / (3600 * 24)); const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600); const minutes = Math.floor((totalSeconds % 3600) / 60);let parts = []; if (days > 0) parts.push(`${days}d`); if (hours > 0) parts.push(`${hours}h`); if (minutes > 0 || (days === 0 && hours === 0)) parts.push(`${minutes}m`);const timeString = parts.join(' '); return diffMillis >= 0 ? `in ${timeString}` : `${timeString} ago`;}
-        function updateCountdowns() {const countdownElements = document.querySelectorAll('.countdown-timer'); if (!countdownElements.length) return;const now = new Date();countdownElements.forEach(span => {const td = span.closest('td[data-delete-at]'); if (!td) return;const deleteAtISO = td.dataset.deleteAt; if (!deleteAtISO) return;try {const targetDate = new Date(deleteAtISO); if (isNaN(targetDate.getTime())) throw new Error("Invalid date parsed");const diff = targetDate - now; span.textContent = `(${formatTimeDifference(diff)})`;if (diff < 0) span.classList.add('text-red-500'); else span.classList.remove('text-red-500');} catch (e) { span.textContent = "(invalid date)"; }});}
+        function updateCountdowns() {
+            document.querySelectorAll('div[data-delete-at]').forEach(div => {
+                const deleteAtISO = div.dataset.deleteAt;
+                if (!deleteAtISO) return;
+
+                const absoluteTimeSpan = div.querySelector('.absolute-time-display');
+                const countdownSpan = div.querySelector('.countdown-timer');
+
+                if (!absoluteTimeSpan || !countdownSpan) {
+                    return;
+                }
+
+                try {
+                    const targetDate = new Date(deleteAtISO); 
+                    if (isNaN(targetDate.getTime())) throw new Error("Invalid date parsed from data-delete-at");
+
+                    const options = { 
+                        hour: '2-digit', minute: '2-digit', 
+                        day: '2-digit', month: 'short', year: 'numeric',
+                        
+                    };
+                    absoluteTimeSpan.textContent = targetDate.toLocaleString(undefined, options); 
+
+                    const now = new Date();
+                    const diff = targetDate - now;
+                    countdownSpan.textContent = `(${formatTimeDifference(diff)})`;
+
+                    if (diff < 0) {
+                        countdownSpan.classList.add('text-error'); 
+                        absoluteTimeSpan.classList.add('text-error');
+                    } else {
+                        countdownSpan.classList.remove('text-error');
+                        absoluteTimeSpan.classList.remove('text-error');
+                    }
+                } catch (e) {
+                    absoluteTimeSpan.textContent = "(Invalid Date)";
+                    countdownSpan.textContent = "";
+                    console.error("Error processing date for countdown:", deleteAtISO, e);
+                }
+            });
+        }
         function startServerPing() {if (pingInterval) clearInterval(pingInterval);pingInterval = setInterval(() => {const currentProtocol = window.location.protocol; const currentHost = window.location.host;const pingUrl = `${currentProtocol}//${currentHost}/ping?t=${new Date().getTime()}`;fetch(pingUrl).then(response => response.ok ? response.json() : Promise.reject(`Ping failed: ${response.status}`)).then(data => {}).catch(error => {});}, 30000);}
         function updateReconciliationStatus() {const currentProtocol = window.location.protocol;const currentHost = window.location.host;const statusUrl = `${currentProtocol}//${currentHost}/reconciliation-status?t=${new Date().getTime()}`;fetch(statusUrl).then(response => response.json()).then(data => {const statusElement = document.getElementById('reconciliation-status');const messageElement = document.getElementById('reconciliation-status-message');if (!statusElement || !messageElement) {return;}if (data.status) {messageElement.textContent = data.status;messageElement.style.display = data.in_progress ? 'block' : 'none';}if (data.in_progress) {statusElement.innerHTML = `<div role="alert" class="alert alert-warning shadow-md text-sm"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6 animate-spin"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2M21.56 10.5A10.001 10.001 0 0012 2a10 10 0 100 20 9.974 9.974 0 005.201-1.71l-.001-.001z"></path></svg><div><h3 class="font-bold">Reconciliation: ${data.progress}%</h3><div class="text-xs">Processing ${data.processed_items} of ${data.total_items} items...</div></div></div>`;} else if (statusElement.innerHTML.includes('Reconciliation')) {statusElement.innerHTML = `<div role="alert" class="alert alert-success shadow-md text-sm"><svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>Reconciliation complete</span></div>`;setTimeout(() => {if (statusElement.innerHTML.includes('Reconciliation complete')) {statusElement.innerHTML = '';if (messageElement) {messageElement.style.display = 'none';}}}, 5000);}}).catch(err => {});}
         
@@ -571,28 +670,45 @@
             
             updateReconciliationStatus();setInterval(updateReconciliationStatus, 2000);
             
-            document.querySelectorAll('.policy-type-select').forEach(select => {
-                select.addEventListener('change', function() {
-                const hostname = this.dataset.hostname;
-                toggleAuthEmailField(this.value, hostname);
-            });
-            toggleAuthEmailField(select.value, select.dataset.hostname);
-        });
-
-        function toggleAuthEmailField(policyType, hostname) {
-            const emailFieldDiv = document.getElementById(`auth-email-field-${hostname.replace(/\./g, '-')}`);
-            if (emailFieldDiv) {
-                if (policyType === 'authenticate_email') {
-                    emailFieldDiv.classList.remove('hidden');
-                } else {
-                    emailFieldDiv.classList.add('hidden');
-                    const emailInput = emailFieldDiv.querySelector('input[name="auth_email"]');
-                    if (emailInput) {
-                        emailInput.value = '';
+            function toggleAuthEmailField(policyType, hostname, selectElementId) {
+                if (!selectElementId || typeof selectElementId !== 'string') {
+                    return; 
+                }
+                const parts = selectElementId.split('-');
+                if (parts.length < 3) { 
+                    return; 
+                }
+                const source = parts[1]; 
+                const hostnameIdentifier = parts.slice(2).join('-');
+                const emailFieldDivId = `auth-email-field-${source}-${hostnameIdentifier}`;
+                const emailFieldDiv = document.getElementById(emailFieldDivId);
+                if (emailFieldDiv) {
+                    if (policyType === 'authenticate_email') {
+                        emailFieldDiv.classList.remove('hidden');
+                    } else {
+                        emailFieldDiv.classList.add('hidden');
+                        const emailInput = emailFieldDiv.querySelector('input[name="auth_email"]');
+                        if (emailInput) {
+                            emailInput.value = '';
+                        }
                     }
                 }
             }
-        }
+
+            document.querySelectorAll('.policy-type-select').forEach(select => {
+                if (select.id) {
+                    select.addEventListener('change', function() {
+                        if (this.id) { 
+                            toggleAuthEmailField(this.value, this.dataset.hostname, this.id);
+                        } else {
+                            console.warn("Select element in change event is missing an ID:", this);
+                        }
+                    });
+                    toggleAuthEmailField(select.value, select.dataset.hostname, select.id);
+                } else {
+                    console.warn("Found a .policy-type-select element missing an ID. Cannot attach listener or set initial state for its email field.", select);
+                }
+            });        
             
             document.querySelectorAll('.tunnel-dns-toggle').forEach(button => {
                 button.addEventListener('click', async function() {
