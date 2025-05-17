@@ -142,6 +142,7 @@ DockFlare listens for Docker container events.
    # TRUSTED_PROXIES=172.16.0.0/12,192.168.0.0/16
    # Default TLS Verification Setting (skip verification) (default: false)
    DEFAULT_NO_TLS_VERIFY=false
+   STATE_FILE_PATH=/app/data/state.json
 
 3. **Run DockFlare**:
 
