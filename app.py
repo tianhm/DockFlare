@@ -1285,7 +1285,7 @@ def process_container_start(container):
                             state_changed_locally = True
                             needs_tunnel_config_update = True
                         
-                        existing_rule["source"] = "docker" # Ensure source is set
+                        existing_rule["source"] = "docker" 
                 else:
                     logging.info(f"Adding new active rule for hostname: {hostname}")
                     managed_rules[hostname] = {
@@ -1511,9 +1511,9 @@ def cleanup_expired_rules():
                         state_changed_in_cleanup = True
 
 
-            if state_changed_in_cleanup and not rules_to_process_for_deletion: # Only save if only manual rule status was changed
+            if state_changed_in_cleanup and not rules_to_process_for_deletion:
                 save_state()
-                state_changed_in_cleanup = False # Reset for this cycle's main logic
+                state_changed_in_cleanup = False
 
             if rules_to_process_for_deletion:
                 logging.info(f"Processing cleanup for hostnames: {list(rules_to_process_for_deletion.keys())}")
@@ -1796,11 +1796,7 @@ def _run_reconciliation():
                     existing_rule_for_hostname = managed_rules.get(hostname)
                     if existing_rule_for_hostname and existing_rule_for_hostname.get("source") == "manual":
                         logging.debug(f"[Reconcile] Hostname {hostname} is manually managed. Skipping update from Docker labels for container {desired_details.get('container_name', 'N/A')}.")
-                        # Still ensure DNS is set up for manual rules if they appear in running_labeled_hostnames_details (which they shouldn't if filtering is correct)
-                        # However, to be safe, if a manual rule exists, we should ensure its DNS is correct if it's active.
-                        # This part might need refinement based on how manual rules are handled regarding DNS.
-                        # For now, if it's manual, reconciliation of *Docker* details stops here.
-                        # We will handle manual rule DNS separately if needed or assume it's done on creation.
+
                         continue 
 
                     target_zone_id = get_zone_id_from_name(desired_details["zone_name"]) if desired_details["zone_name"] else CF_ZONE_ID
@@ -1920,7 +1916,7 @@ def _run_reconciliation():
         
             effective_tunnel_id_for_dns = tunnel_state.get("id") if not USE_EXTERNAL_CLOUDFLARED else EXTERNAL_TUNNEL_ID
             if effective_tunnel_id_for_dns:
-                # Deduplicate hostnames requiring DNS setup to avoid redundant calls
+                
                 unique_dns_setups = []
                 seen_host_zone_pairs = set()
                 for hostname_dns, zone_id_dns in hostnames_requiring_dns_setup:
