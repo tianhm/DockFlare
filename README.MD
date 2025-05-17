@@ -101,7 +101,7 @@ DockFlare listens for Docker container events.
      dockflare_data:
    networks:
      cloudflare-net:
-      external: true   
+      name: cloudflare-net
    ```
 
 2. **Create `.env` File**:

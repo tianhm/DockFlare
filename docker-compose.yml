@@ -41,5 +41,5 @@ services:
 volumes:
   dockflare_data:  # Persistent volume for state data
 networks:
-  cloudflare-net: # Default network for cloudflared and services
-   external: true
+  cloudflare-net:
+   name: cloudflare-net
