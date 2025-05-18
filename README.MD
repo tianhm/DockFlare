@@ -327,6 +327,34 @@ After the switch, DockFlare will:
 | `{prefix}.zonename` | Zone name for this hostname | No | `"example.com"` |
 | `{prefix}.no_tls_verify` | Disable TLS verification | No | `"true"` |
 
+### Access Policy Labels (Zero Trust)
+
+These labels define the initial Cloudflare Access Policy for the exposed `hostname`. **Note:** These label-defined policies can be overridden by changes made in the DockFlare [Web UI](UsingtheWebUI.md). If a UI override is active, these labels will not be re-applied unless the policy is "Reverted to Labels" via the UI.
+
+| Label                                   | Description                                                                                                                                                                                             | Default | Example                                                  |
+| :-------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :------ | :------------------------------------------------------- |
+| `{prefix}.access.policy`                | Defines the type of Access Policy. Common values: `bypass` (public), `authenticate` (requires login via configured IdPs), `default_tld` (inherits from `*.yourdomain.com` policy, no app created for this specific hostname). | (None)  | `cloudflare.tunnel.access.policy="authenticate"`       |
+| `{prefix}.access.name`                  | Custom name for the Cloudflare Access Application.                                                                                                                                                      | `DockFlare-{hostname}` | `cloudflare.tunnel.access.name="My Web App Access"`     |
+| `{prefix}.access.session_duration`      | Session duration for the Access Application (e.g., `24h`, `30m`).                                                                                                                                       | `24h`   | `cloudflare.tunnel.access.session_duration="1h"`       |
+| `{prefix}.access.app_launcher_visible`  | If `"true"`, the application will be visible in the Cloudflare App Launcher.                                                                                                                            | `false` | `cloudflare.tunnel.access.app_launcher_visible="true"` |
+| `{prefix}.access.allowed_idps`          | Comma-separated list of allowed Identity Provider (IdP) UUIDs. If `access.policy="authenticate"` and this is not set, it typically allows any configured IdP for the account.                            | (Account Default) | `cloudflare.tunnel.access.allowed_idps="<IdP_UUID_1>,<IdP_UUID_2>"` |
+| `{prefix}.access.auto_redirect_to_identity` | If `"true"`, automatically redirects to the identity provider login page.                                                                                                                               | `false` | `cloudflare.tunnel.access.auto_redirect_to_identity="true"` |
+| `{prefix}.access.custom_rules`          | A JSON string representing an array of Cloudflare Access Policy rules. Overrides `access.policy` if set to `authenticate` or `bypass` for policy decision. See [Cloudflare Access Policy Docs](https://developers.cloudflare.com/api/operations/access-policies-create-an-access-policy) for schema. | (None)  | `cloudflare.tunnel.access.custom_rules='[{"email":{"email":"user@example.com"},"action":"allow"}]'` |
+
+**Example of Access Policy Labels:**
+
+```yaml
+labels:
+  cloudflare.tunnel.enable: "true"
+  cloudflare.tunnel.hostname: "secure-app.example.com"
+  cloudflare.tunnel.service: "http://my-secure-app:8080"
+  cloudflare.tunnel.access.policy: "authenticate"
+  cloudflare.tunnel.access.session_duration: "8h"
+  cloudflare.tunnel.access.allowed_idps: "YOUR_GITHUB_IDP_UUID_HERE" 
+  # This creates an Access Application named "DockFlare-secure-app.example.com"
+  # that requires authentication via the specified GitHub IdP with an 8-hour session.
+```
+
 ### External Cloudflared Mode
 
 DockFlare can work with an existing `cloudflared` container. This is useful if you're already using cloudflared for other services or prefer to manage it separately. To enable this mode:
