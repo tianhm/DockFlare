@@ -117,10 +117,6 @@ DockFlare listens for Docker container events.
    CF_ZONE_ID=your_cloudflare_zone_id
    # Tunnel Name (REQUIRED only when NOT using external cloudflared)
    TUNNEL_NAME=DockFlare
-   # Use External Cloudflared (OPTIONAL)
-   USE_EXTERNAL_CLOUDFLARED=false
-   # External Tunnel ID (REQUIRED if USE_EXTERNAL_CLOUDFLARED=true) 
-   EXTERNAL_TUNNEL_ID=6ff42ae2-765d-4adf-befc-ca51f8e4e688 # Example Tunnel ID format
    # Docker Network Name (internal cloudflared mode)
    CLOUDFLARED_NETWORK_NAME=cloudflare-net
    # Label Prefix for Docker Containers
@@ -358,7 +354,7 @@ labels:
   # that requires authentication via the specified GitHub IdP with an 8-hour session.
 ```
 
-### External Cloudflared Mode
+### External Cloudflared Mode (DANGER ZONE)
 
 DockFlare can work with an existing `cloudflared` container. This is useful if you're already using cloudflared for other services or prefer to manage it separately. To enable this mode:
 
@@ -371,6 +367,10 @@ In this mode, DockFlare will only manage DNS records and ingress rules, but not 
 USE_EXTERNAL_CLOUDFLARED=true
 EXTERNAL_TUNNEL_ID=your-tunnel-id-from-cloudflare
 ```
+Update on version 1.7
+The `update_cloudflare_config` function now takes a more authoritative stance: for the DockFlare-managed tunnel, any non-wildcard, non-catch-all ingress rule found on Cloudflare that is *not* present in DockFlare's `managed_rules` (either from Docker labels or manual UI entries) will be removed by DockFlare. This ensures the tunnel configuration accurately reflects DockFlare's intended state. True external wildcards and the API's catch-all rule are still preserved.
+
+This means as well that DNS records that are not present in the DockFlare rules will be removed from your DNS Zone. External Mode is not recommended only if you know what to do and are for Edge cases. 
 
 ### Real-time Log Streaming
 
