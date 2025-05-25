@@ -1624,7 +1624,7 @@ def _run_reconciliation():
     needs_tunnel_config_update = False 
     state_changed_locally = False
     
-    max_total_time = 180 
+    max_total_time = 480 
     reconciliation_start = time.time()
     
     app.reconciliation_info = {
@@ -1760,7 +1760,7 @@ def _run_reconciliation():
                     except Exception as e_cont:
                         logging.error(f"[Reconcile] Error processing container {c.id[:12] if c and c.id else 'N/A'}: {e_cont}")
                         continue
-                if USE_EXTERNAL_CLOUDFLARED and i + batch_size < container_count: time.sleep(0.2)
+                if USE_EXTERNAL_CLOUDFLARED and i + batch_size < container_count: time.sleep(0.05)
             
             logging.info(f"[Reconcile] Found {len(running_labeled_hostnames_details)} running hostnames with DockFlare labels.")
         except Exception as e_phase1:
@@ -2430,7 +2430,6 @@ def get_all_account_cloudflare_tunnels():
         logging.error(f"Unexpected error listing all Cloudflare tunnels for the account: {e}", exc_info=True)
         return []
 
-# app.py
 def get_dns_records_for_tunnel(zone_id, tunnel_id):
     if not zone_id or not tunnel_id:
         logging.warning("get_dns_records_for_tunnel: Missing zone_id or tunnel_id.")
