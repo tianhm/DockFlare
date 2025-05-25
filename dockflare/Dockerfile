@@ -54,6 +54,6 @@ RUN mkdir -p /app/static/css
 RUN mkdir -p /app/static/images
 COPY --from=frontend-builder /usr/src/app/static/css/output.css /app/static/css/output.css
 COPY ./dockflare/app /app
-COPY ./dockflare/images /app/static/images/
+COPY images /app/static/images/
 EXPOSE 5000
 CMD ["python", "main.py"]
