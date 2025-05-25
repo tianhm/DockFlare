@@ -17,6 +17,7 @@ COPY postcss.config.js ./postcss.config.js
 
 # 3. Create 'app/templates' and copy inputs
 RUN mkdir -p ./app/templates
+RUN mkdir -p ./app/static/css
 COPY app/templates/input.css ./app/templates/input.css
 COPY app/templates ./app/templates
 
