@@ -23,7 +23,7 @@ COPY package-lock.json* ./
 RUN npm install
 COPY tailwind.config.js ./
 COPY postcss.config.js ./
-COPY ./templates/input.css ./templates/input.css 
+COPY ./app/templates/input.css ./templates/input.css 
 COPY ./app/templates ./templates
 RUN npm run build:css
 FROM python:3.13-slim as runtime
