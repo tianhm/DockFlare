@@ -17,7 +17,6 @@ COPY postcss.config.js ./postcss.config.js
 
 # 3. Create 'app/templates' and copy inputs
 RUN mkdir -p ./app/templates
-RUN mkdir -p ./app/static/css
 COPY app/templates/input.css ./app/templates/input.css
 COPY app/templates ./app/templates
 
@@ -25,25 +24,19 @@ COPY app/templates ./app/templates
 RUN echo ">>> [DEBUG] Current directory before npm run build:css is $(pwd)" && \
     echo ">>> [DEBUG] Listing WORKDIR (/buildstage) contents:" && \
     ls -la . && \
-    echo ">>> [DEBUG] Listing ./app/ contents:" && \
-    ls -la ./app/ && \
     echo ">>> [DEBUG] Listing ./app/templates/ contents:" && \
     ls -la ./app/templates/
 
-# 5. Run the build script
+# 5. Run the build script (which now outputs to ./dist/output.css)
 RUN echo ">>> [DEBUG] Running npm run build:css..." && \
     npm run build:css
 
-# 6. DEBUG: Verify output after build
+# 6. DEBUG: Verify output after build in the new ./dist directory
 RUN echo ">>> [DEBUG] CSS build supposedly complete. Verifying output..." && \
-    echo ">>> [DEBUG] Listing /buildstage/app/ :" && \
-    ls -la /buildstage/app/ && \
-    echo ">>> [DEBUG] Listing /buildstage/app/static/ :" && \
-    ls -la /buildstage/app/static/ && \
-    echo ">>> [DEBUG] Listing /buildstage/app/static/css/ :" && \
-    ls -la /buildstage/app/static/css/ && \
-    echo ">>> [DEBUG] Checking for /buildstage/app/static/css/output.css existence:" && \
-    (test -f /buildstage/app/static/css/output.css && echo "output.css FOUND at /buildstage/app/static/css/output.css" || echo "output.css NOT FOUND at /buildstage/app/static/css/output.css")
+    echo ">>> [DEBUG] Listing /buildstage/dist/ :" && \
+    ls -la /buildstage/dist/ && \
+    echo ">>> [DEBUG] Checking for /buildstage/dist/output.css existence:" && \
+    (test -f /buildstage/dist/output.css && echo "output.css FOUND at /buildstage/dist/output.css" || echo "output.css NOT FOUND at /buildstage/dist/output.css")
 # End of frontend-builder stage
 
 # --- Runtime Stage ---
@@ -76,7 +69,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN mkdir -p /app/static/css && mkdir -p /app/static/images
 
-COPY --from=frontend-builder /buildstage/app/static/css/output.css /app/static/css/output.css
+# Copy from the new output location in frontend-builder
+COPY --from=frontend-builder /buildstage/dist/output.css /app/static/css/output.css
 
 COPY app /app
 COPY images /app/static/images/
