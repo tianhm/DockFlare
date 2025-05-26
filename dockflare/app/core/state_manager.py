@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import threading
+import copy
 from datetime import datetime, timezone
 
 from app import config
