@@ -21,7 +21,7 @@ import time
 import threading
 from datetime import datetime, timedelta, timezone
 import json 
-
+import copy
 from app import config, docker_client, tunnel_state, cloudflared_agent_state
 # DO NOT import 'app' (the Flask instance) at the top level here.
 from flask import current_app 

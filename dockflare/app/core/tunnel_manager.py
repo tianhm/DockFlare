@@ -18,7 +18,7 @@
 import logging
 import json 
 import time 
-
+import copy
 from app import config, docker_client 
 from app import tunnel_state, cloudflared_agent_state 
 from app.core import cloudflare_api

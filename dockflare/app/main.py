@@ -20,6 +20,7 @@ import logging
 import threading
 import time
 import sys
+import copy
 from app import app, docker_client, tunnel_state, cloudflared_agent_state, config, log_queue
 
 from app.core.state_manager import load_state
