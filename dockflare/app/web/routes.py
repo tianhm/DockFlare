@@ -593,22 +593,75 @@ def ui_add_manual_rule_route():
     return redirect(url_for('web.status_page'))
 
 @bp.route('/ui/manual-rules/delete/<path:hostname>', methods=['POST'])
-def ui_delete_manual_rule_route(hostname): 
+# app/web/routes.py
+# ... (other imports and blueprint definition) ...
+
+@bp.route('/ui/manual-rules/delete/<path:hostname>', methods=['POST'])
+def ui_delete_manual_rule_route(hostname):
+    if not docker_client: 
+        cloudflared_agent_state["last_action_status"] = "Error: System not ready to delete manual rule. Docker client unavailable."
+        return redirect(url_for('web.status_page'))
     
+    effective_tunnel_id = tunnel_state.get("id") if not config.USE_EXTERNAL_CLOUDFLARED else config.EXTERNAL_TUNNEL_ID
+    if not effective_tunnel_id: 
+        cloudflared_agent_state["last_action_status"] = "Error: System not ready to delete manual rule. Tunnel not initialized or ID missing."
+        return redirect(url_for('web.status_page'))
+
+    logging.info(f"UI request: Delete manual rule for hostname: {hostname}")
+    
+    zone_id_for_delete = None
+    access_app_id_for_delete = None
+    rule_existed_as_manual_and_deleted = False 
+
     with state_lock:
         rule_details = managed_rules.get(hostname)
         if rule_details and rule_details.get("source") == "manual":
-            # ... (get zone_id, access_app_id) ...
-            del managed_rules[hostname]; save_state()
-        # ...
-    effective_tunnel_id = tunnel_state.get("id") if not config.USE_EXTERNAL_CLOUDFLARED else config.EXTERNAL_TUNNEL_ID
-    if zone_id_for_delete and effective_tunnel_id: delete_cloudflare_dns_record(...)
-    if access_app_id_for_delete: delete_cloudflare_access_application(...)
-    if update_cloudflare_config(): pass # ...
+            logging.info(f"Found manual rule for {hostname} to delete. Details: {rule_details}")
+            # Assign to outer scope variables
+            zone_id_for_delete = rule_details.get("zone_id")
+            access_app_id_for_delete = rule_details.get("access_app_id")
+            
+            del managed_rules[hostname]
+            save_state() 
+            rule_existed_as_manual_and_deleted = True
+            action_status_message = f"Manual rule {hostname} removed from local state." 
+        elif rule_details:
+            action_status_message = f"Error: Rule for {hostname} is not a manual rule. Cannot delete via this action."
+            cloudflared_agent_state["last_action_status"] = action_status_message
+            return redirect(url_for('web.status_page'))
+        else:
+            action_status_message = f"Info: Manual rule for {hostname} not found to delete."
+            cloudflared_agent_state["last_action_status"] = action_status_message
+            return redirect(url_for('web.status_page'))
+    if rule_existed_as_manual_and_deleted:
+        dns_deleted_successfully = False
+        access_app_deleted_successfully = False
+
+        if zone_id_for_delete: 
+            logging.info(f"Attempting DNS delete for manual rule {hostname} in zone {zone_id_for_delete}")
+            if delete_cloudflare_dns_record(zone_id_for_delete, hostname, effective_tunnel_id):
+                dns_deleted_successfully = True
+        else:
+            logging.warning(f"No zone_id found for manual rule {hostname}, skipping DNS deletion.")
+            dns_deleted_successfully = True 
+
+        if access_app_id_for_delete: 
+            logging.info(f"Attempting Access App delete for manual rule {hostname}, App ID {access_app_id_for_delete}")
+            if delete_cloudflare_access_application(access_app_id_for_delete):
+                access_app_deleted_successfully = True
+        else:
+            logging.info(f"No Access App ID found for manual rule {hostname}, skipping Access App deletion.")
+            access_app_deleted_successfully = True 
+        if update_cloudflare_config(): 
+            action_status_message = f"Success: Manual rule {hostname} deleted. DNS: {'OK' if dns_deleted_successfully else 'Fail/Skip'}. AccessApp: {'OK' if access_app_deleted_successfully else 'Fail/Skip'}. Tunnel config updated."
+        else:
+            action_status_message = f"Warning: Manual rule {hostname} deleted. DNS/AccessApp processed. Tunnel config update FAILED."
+        
+        cloudflared_agent_state["last_action_status"] = action_status_message
     return redirect(url_for('web.status_page'))
 
 @bp.route('/cloudflare-ping')
-def cloudflare_ping_route(): # Renamed
+def cloudflare_ping_route(): 
     try:
         cf_headers = {k: v for k, v in request.headers.items() if k.lower().startswith('cf-')}
         visitor_data = json.loads(request.headers.get('Cf-Visitor', '{}'))
