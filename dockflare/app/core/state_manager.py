@@ -98,6 +98,8 @@ def save_state():
     serializable_state = {}
     rules_to_iterate_items = []
 
+    # It's safer to create the list of items while holding the lock, 
+    # then release the lock before the potentially long serialization loop.
     with state_lock:
         rules_to_iterate_items = list(managed_rules.items())
     
@@ -106,32 +108,32 @@ def save_state():
     else:
         logging.info(f"SAVE_STATE: THREAD: {current_thread_name}. Serializing {len(rules_to_iterate_items)} rules.")
 
-    for hostname, rule in rules_to_iterate_items:
-        logging.debug(f"SAVE_STATE_LOOP: THREAD: {current_thread_name}. Preparing to serialize rule for hostname: {hostname}")
+    for hostname, rule in rules_to_iterate_items: # Iterate over the snapshot
+        logging.debug(f"SAVE_STATE_LOOP: THREAD: {current_thread_name}. Preparing rule for hostname: {hostname}")
         try:
             data_to_serialize = {
                 "service": rule.get("service"),
                 "container_id": rule.get("container_id"),
                 "status": rule.get("status"),
-                "delete_at": None, # Default to None
+                "delete_at": None, # Default to None, will be overwritten if datetime
                 "zone_id": rule.get("zone_id"),
-                "no_tls_verify": rule.get("no_tls_verify", False), # Default to False if missing
+                "no_tls_verify": rule.get("no_tls_verify", False),
                 "access_app_id": rule.get("access_app_id"),
                 "access_policy_type": rule.get("access_policy_type"),
                 "access_app_config_hash": rule.get("access_app_config_hash"),
-                "access_policy_ui_override": rule.get("access_policy_ui_override", False), # Default
-                "source": rule.get("source", "docker") # Default
+                "access_policy_ui_override": rule.get("access_policy_ui_override", False),
+                "source": rule.get("source", "docker")
             }
 
             delete_at_val = rule.get("delete_at")
             if isinstance(delete_at_val, datetime):
+                logging.debug(f"SAVE_STATE_LOOP: THREAD: {current_thread_name}. Serializing datetime for {hostname} (value: {delete_at_val}).")
                 data_to_serialize["delete_at"] = delete_at_val.astimezone(timezone.utc).isoformat().replace('+00:00', 'Z')
             
             serializable_state[hostname] = data_to_serialize
         except Exception as e_serialize_item:
-            logging.error(f"SAVE_STATE_LOOP_ERROR: THREAD: {current_thread_name}. Error preparing rule for serialization '{hostname}': {e_serialize_item}", exc_info=True)
-            logging.error(f"Problematic rule data: {rule}") # Log the rule that caused issue
-            continue # Skip this rule and try to save the rest
+            logging.error(f"SAVE_STATE_LOOP_ERROR: THREAD: {current_thread_name}. Error preparing rule for serialization '{hostname}': {e_serialize_item}. Rule data: {rule}", exc_info=True)
+            continue 
     
     logging.info(f"SAVE_STATE: THREAD: {current_thread_name}. Prepared serializable_state with {len(serializable_state)} items.")
 
@@ -157,7 +159,6 @@ def save_state():
     except (IOError, OSError) as e_io:
         logging.error(f"SAVE_STATE: THREAD: {current_thread_name}. IO/OS Error: {e_io}", exc_info=True)
     except TypeError as e_type: 
-        # This error is also less likely now with explicit field selection.
         logging.error(f"SAVE_STATE: THREAD: {current_thread_name}. TypeError during JSON serialization (json.dump): {e_type}. Serializing {len(serializable_state)} items.", exc_info=True)
     except Exception as e_save:
         logging.error(f"SAVE_STATE: THREAD: {current_thread_name}. Unexpected error during file write: {e_save}", exc_info=True)
