@@ -23,8 +23,8 @@ from datetime import datetime, timedelta, timezone
 import json 
 
 from app import config, docker_client, tunnel_state, cloudflared_agent_state
-from app import app as main_app_instance_for_context 
-from flask import current_app # For use within the app_context
+# DO NOT import 'app' (the Flask instance) at the top level here.
+from flask import current_app 
 
 from app.core.state_manager import managed_rules, state_lock, save_state
 from app.core.cloudflare_api import (
@@ -61,8 +61,7 @@ def _get_hostname_configs_from_container(container_obj):
     ntv_main_str = labels.get(f"{config.LABEL_PREFIX}.no_tls_verify", "false")
     ntv_main = ntv_main_str.lower() in ["true", "1", "t", "yes"]
 
-    if h_main and s_main: # Direct labels
-
+    if h_main and s_main: 
         hostnames_configs.append({
             "hostname": h_main, "service": s_main, "zone_name": zn_main, "no_tls_verify": ntv_main,
             "container_id": container_id_val, "container_name": container_name_val,
@@ -109,16 +108,20 @@ def _get_hostname_configs_from_container(container_obj):
         idx += 1
     return hostnames_configs
 
-
 def _run_reconciliation_logic(): 
-    with main_app_instance_for_context.app_context(): # Push an app context
+    # Import the app instance *inside* the function that runs in the thread
+    from app import app as main_app_instance_for_context 
+
+    with main_app_instance_for_context.app_context(): 
         logging.info("[Reconcile Thread] Starting state reconciliation logic (with app context).")
+        # ... (rest of _run_reconciliation_logic function, using current_app.reconciliation_info) ...
+        # (Make sure all previous logic using current_app.reconciliation_info is within this 'with' block)
         needs_tunnel_config_update = False 
         state_changed_locally = False
         max_total_time = 480 
         reconciliation_start_time = time.time()
 
-        current_app.reconciliation_info = { # Use current_app
+        current_app.reconciliation_info = { 
             "in_progress": True, "progress": 0, "total_items": 0,
             "processed_items": 0, "start_time": reconciliation_start_time,
             "status": "Initializing reconciliation..."
@@ -127,7 +130,6 @@ def _run_reconciliation_logic():
         running_labeled_hostnames_details = {}
         try:
             current_app.reconciliation_info["status"] = "Scanning containers for services and access policies..."
-            # ... (the rest of your try block for container scanning, using current_app)
             containers = docker_client.containers.list(sparse=False, all=config.SCAN_ALL_NETWORKS)
             container_count = len(containers)
             current_app.reconciliation_info["total_items"] = container_count
@@ -151,7 +153,7 @@ def _run_reconciliation_logic():
                         c_obj.reload() 
                         if c_obj.labels.get(f"{config.LABEL_PREFIX}.enable", "false").lower() in ["true", "1", "t", "yes"]:
                             configs = _get_hostname_configs_from_container(c_obj)
-                            for conf_item in configs: # Renamed conf to conf_item
+                            for conf_item in configs: 
                                 if conf_item["hostname"] in running_labeled_hostnames_details:
                                     logging.warning(f"[Reconcile] Duplicate hostname '{conf_item['hostname']}' found. Using from: {conf_item['container_name']}.")
                                 running_labeled_hostnames_details[conf_item["hostname"]] = conf_item
@@ -163,7 +165,6 @@ def _run_reconciliation_logic():
             current_app.reconciliation_info["status"] = f"Container scan error: {str(e_phase1)}"
             
         current_app.reconciliation_info["status"] = "Comparing state and reconciling cloud resources..."
-        # Ensure total_items is correct if container_count changed due to errors
         current_app.reconciliation_info["total_items"] = len(running_labeled_hostnames_details) + len(managed_rules) 
         current_app.reconciliation_info["processed_items"] = 0 
         processed_reconcile_items = 0
@@ -174,6 +175,7 @@ def _run_reconciliation_logic():
             current_managed_hostnames_in_state = set(managed_rules.keys())
                             
             for hostname, desired_details in running_labeled_hostnames_details.items():
+                # ... (rest of this loop using current_app.reconciliation_info)
                 processed_reconcile_items +=1
                 current_app.reconciliation_info["processed_items"] = processed_reconcile_items
                 current_app.reconciliation_info["progress"] = min(100, int((processed_reconcile_items / current_app.reconciliation_info["total_items"]) * 100)) if current_app.reconciliation_info["total_items"] > 0 else 0
@@ -229,6 +231,7 @@ def _run_reconciliation_logic():
             
             hostnames_in_state_but_not_running = list(current_managed_hostnames_in_state - set(running_labeled_hostnames_details.keys()))
             for hostname_to_check in hostnames_in_state_but_not_running:
+                # ... (rest of this loop using current_app.reconciliation_info)
                 processed_reconcile_items +=1 
                 current_app.reconciliation_info["processed_items"] = processed_reconcile_items
                             
@@ -243,11 +246,11 @@ def _run_reconciliation_logic():
                 elif rule and rule.get("source") == "manual" and rule.get("zone_id"):
                      hostnames_requiring_dns_setup.append((hostname_to_check, rule.get("zone_id")))
 
-
             if state_changed_locally:
                 current_app.reconciliation_info["status"] = "Saving reconciled state..."
                 save_state()
 
+        # ... (rest of the function: tunnel config update, DNS setup, using current_app.reconciliation_info)
         if time.time() - reconciliation_start_time > max_total_time - 15:
             logging.warning("[Reconcile] Timeout before Tunnel/DNS operations.")
             needs_tunnel_config_update = False 
@@ -301,13 +304,15 @@ def reconcile_state_threaded():
     if not tunnel_state.get("id") and not config.EXTERNAL_TUNNEL_ID: 
         logging.warning("Tunnel not initialized (no ID), skipping reconciliation.")
         return
+    
+    # Import app instance here, only when the thread is about to be created
+    from app import app as main_app_instance_for_thread_check
 
-    # Use main_app_instance_for_context to access reconciliation_info
-    if not hasattr(main_app_instance_for_context, 'reconciliation_info'):
-        logging.error("main_app_instance_for_context.reconciliation_info not initialized. Cannot start reconciliation.")
-        main_app_instance_for_context.reconciliation_info = {"in_progress": False} # Fallback
+    if not hasattr(main_app_instance_for_thread_check, 'reconciliation_info'):
+        logging.error("main_app_instance_for_thread_check.reconciliation_info not initialized. Cannot start reconciliation.")
+        main_app_instance_for_thread_check.reconciliation_info = {"in_progress": False} 
         
-    if main_app_instance_for_context.reconciliation_info.get("in_progress", False):
+    if main_app_instance_for_thread_check.reconciliation_info.get("in_progress", False):
         logging.info("Reconciliation is already in progress. Skipping new request.")
         return
 
@@ -321,6 +326,7 @@ def reconcile_state_threaded():
 
 
 def cleanup_expired_rules(stop_event_param):
+    # ... (no changes needed in this function regarding app context) ...
     logging.info("Starting cleanup task for expired rules...")
     if stop_event_param is None:
         logging.error("cleanup_expired_rules called with None stop_event_param. Task will not run correctly.")
