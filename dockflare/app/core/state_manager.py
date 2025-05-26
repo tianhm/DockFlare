@@ -15,17 +15,19 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 # app/core/state_manager.py
-import copy
 import json
 import logging
 import os
 import threading
+import copy # For deepcopy in save_state logging if used
 from datetime import datetime, timezone
 
 from app import config
 
 managed_rules = {}
 state_lock = threading.Lock()
+# Log the initial ID of managed_rules when the module is first loaded
+logging.info(f"STATE_MANAGER_INIT: managed_rules object ID at module load: {id(managed_rules)}")
 
 def _deserialize_datetime(dt_str):
     if not dt_str:
@@ -42,99 +44,105 @@ def _deserialize_datetime(dt_str):
 
 def load_state():
     global managed_rules
+    logging.info(f"LOAD_STATE: Start. Initial managed_rules ID: {id(managed_rules)}, Current len: {len(managed_rules)}")
     state_dir = os.path.dirname(config.STATE_FILE_PATH)
     if not os.path.exists(state_dir):
         try:
             os.makedirs(state_dir, exist_ok=True)
-            logging.info(f"Created directory for state file: {state_dir}")
+            logging.info(f"LOAD_STATE: Created directory for state file: {state_dir}")
         except OSError as e:
-            logging.error(f"FATAL: Could not create directory for state file {state_dir}: {e}. State persistence will fail.")
-            managed_rules = {}
+            logging.error(f"LOAD_STATE: FATAL - Could not create directory {state_dir}: {e}. State persistence will fail.")
+            managed_rules = {} # Reset to empty
+            logging.info(f"LOAD_STATE: After failed dir create, managed_rules ID: {id(managed_rules)}, len: {len(managed_rules)}")
             return
 
     if not os.path.exists(config.STATE_FILE_PATH):
-        logging.info(f"State file '{config.STATE_FILE_PATH}' not found, starting fresh.")
-        managed_rules = {}
+        logging.info(f"LOAD_STATE: State file '{config.STATE_FILE_PATH}' not found, starting fresh.")
+        managed_rules = {} # Reset to empty
+        logging.info(f"LOAD_STATE: After file not found, managed_rules ID: {id(managed_rules)}, len: {len(managed_rules)}")
         return
 
     with state_lock:
         try:
+            logging.info(f"LOAD_STATE: Reading from {config.STATE_FILE_PATH}. managed_rules ID before read: {id(managed_rules)}")
             with open(config.STATE_FILE_PATH, 'r') as f:
                 loaded_data = json.load(f)
             
             processed_rules = {}
             for hostname, rule in loaded_data.items():
+                # ... (your deserialization logic for rule items) ...
                 rule_copy = rule.copy()
                 delete_at_val = rule_copy.get("delete_at")
-                if isinstance(delete_at_val, str):
-                    rule_copy["delete_at"] = _deserialize_datetime(delete_at_val)
-                elif not isinstance(delete_at_val, (datetime, type(None))):
-                    logging.warning(f"Invalid type for delete_at for {hostname}: {type(delete_at_val)}. Setting to None.")
-                    rule_copy["delete_at"] = None
-                
-                if "zone_id" not in rule_copy:
-                    logging.warning(f"Rule for {hostname} loaded from state is missing 'zone_id'. Will attempt to re-determine on reconcile.")
-                    rule_copy["zone_id"] = None
-                
-                rule_copy.setdefault("access_app_id", None)
-                rule_copy.setdefault("access_policy_type", None)
-                rule_copy.setdefault("access_app_config_hash", None)
-                rule_copy.setdefault("access_policy_ui_override", False)
+                if isinstance(delete_at_val, str): rule_copy["delete_at"] = _deserialize_datetime(delete_at_val)
+                elif not isinstance(delete_at_val, (datetime, type(None))): rule_copy["delete_at"] = None
+                if "zone_id" not in rule_copy: rule_copy["zone_id"] = None
+                rule_copy.setdefault("access_app_id", None); rule_copy.setdefault("access_policy_type", None)
+                rule_copy.setdefault("access_app_config_hash", None); rule_copy.setdefault("access_policy_ui_override", False)
                 rule_copy.setdefault("source", "docker")
                 processed_rules[hostname] = rule_copy
             
-            managed_rules = processed_rules
-            logging.info(f"Loaded state for {len(managed_rules)} rules from {config.STATE_FILE_PATH}")
+            managed_rules = processed_rules # This rebinds the global 'managed_rules'
+            logging.info(f"LOAD_STATE: Loaded {len(managed_rules)} rules. managed_rules ID after assignment: {id(managed_rules)}")
         except (json.JSONDecodeError, IOError, OSError) as e:
-            logging.error(f"Error loading state from {config.STATE_FILE_PATH}: {e}. Starting fresh.", exc_info=True)
+            logging.error(f"LOAD_STATE: Error loading state from {config.STATE_FILE_PATH}: {e}. Starting fresh.", exc_info=True)
             managed_rules = {}
-        except Exception as e:
-            logging.error(f"Unexpected error during state loading from {config.STATE_FILE_PATH}: {e}. Starting fresh.", exc_info=True)
+            logging.info(f"LOAD_STATE: After error, managed_rules ID: {id(managed_rules)}, len: {len(managed_rules)}")
+        except Exception as e_load_unexp:
+            logging.error(f"LOAD_STATE: Unexpected error loading state: {e_load_unexp}. Starting fresh.", exc_info=True)
             managed_rules = {}
+            logging.info(f"LOAD_STATE: After unexpected error, managed_rules ID: {id(managed_rules)}, len: {len(managed_rules)}")
 
 def save_state():
-    global managed_rules
+    global managed_rules # Ensures we are working with the module-level global
+    logging.info(f"SAVE_STATE: Start. managed_rules object ID: {id(managed_rules)}, Current item count: {len(managed_rules)}")
     serializable_state = {}
     
-    logging.info(f"SAVE_STATE: Attempting to save. Current managed_rules item count: {len(managed_rules)}")
-    
-    with state_lock:
-        try:
-            rules_to_serialize = copy.deepcopy(managed_rules) # Requires 'import copy'
-        except Exception as e_copy:
-            logging.error(f"SAVE_STATE: Error deepcopying managed_rules: {e_copy}", exc_info=True)
-            return # Don't proceed if copy fails
+    with state_lock: 
+        rules_to_iterate = list(managed_rules.items()) 
 
-        for hostname, rule in rules_to_serialize.items(): # Iterate over the copy
-            rule_copy = rule # rule is already a copy from deepcopy
-            delete_at_val = rule_copy.get("delete_at")
-            if isinstance(delete_at_val, datetime):
-                rule_copy["delete_at"] = delete_at_val.astimezone(timezone.utc).isoformat().replace('+00:00', 'Z')
-            serializable_state[hostname] = rule_copy
+    if not rules_to_iterate:
+        logging.info("SAVE_STATE: managed_rules is empty. Nothing to serialize for state file.")
+    else:
+        logging.info(f"SAVE_STATE: Serializing {len(rules_to_iterate)} rules.")
+
+    for hostname, rule in rules_to_iterate: 
+        rule_copy_for_serialization = copy.deepcopy(rule) 
+        delete_at_val = rule_copy_for_serialization.get("delete_at")
+        if isinstance(delete_at_val, datetime):
+            rule_copy_for_serialization["delete_at"] = delete_at_val.astimezone(timezone.utc).isoformat().replace('+00:00', 'Z')
+        
+        if "zone_id" not in rule_copy_for_serialization:
+            rule_copy_for_serialization["zone_id"] = None
+        
+        rule_copy_for_serialization.setdefault("access_app_id", None)
+        rule_copy_for_serialization.setdefault("access_policy_type", None)
+        rule_copy_for_serialization.setdefault("access_app_config_hash", None)
+        rule_copy_for_serialization.setdefault("access_policy_ui_override", False)
+        rule_copy_for_serialization.setdefault("source", "docker")
+            
+        serializable_state[hostname] = rule_copy_for_serialization
     
-    logging.info(f"SAVE_STATE: Prepared serializable_state with {len(serializable_state)} items. First item (if any): {next(iter(serializable_state.items()), None)}")
+    logging.info(f"SAVE_STATE: Prepared serializable_state with {len(serializable_state)} items. Sample: {str(dict(list(serializable_state.items())[:1]))}")
 
     try:
+        # ... (rest of your file writing logic with .tmp and os.replace) ...
         state_dir = os.path.dirname(config.STATE_FILE_PATH)
         if not os.path.exists(state_dir):
-            try:
-                os.makedirs(state_dir, exist_ok=True)
-                logging.info(f"SAVE_STATE: Created directory {state_dir} before saving state.")
-            except OSError as e_mkdir:
-                logging.error(f"SAVE_STATE: Could not create directory {state_dir} for state file: {e_mkdir}. Save failed.")
-                return
+            try: os.makedirs(state_dir, exist_ok=True); logging.info(f"SAVE_STATE: Created dir {state_dir}.")
+            except OSError as e_mkdir: logging.error(f"SAVE_STATE: Could not create dir {state_dir}: {e_mkdir}. Save failed."); return
 
         temp_file_path = config.STATE_FILE_PATH + ".tmp"
-        logging.info(f"SAVE_STATE: Writing to temporary file: {temp_file_path}")
+        logging.info(f"SAVE_STATE: Writing to temp file: {temp_file_path}")
         with open(temp_file_path, 'w') as f:
             json.dump(serializable_state, f, indent=2)
         
-        logging.info(f"SAVE_STATE: Replacing original state file with temporary file. Original: {config.STATE_FILE_PATH}, Temp: {temp_file_path}")
+        logging.info(f"SAVE_STATE: Replacing original state file. Original: {config.STATE_FILE_PATH}")
         os.replace(temp_file_path, config.STATE_FILE_PATH)
         logging.info(f"SAVE_STATE: Successfully saved state for {len(serializable_state)} rules to {config.STATE_FILE_PATH}")
+
     except (IOError, OSError) as e_io:
-        logging.error(f"SAVE_STATE: IO/OS Error saving state to {config.STATE_FILE_PATH}: {e_io}", exc_info=True)
-    except TypeError as e_type: # Catch JSON serialization errors
-        logging.error(f"SAVE_STATE: TypeError during JSON serialization: {e_type}. Data that failed (sample): {str(serializable_state)[:500]}", exc_info=True)
+        logging.error(f"SAVE_STATE: IO/OS Error: {e_io}", exc_info=True)
+    except TypeError as e_type: 
+        logging.error(f"SAVE_STATE: TypeError during JSON serialization: {e_type}. Data sample: {str(serializable_state)[:500]}", exc_info=True)
     except Exception as e_save:
-        logging.error(f"SAVE_STATE: Unexpected error during state saving: {e_save}", exc_info=True)
+        logging.error(f"SAVE_STATE: Unexpected error: {e_save}", exc_info=True)

@@ -15,11 +15,11 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 # app/core/docker_handler.py
-import copy
+
 import logging
 import time
 import requests
-
+import copy 
 from docker.errors import NotFound, APIError
 
 from app import config, docker_client, cloudflared_agent_state, tunnel_state 
@@ -59,6 +59,7 @@ def process_container_start(container_obj):
 
     container_id_val = None
     container_name_val = "UnknownContainer"
+    logging.info(f"DOCKER_HANDLER_PROCESS_START: Initial managed_rules ID: {id(managed_rules)}, len: {len(managed_rules)} for container {getattr(container_obj, 'name', 'N/A')}")
     try:
         container_id_val = container_obj.id
         container_obj.reload() 
@@ -68,11 +69,11 @@ def process_container_start(container_obj):
         enabled_label_key = f"{config.LABEL_PREFIX}.enable"
         is_enabled = labels.get(enabled_label_key, "false").lower() in ["true", "1", "t", "yes"]
         if not is_enabled:
-            logging.debug(f"Ignoring start: {container_name_val} ({container_id_val[:12]}): '{enabled_label_key}' not true.")
+            logging.debug(f"DOCKER_HANDLER: Ignoring start: {container_name_val} ({container_id_val[:12]}): '{enabled_label_key}' not true.")
             return
 
         hostnames_to_process = []
-        
+        # ... (Your label parsing logic to populate hostnames_to_process - this seemed correct)
         default_access_policy_type_label = labels.get(f"{config.LABEL_PREFIX}.access.policy")
         default_access_app_name_label = labels.get(f"{config.LABEL_PREFIX}.access.name")
         default_access_session_duration_label = labels.get(f"{config.LABEL_PREFIX}.access.session_duration", "24h")
@@ -80,38 +81,27 @@ def process_container_start(container_obj):
         default_access_allowed_idps_label_str = labels.get(f"{config.LABEL_PREFIX}.access.allowed_idps")
         default_access_auto_redirect_label = labels.get(f"{config.LABEL_PREFIX}.access.auto_redirect_to_identity", "false").lower() in ["true", "1", "t", "yes"]
         default_access_custom_rules_label_str = labels.get(f"{config.LABEL_PREFIX}.access.custom_rules")
-
         hostname_label = labels.get(f"{config.LABEL_PREFIX}.hostname")
         service_label = labels.get(f"{config.LABEL_PREFIX}.service")
         zone_name_label = labels.get(f"{config.LABEL_PREFIX}.zonename")
         no_tls_verify_label = labels.get(f"{config.LABEL_PREFIX}.no_tls_verify", "false").lower() in ["true", "1", "t", "yes"]
-        
         if hostname_label and service_label:
             if is_valid_hostname(hostname_label) and is_valid_service(service_label):
                 hostnames_to_process.append({
                     "hostname": hostname_label, "service": service_label, "zone_name": zone_name_label,
                     "no_tls_verify": no_tls_verify_label,
-                    "access_policy_type": default_access_policy_type_label,
-                    "access_app_name": default_access_app_name_label,
-                    "access_session_duration": default_access_session_duration_label,
-                    "access_app_launcher_visible": default_access_app_launcher_visible_label,
-                    "access_allowed_idps_str": default_access_allowed_idps_label_str,
-                    "access_auto_redirect": default_access_auto_redirect_label,
+                    "access_policy_type": default_access_policy_type_label, "access_app_name": default_access_app_name_label,
+                    "access_session_duration": default_access_session_duration_label, "access_app_launcher_visible": default_access_app_launcher_visible_label,
+                    "access_allowed_idps_str": default_access_allowed_idps_label_str, "access_auto_redirect": default_access_auto_redirect_label,
                     "access_custom_rules_str": default_access_custom_rules_label_str
                 })
-            else:
-                logging.warning(f"Ignoring invalid direct label pair for {container_name_val}: Hostname '{hostname_label}', Service '{service_label}'")
-        
         index = 0
         while True:
             prefix = f"{config.LABEL_PREFIX}.{index}"
             hostname_indexed = labels.get(f"{prefix}.hostname")
             if not hostname_indexed: break
             service_indexed = labels.get(f"{prefix}.service", service_label) 
-            if not service_indexed:
-                logging.warning(f"Ignoring indexed hostname {hostname_indexed} for {container_name_val}: Missing service for index {index} and no default service label.")
-                index += 1
-                continue
+            if not service_indexed: index += 1; continue
             zone_name_indexed = labels.get(f"{prefix}.zonename", zone_name_label)
             no_tls_verify_indexed_val = labels.get(f"{prefix}.no_tls_verify", str(no_tls_verify_label).lower())
             no_tls_verify_indexed = no_tls_verify_indexed_val.lower() in ["true", "1", "t", "yes"]
@@ -126,28 +116,22 @@ def process_container_start(container_obj):
             access_custom_rules_indexed_str = labels.get(f"{prefix}.access.custom_rules", default_access_custom_rules_label_str)
             if is_valid_hostname(hostname_indexed) and is_valid_service(service_indexed):
                 hostnames_to_process.append({
-                    "hostname": hostname_indexed, "service": service_indexed, "zone_name": zone_name_indexed,
-                    "no_tls_verify": no_tls_verify_indexed,
-                    "access_policy_type": access_policy_type_indexed,
-                    "access_app_name": access_app_name_indexed,
-                    "access_session_duration": access_session_duration_indexed,
-                    "access_app_launcher_visible": access_app_launcher_visible_indexed,
-                    "access_allowed_idps_str": access_allowed_idps_indexed_str,
-                    "access_auto_redirect": access_auto_redirect_indexed,
+                    "hostname": hostname_indexed, "service": service_indexed, "zone_name": zone_name_indexed, "no_tls_verify": no_tls_verify_indexed,
+                    "access_policy_type": access_policy_type_indexed, "access_app_name": access_app_name_indexed,
+                    "access_session_duration": access_session_duration_indexed, "access_app_launcher_visible": access_app_launcher_visible_indexed,
+                    "access_allowed_idps_str": access_allowed_idps_indexed_str, "access_auto_redirect": access_auto_redirect_indexed,
                     "access_custom_rules_str": access_custom_rules_indexed_str
                 })
-            else:
-                logging.warning(f"Ignoring invalid indexed label pair for {container_name_val} (idx {index}): Hostname '{hostname_indexed}', Service '{service_indexed}'")
             index += 1
         
         if not hostnames_to_process:
-            logging.warning(f"No valid hostname configurations found for {container_name_val} ({container_id_val[:12]}) despite being enabled.")
+            logging.warning(f"DOCKER_HANDLER: No valid hostname configs for {container_name_val} ({container_id_val[:12]}).")
             return
             
-        logging.info(f"Found {len(hostnames_to_process)} hostname configurations for container {container_name_val}")
+        logging.info(f"DOCKER_HANDLER: Found {len(hostnames_to_process)} hostname configurations for container {container_name_val}")
         
-        state_changed_locally_for_this_container = False 
-        needs_tunnel_config_update_for_this_container = False 
+        state_changed_locally_for_this_container = False
+        needs_tunnel_config_update_for_this_container = False
 
         for config_item in hostnames_to_process:
             hostname = config_item["hostname"]
@@ -159,55 +143,50 @@ def process_container_start(container_obj):
             if zone_name_from_item:
                 target_zone_id = get_zone_id_from_name(zone_name_from_item) 
                 if not target_zone_id:
-                    logging.error(f"Failed to find Zone ID for '{zone_name_from_item}' for hostname {hostname}. Skipping this hostname.")
+                    logging.error(f"DOCKER_HANDLER: Failed Zone ID lookup for '{zone_name_from_item}' (hostname {hostname}). Skipping.")
                     continue
             elif config.CF_ZONE_ID:
                 target_zone_id = config.CF_ZONE_ID
             else: 
-                logging.error(f"Cannot manage DNS for {hostname}: No Zone ID (label or default). Skipping.")
+                logging.error(f"DOCKER_HANDLER: No Zone ID for {hostname}. Skipping.")
                 continue
             
-            logging.info(f"DOCKER_HANDLER: Processing hostname {hostname} for container {container_name_val}. Current managed_rules count before this hostname: {len(managed_rules)}")
-
+            logging.info(f"DOCKER_HANDLER_LOOP_ITEM: For {hostname}. Before lock, managed_rules ID {id(managed_rules)}, len {len(managed_rules)}")
             with state_lock: 
                 existing_rule = managed_rules.get(hostname) 
                 
                 if existing_rule and existing_rule.get("source") == "manual":
-                    logging.info(f"DOCKER_HANDLER: Hostname {hostname} is manual, skipping for container {container_name_val}.")
+                    logging.info(f"DOCKER_HANDLER: Hostname {hostname} is manual, skipping for {container_name_val}.")
                     continue
-                
+
                 original_existing_rule_for_comparison = copy.deepcopy(existing_rule) if existing_rule else None
                 
                 if existing_rule:
-                    logging.info(f"DOCKER_HANDLER: Updating existing rule for {hostname} from container {container_name_val}.")
+                    logging.info(f"DOCKER_HANDLER_UPD_RULE_PRE: Updating rule for {hostname}. Current: {existing_rule}")
                     
-                    rule_content_changed = False
-                    if existing_rule.get("service") != service:
-                        existing_rule["service"] = service
-                        rule_content_changed = True
-                    if existing_rule.get("no_tls_verify") != no_tls_verify_from_item:
-                        existing_rule["no_tls_verify"] = no_tls_verify_from_item
-                        rule_content_changed = True
-                    if existing_rule.get("zone_id") != target_zone_id: 
-                        existing_rule["zone_id"] = target_zone_id
-                        rule_content_changed = True 
-
-                    existing_rule["container_id"] = container_id_val
-                    existing_rule["source"] = "docker"
+                    rule_data_changed = False
+                    if existing_rule.get("service") != service: existing_rule["service"] = service; rule_data_changed = True
+                    if existing_rule.get("container_id") != container_id_val: existing_rule["container_id"] = container_id_val # Does not trigger tunnel update but needs save
+                    if existing_rule.get("zone_id") != target_zone_id: existing_rule["zone_id"] = target_zone_id; rule_data_changed = True
+                    if existing_rule.get("no_tls_verify") != no_tls_verify_from_item: existing_rule["no_tls_verify"] = no_tls_verify_from_item; rule_data_changed = True
+                    
+                    existing_rule["source"] = "docker" # Ensure source is set
 
                     if existing_rule.get("status") == "pending_deletion":
                         existing_rule["status"] = "active"
                         existing_rule["delete_at"] = None
-                        rule_content_changed = True 
+                        rule_data_changed = True # Status change is significant
                     
-                    if rule_content_changed:
+                    if rule_data_changed:
                         needs_tunnel_config_update_for_this_container = True
                     
+                    # Check if anything at all changed in the rule (including just container_id)
                     if original_existing_rule_for_comparison != existing_rule:
                          state_changed_locally_for_this_container = True
+                    logging.info(f"DOCKER_HANDLER_UPD_RULE_POST: For {hostname}. Rule: {existing_rule}. state_changed: {state_changed_locally_for_this_container}, tunnel_update: {needs_tunnel_config_update_for_this_container}")
 
                 else: 
-                    logging.info(f"DOCKER_HANDLER: Adding NEW rule for {hostname} from container {container_name_val}.")
+                    logging.info(f"DOCKER_HANDLER_NEW_RULE_PRE: Adding NEW rule for {hostname}. managed_rules ID before add: {id(managed_rules)}")
                     managed_rules[hostname] = {
                         "service": service, "container_id": container_id_val,
                         "status": "active", "delete_at": None, "zone_id": target_zone_id,
@@ -219,27 +198,26 @@ def process_container_start(container_obj):
                     existing_rule = managed_rules[hostname] 
                     state_changed_locally_for_this_container = True
                     needs_tunnel_config_update_for_this_container = True
+                    logging.info(f"DOCKER_HANDLER_NEW_RULE_POST: Added {hostname}. managed_rules ID after add: {id(managed_rules)}, len: {len(managed_rules)}. Rule: {existing_rule}")
                 
-                logging.info(f"DOCKER_HANDLER: After add/update for {hostname}, managed_rules count: {len(managed_rules)}. Rule: {existing_rule}")
-
                 if existing_rule: 
                     if existing_rule.get("access_policy_ui_override", False):
-                        logging.info(f"DOCKER_HANDLER: Access policy for {hostname} is UI-managed. Skipping label-based processing.")
+                        logging.info(f"DOCKER_HANDLER: Access policy for {hostname} is UI-managed. Skipping.")
                     else:
                         if handle_access_policy_from_labels(config_item, existing_rule, None): 
                             state_changed_locally_for_this_container = True 
-                            logging.info(f"DOCKER_HANDLER: Access policy change for {hostname} marked state_changed_locally_for_this_container=True.")
+                            logging.info(f"DOCKER_HANDLER_ACCESS_MOD: Access policy for {hostname} changed. state_changed: {state_changed_locally_for_this_container}. managed_rules ID {id(managed_rules)}, len {len(managed_rules)}")
             
-        logging.info(f"DOCKER_HANDLER: Finished processing all hostnames for container {container_name_val}. state_changed_locally_for_this_container={state_changed_locally_for_this_container}. needs_tunnel_config_update_for_this_container={needs_tunnel_config_update_for_this_container}. Final managed_rules count: {len(managed_rules)}")
+        logging.info(f"DOCKER_HANDLER_END_CONTAINER_LOOP: For {container_name_val}. state_changed={state_changed_locally_for_this_container}, tunnel_update={needs_tunnel_config_update_for_this_container}. managed_rules ID {id(managed_rules)}, len {len(managed_rules)}")
             
         if state_changed_locally_for_this_container:
-            logging.info(f"DOCKER_HANDLER: Calling save_state() for container {container_name_val} modifications.")
+            logging.info(f"DOCKER_HANDLER_PRE_SAVE: For container {container_name_val}. managed_rules ID {id(managed_rules)}, len {len(managed_rules)}")
             save_state() 
         else:
-            logging.info(f"DOCKER_HANDLER: No local state changes detected for container {container_name_val}. Skipping save_state().")
+            logging.info(f"DOCKER_HANDLER: No local state changes for {container_name_val}. Skipping save_state().")
 
         if needs_tunnel_config_update_for_this_container:
-            logging.info(f"DOCKER_HANDLER: Triggering Cloudflare tunnel config update after processing container {container_name_val}.")
+            logging.info(f"DOCKER_HANDLER: Triggering tunnel config update for {container_name_val}.")
             if update_cloudflare_config(): 
                 logging.info(f"DOCKER_HANDLER: Tunnel config update successful for container {container_name_val}.")
                 effective_tunnel_id = tunnel_state.get("id") if not config.USE_EXTERNAL_CLOUDFLARED else config.EXTERNAL_TUNNEL_ID
@@ -248,9 +226,7 @@ def process_container_start(container_obj):
                         hostname_dns = config_item_dns["hostname"]
                         zone_name_dns_item = config_item_dns["zone_name"]
                         target_zone_id_for_dns_item = get_zone_id_from_name(zone_name_dns_item) if zone_name_dns_item else config.CF_ZONE_ID
-                        
                         if managed_rules.get(hostname_dns, {}).get("source") == "manual": continue 
-                        
                         if target_zone_id_for_dns_item:
                             dns_record_id_status = create_cloudflare_dns_record(target_zone_id_for_dns_item, hostname_dns, effective_tunnel_id)
                             if dns_record_id_status and dns_record_id_status not in ["semaphore_timeout", "existing_record_unconfirmed"]:
@@ -265,14 +241,15 @@ def process_container_start(container_obj):
             else:
                 logging.error(f"DOCKER_HANDLER: Failed to update Cloudflare tunnel config for {container_name_val}. DNS records not managed.")
 
+
     except NotFound:
-        logging.warning(f"Container {container_name_val} ({container_id_val[:12] if container_id_val else 'UnknownID'}) not found during start processing.")
+        logging.warning(f"DOCKER_HANDLER: Container {container_name_val} ({container_id_val[:12] if container_id_val else 'UnknownID'}) not found.")
     except APIError as e:
-        logging.error(f"Docker API error processing start for {container_name_val}: {e}", exc_info=True)
+        logging.error(f"DOCKER_HANDLER: Docker API error for {container_name_val}: {e}", exc_info=True)
     except requests.exceptions.ConnectionError as e: 
-        logging.error(f"Docker connection error processing start for {container_name_val}: {e}", exc_info=True)
+        logging.error(f"DOCKER_HANDLER: Docker connection error for {container_name_val}: {e}", exc_info=True)
     except Exception as e:
-        logging.error(f"Unexpected error processing start for {container_name_val}: {e}", exc_info=True)
+        logging.error(f"DOCKER_HANDLER: Unexpected error for {container_name_val}: {e}", exc_info=True)
 
 def schedule_container_stop(container_id_val):
     from datetime import datetime, timedelta, timezone 
