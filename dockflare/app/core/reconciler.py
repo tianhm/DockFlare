@@ -22,8 +22,9 @@ import threading
 from datetime import datetime, timedelta, timezone
 import json 
 
-from app import config, docker_client, tunnel_state, cloudflared_agent_state, app as flask_app 
-
+from app import config, docker_client, tunnel_state, cloudflared_agent_state
+from app import app as main_app_instance_for_context 
+from flask import current_app # For use within the app_context
 
 from app.core.state_manager import managed_rules, state_lock, save_state
 from app.core.cloudflare_api import (
@@ -39,7 +40,7 @@ from app.core.tunnel_manager import update_cloudflare_config
 
 
 def _get_hostname_configs_from_container(container_obj):
-    """Helper to extract hostname configurations from a container's labels."""
+    # ... (no changes in this helper function) ...
     labels = container_obj.labels
     container_id_val = container_obj.id
     container_name_val = container_obj.name
@@ -110,184 +111,187 @@ def _get_hostname_configs_from_container(container_obj):
 
 
 def _run_reconciliation_logic(): 
-    logging.info("[Reconcile Thread] Starting state reconciliation logic...")
-    needs_tunnel_config_update = False 
-    state_changed_locally = False
-    max_total_time = 480 
-    reconciliation_start_time = time.time()
-    
-    flask_app.reconciliation_info = {
-        "in_progress": True, "progress": 0, "total_items": 0,
-        "processed_items": 0, "start_time": reconciliation_start_time,
-        "status": "Initializing reconciliation..."
-    }
-    
-    running_labeled_hostnames_details = {}
-    try:
-        flask_app.reconciliation_info["status"] = "Scanning containers for services and access policies..."
-        containers = docker_client.containers.list(sparse=False, all=config.SCAN_ALL_NETWORKS)
-        container_count = len(containers)
-        flask_app.reconciliation_info["total_items"] = container_count
-        processed_container_count = 0
-        batch_size = 3 if not config.USE_EXTERNAL_CLOUDFLARED else 2
+    with main_app_instance_for_context.app_context(): # Push an app context
+        logging.info("[Reconcile Thread] Starting state reconciliation logic (with app context).")
+        needs_tunnel_config_update = False 
+        state_changed_locally = False
+        max_total_time = 480 
+        reconciliation_start_time = time.time()
 
-        for i in range(0, container_count, batch_size):
-            if time.time() - reconciliation_start_time > 60:
-                logging.warning("[Reconcile] Timeout during container scanning phase.")
-                flask_app.reconciliation_info["status"] = "Container scan timeout (partial data)"
-                break
-            
-            batch = containers[i:i+batch_size]
-            processed_container_count += len(batch)
-            flask_app.reconciliation_info["progress"] = min(100, int((processed_container_count / container_count) * 100)) if container_count > 0 else 0
-            flask_app.reconciliation_info["processed_items"] = processed_container_count
-            flask_app.reconciliation_info["status"] = f"Scanning containers: batch {i//batch_size + 1}/{(container_count+batch_size-1)//batch_size}"
-            
-            for c_obj in batch:
-                try:
-                    c_obj.reload() 
-                    if c_obj.labels.get(f"{config.LABEL_PREFIX}.enable", "false").lower() in ["true", "1", "t", "yes"]:
-                        configs = _get_hostname_configs_from_container(c_obj)
-                        for conf in configs:
-                            if conf["hostname"] in running_labeled_hostnames_details:
-                                logging.warning(f"[Reconcile] Duplicate hostname '{conf['hostname']}' found. Using from: {conf['container_name']}.")
-                            running_labeled_hostnames_details[conf["hostname"]] = conf
-                except Exception as e_cont_scan:
-                    logging.error(f"[Reconcile] Error processing container {c_obj.id[:12] if c_obj and c_obj.id else 'N/A'}: {e_cont_scan}")
-        logging.info(f"[Reconcile] Found {len(running_labeled_hostnames_details)} running hostnames with DockFlare labels.")
-    except Exception as e_phase1:
-        logging.error(f"[Reconcile] Error in container scanning phase: {e_phase1}", exc_info=True)
-        flask_app.reconciliation_info["status"] = f"Container scan error: {str(e_phase1)}"
+        current_app.reconciliation_info = { # Use current_app
+            "in_progress": True, "progress": 0, "total_items": 0,
+            "processed_items": 0, "start_time": reconciliation_start_time,
+            "status": "Initializing reconciliation..."
+        }
         
-    flask_app.reconciliation_info["status"] = "Comparing state and reconciling cloud resources..."
-    flask_app.reconciliation_info["total_items"] = len(running_labeled_hostnames_details) + len(managed_rules)
-    flask_app.reconciliation_info["processed_items"] = 0 # Reset for this phase
-    processed_reconcile_items = 0
-    hostnames_requiring_dns_setup = []
+        running_labeled_hostnames_details = {}
+        try:
+            current_app.reconciliation_info["status"] = "Scanning containers for services and access policies..."
+            # ... (the rest of your try block for container scanning, using current_app)
+            containers = docker_client.containers.list(sparse=False, all=config.SCAN_ALL_NETWORKS)
+            container_count = len(containers)
+            current_app.reconciliation_info["total_items"] = container_count
+            processed_container_count = 0
+            batch_size = 3 if not config.USE_EXTERNAL_CLOUDFLARED else 2
 
-    with state_lock:
-        now_utc = datetime.now(timezone.utc)
-        current_managed_hostnames_in_state = set(managed_rules.keys())
-                        
-        for hostname, desired_details in running_labeled_hostnames_details.items():
-            processed_reconcile_items +=1
-            flask_app.reconciliation_info["processed_items"] = processed_reconcile_items
-            flask_app.reconciliation_info["progress"] = min(100, int((processed_reconcile_items / flask_app.reconciliation_info["total_items"]) * 100)) if flask_app.reconciliation_info["total_items"] > 0 else 0
-            flask_app.reconciliation_info["status"] = f"Reconciling (active): {hostname}"
-
-            if time.time() - reconciliation_start_time > max_total_time - 30: break
-
-            existing_rule = managed_rules.get(hostname)
-            if existing_rule and existing_rule.get("source") == "manual":
-                continue
-
-            target_zone_id = get_zone_id_from_name(desired_details["zone_name"]) if desired_details["zone_name"] else config.CF_ZONE_ID
-            if not target_zone_id:
-                logging.error(f"[Reconcile] No zone ID for {hostname}, skipping its reconciliation.")
-                continue
-
-            if not existing_rule:
-                managed_rules[hostname] = {
-                    "service": desired_details["service"], "container_id": desired_details["container_id"],
-                    "status": "active", "delete_at": None, "zone_id": target_zone_id,
-                    "no_tls_verify": desired_details["no_tls_verify"],
-                    "access_app_id": None, "access_policy_type": None, "access_app_config_hash": None,
-                    "access_policy_ui_override": False, "source": "docker"
-                }
-                existing_rule = managed_rules[hostname]
-                state_changed_locally = True
-                needs_tunnel_config_update = True
-                hostnames_requiring_dns_setup.append((hostname, target_zone_id))
-            else:
-                changed_in_reconcile = False
-                if existing_rule.get("status") == "pending_deletion":
-                    existing_rule["status"] = "active"; existing_rule["delete_at"] = None
-                    changed_in_reconcile = True; needs_tunnel_config_update = True
+            for i in range(0, container_count, batch_size):
+                if time.time() - reconciliation_start_time > 60:
+                    logging.warning("[Reconcile] Timeout during container scanning phase.")
+                    current_app.reconciliation_info["status"] = "Container scan timeout (partial data)"
+                    break
                 
-                if existing_rule.get("service") != desired_details["service"]:
-                    existing_rule["service"] = desired_details["service"]; changed_in_reconcile = True; needs_tunnel_config_update = True
-                if existing_rule.get("no_tls_verify") != desired_details["no_tls_verify"]:
-                    existing_rule["no_tls_verify"] = desired_details["no_tls_verify"]; changed_in_reconcile = True; needs_tunnel_config_update = True
-                if existing_rule.get("zone_id") != target_zone_id:
-                    existing_rule["zone_id"] = target_zone_id; changed_in_reconcile = True; needs_tunnel_config_update = True # DNS needs re-check for new zone
-                if existing_rule.get("container_id") != desired_details["container_id"]:
-                    existing_rule["container_id"] = desired_details["container_id"]; changed_in_reconcile = True
+                batch = containers[i:i+batch_size]
+                processed_container_count += len(batch)
+                current_app.reconciliation_info["progress"] = min(100, int((processed_container_count / container_count) * 100)) if container_count > 0 else 0
+                current_app.reconciliation_info["processed_items"] = processed_container_count
+                current_app.reconciliation_info["status"] = f"Scanning containers: batch {i//batch_size + 1}/{(container_count+batch_size-1)//batch_size}"
                 
-                existing_rule["source"] = "docker" 
-                if changed_in_reconcile: state_changed_locally = True
-                hostnames_requiring_dns_setup.append((hostname, target_zone_id)) 
+                for c_obj in batch:
+                    try:
+                        c_obj.reload() 
+                        if c_obj.labels.get(f"{config.LABEL_PREFIX}.enable", "false").lower() in ["true", "1", "t", "yes"]:
+                            configs = _get_hostname_configs_from_container(c_obj)
+                            for conf_item in configs: # Renamed conf to conf_item
+                                if conf_item["hostname"] in running_labeled_hostnames_details:
+                                    logging.warning(f"[Reconcile] Duplicate hostname '{conf_item['hostname']}' found. Using from: {conf_item['container_name']}.")
+                                running_labeled_hostnames_details[conf_item["hostname"]] = conf_item
+                    except Exception as e_cont_scan:
+                        logging.error(f"[Reconcile] Error processing container {c_obj.id[:12] if c_obj and c_obj.id else 'N/A'}: {e_cont_scan}")
+            logging.info(f"[Reconcile] Found {len(running_labeled_hostnames_details)} running hostnames with DockFlare labels.")
+        except Exception as e_phase1:
+            logging.error(f"[Reconcile] Error in container scanning phase: {e_phase1}", exc_info=True)
+            current_app.reconciliation_info["status"] = f"Container scan error: {str(e_phase1)}"
             
-            if existing_rule.get("access_policy_ui_override", False):
-                pass # Skip label processing if UI override
-            else:
-                if handle_access_policy_from_labels(desired_details, existing_rule, None):
+        current_app.reconciliation_info["status"] = "Comparing state and reconciling cloud resources..."
+        # Ensure total_items is correct if container_count changed due to errors
+        current_app.reconciliation_info["total_items"] = len(running_labeled_hostnames_details) + len(managed_rules) 
+        current_app.reconciliation_info["processed_items"] = 0 
+        processed_reconcile_items = 0
+        hostnames_requiring_dns_setup = []
+
+        with state_lock:
+            now_utc = datetime.now(timezone.utc)
+            current_managed_hostnames_in_state = set(managed_rules.keys())
+                            
+            for hostname, desired_details in running_labeled_hostnames_details.items():
+                processed_reconcile_items +=1
+                current_app.reconciliation_info["processed_items"] = processed_reconcile_items
+                current_app.reconciliation_info["progress"] = min(100, int((processed_reconcile_items / current_app.reconciliation_info["total_items"]) * 100)) if current_app.reconciliation_info["total_items"] > 0 else 0
+                current_app.reconciliation_info["status"] = f"Reconciling (active): {hostname}"
+
+                if time.time() - reconciliation_start_time > max_total_time - 30: break
+
+                existing_rule = managed_rules.get(hostname)
+                if existing_rule and existing_rule.get("source") == "manual":
+                    continue
+
+                target_zone_id = get_zone_id_from_name(desired_details["zone_name"]) if desired_details["zone_name"] else config.CF_ZONE_ID
+                if not target_zone_id:
+                    logging.error(f"[Reconcile] No zone ID for {hostname}, skipping its reconciliation.")
+                    continue
+
+                if not existing_rule:
+                    managed_rules[hostname] = {
+                        "service": desired_details["service"], "container_id": desired_details["container_id"],
+                        "status": "active", "delete_at": None, "zone_id": target_zone_id,
+                        "no_tls_verify": desired_details["no_tls_verify"],
+                        "access_app_id": None, "access_policy_type": None, "access_app_config_hash": None,
+                        "access_policy_ui_override": False, "source": "docker"
+                    }
+                    existing_rule = managed_rules[hostname]
                     state_changed_locally = True
-        
-        hostnames_in_state_but_not_running = list(current_managed_hostnames_in_state - set(running_labeled_hostnames_details.keys()))
-        for hostname_to_check in hostnames_in_state_but_not_running:
-            processed_reconcile_items +=1 
-            flask_app.reconciliation_info["processed_items"] = processed_reconcile_items
-                        
-            if time.time() - reconciliation_start_time > max_total_time - 20: break
+                    needs_tunnel_config_update = True
+                    hostnames_requiring_dns_setup.append((hostname, target_zone_id))
+                else:
+                    changed_in_reconcile = False
+                    if existing_rule.get("status") == "pending_deletion":
+                        existing_rule["status"] = "active"; existing_rule["delete_at"] = None
+                        changed_in_reconcile = True; needs_tunnel_config_update = True
+                    
+                    if existing_rule.get("service") != desired_details["service"]:
+                        existing_rule["service"] = desired_details["service"]; changed_in_reconcile = True; needs_tunnel_config_update = True
+                    if existing_rule.get("no_tls_verify") != desired_details["no_tls_verify"]:
+                        existing_rule["no_tls_verify"] = desired_details["no_tls_verify"]; changed_in_reconcile = True; needs_tunnel_config_update = True
+                    if existing_rule.get("zone_id") != target_zone_id:
+                        existing_rule["zone_id"] = target_zone_id; changed_in_reconcile = True; needs_tunnel_config_update = True 
+                    if existing_rule.get("container_id") != desired_details["container_id"]:
+                        existing_rule["container_id"] = desired_details["container_id"]; changed_in_reconcile = True
+                    
+                    existing_rule["source"] = "docker" 
+                    if changed_in_reconcile: state_changed_locally = True
+                    hostnames_requiring_dns_setup.append((hostname, target_zone_id)) 
+                
+                if existing_rule.get("access_policy_ui_override", False):
+                    pass 
+                else:
+                    if handle_access_policy_from_labels(desired_details, existing_rule, None):
+                        state_changed_locally = True
             
-            rule = managed_rules.get(hostname_to_check)
-            if rule and rule.get("status") == "active" and rule.get("source", "docker") == "docker":
-                logging.info(f"[Reconcile] Docker-managed rule {hostname_to_check} active but container/labels gone. Marking for deletion.")
-                rule["status"] = "pending_deletion"
-                rule["delete_at"] = now_utc + timedelta(seconds=config.GRACE_PERIOD_SECONDS)
-                state_changed_locally = True
-            elif rule and rule.get("source") == "manual" and rule.get("zone_id"):
-                 hostnames_requiring_dns_setup.append((hostname_to_check, rule.get("zone_id")))
+            hostnames_in_state_but_not_running = list(current_managed_hostnames_in_state - set(running_labeled_hostnames_details.keys()))
+            for hostname_to_check in hostnames_in_state_but_not_running:
+                processed_reconcile_items +=1 
+                current_app.reconciliation_info["processed_items"] = processed_reconcile_items
+                            
+                if time.time() - reconciliation_start_time > max_total_time - 20: break
+                
+                rule = managed_rules.get(hostname_to_check)
+                if rule and rule.get("status") == "active" and rule.get("source", "docker") == "docker":
+                    logging.info(f"[Reconcile] Docker-managed rule {hostname_to_check} active but container/labels gone. Marking for deletion.")
+                    rule["status"] = "pending_deletion"
+                    rule["delete_at"] = now_utc + timedelta(seconds=config.GRACE_PERIOD_SECONDS)
+                    state_changed_locally = True
+                elif rule and rule.get("source") == "manual" and rule.get("zone_id"):
+                     hostnames_requiring_dns_setup.append((hostname_to_check, rule.get("zone_id")))
 
 
-        if state_changed_locally:
-            flask_app.reconciliation_info["status"] = "Saving reconciled state..."
-            save_state()
+            if state_changed_locally:
+                current_app.reconciliation_info["status"] = "Saving reconciled state..."
+                save_state()
 
-    if time.time() - reconciliation_start_time > max_total_time - 15:
-        logging.warning("[Reconcile] Timeout before Tunnel/DNS operations.")
-        needs_tunnel_config_update = False # Skip if timeout
+        if time.time() - reconciliation_start_time > max_total_time - 15:
+            logging.warning("[Reconcile] Timeout before Tunnel/DNS operations.")
+            needs_tunnel_config_update = False 
 
-    if needs_tunnel_config_update:
-        flask_app.reconciliation_info["status"] = "Updating Cloudflare tunnel configuration..."
-        if not config.USE_EXTERNAL_CLOUDFLARED:
-            if not update_cloudflare_config():
-                logging.error("[Reconcile] Failed to update Cloudflare tunnel configuration.")
-                flask_app.reconciliation_info["status"] = "Error: Failed tunnel config update."
+        if needs_tunnel_config_update:
+            current_app.reconciliation_info["status"] = "Updating Cloudflare tunnel configuration..."
+            if not config.USE_EXTERNAL_CLOUDFLARED:
+                if not update_cloudflare_config():
+                    logging.error("[Reconcile] Failed to update Cloudflare tunnel configuration.")
+                    current_app.reconciliation_info["status"] = "Error: Failed tunnel config update."
+                else:
+                    logging.info("[Reconcile] Cloudflare tunnel configuration updated successfully.")
+                    current_app.reconciliation_info["status"] = "Tunnel configuration updated."
             else:
-                logging.info("[Reconcile] Cloudflare tunnel configuration updated successfully.")
-                flask_app.reconciliation_info["status"] = "Tunnel configuration updated."
-        else:
-            logging.info("[Reconcile] External mode: Skipping DockFlare-managed tunnel config update.")
-            flask_app.reconciliation_info["status"] = "Tunnel config update skipped (external mode)."
-    
-    if hostnames_requiring_dns_setup:
-        dns_total = len(hostnames_requiring_dns_setup)
-        flask_app.reconciliation_info["status"] = f"Setting up DNS for {dns_total} hostnames..."
-        dns_processed_count = 0
-        effective_tunnel_id_for_dns = tunnel_state.get("id") if not config.USE_EXTERNAL_CLOUDFLARED else config.EXTERNAL_TUNNEL_ID
+                logging.info("[Reconcile] External mode: Skipping DockFlare-managed tunnel config update.")
+                current_app.reconciliation_info["status"] = "Tunnel config update skipped (external mode)."
         
-        if effective_tunnel_id_for_dns:
-            unique_dns_setups = list(set(hostnames_requiring_dns_setup)) 
-            logging.info(f"[Reconcile] Unique hostnames for DNS setup/check: {len(unique_dns_setups)}")
-            for hostname_dns, zone_id_dns in unique_dns_setups:
-                dns_processed_count +=1 
-                flask_app.reconciliation_info["status"] = f"DNS for {hostname_dns} ({dns_processed_count}/{len(unique_dns_setups)})"
-                if time.time() - reconciliation_start_time > max_total_time - 5: break
-                create_cloudflare_dns_record(zone_id_dns, hostname_dns, effective_tunnel_id_for_dns)
-                if config.USE_EXTERNAL_CLOUDFLARED: time.sleep(0.1) 
-        else:
-            logging.error("[Reconcile] Cannot setup DNS: Effective tunnel ID is missing.")
-            flask_app.reconciliation_info["status"] = "Error: Missing tunnel ID for DNS setup."
+        if hostnames_requiring_dns_setup:
+            dns_total = len(hostnames_requiring_dns_setup)
+            current_app.reconciliation_info["status"] = f"Setting up DNS for {dns_total} hostnames..."
+            dns_processed_count = 0
+            effective_tunnel_id_for_dns = tunnel_state.get("id") if not config.USE_EXTERNAL_CLOUDFLARED else config.EXTERNAL_TUNNEL_ID
             
-    flask_app.reconciliation_info["in_progress"] = False
-    flask_app.reconciliation_info["progress"] = 100 
-    final_status = flask_app.reconciliation_info.get("status", "Reconciliation finished.")
-    if not final_status.endswith("(Final)"): final_status += " (Final)"
-    flask_app.reconciliation_info["status"] = final_status
-    flask_app.reconciliation_info["completed_at"] = time.time()
-    duration = flask_app.reconciliation_info["completed_at"] - flask_app.reconciliation_info["start_time"]
-    logging.info(f"[Reconcile Thread] Reconciliation complete. Duration: {duration:.2f}s. Status: {flask_app.reconciliation_info['status']}")
+            if effective_tunnel_id_for_dns:
+                unique_dns_setups = list(set(hostnames_requiring_dns_setup)) 
+                logging.info(f"[Reconcile] Unique hostnames for DNS setup/check: {len(unique_dns_setups)}")
+                for hostname_dns, zone_id_dns in unique_dns_setups:
+                    dns_processed_count +=1 
+                    current_app.reconciliation_info["status"] = f"DNS for {hostname_dns} ({dns_processed_count}/{len(unique_dns_setups)})"
+                    if time.time() - reconciliation_start_time > max_total_time - 5: break
+                    create_cloudflare_dns_record(zone_id_dns, hostname_dns, effective_tunnel_id_for_dns)
+                    if config.USE_EXTERNAL_CLOUDFLARED: time.sleep(0.1) 
+            else:
+                logging.error("[Reconcile] Cannot setup DNS: Effective tunnel ID is missing.")
+                current_app.reconciliation_info["status"] = "Error: Missing tunnel ID for DNS setup."
+                
+        current_app.reconciliation_info["in_progress"] = False
+        current_app.reconciliation_info["progress"] = 100 
+        final_status = current_app.reconciliation_info.get("status", "Reconciliation finished.")
+        if not final_status.endswith("(Final)"): final_status += " (Final)"
+        current_app.reconciliation_info["status"] = final_status
+        current_app.reconciliation_info["completed_at"] = time.time()
+        duration = current_app.reconciliation_info["completed_at"] - current_app.reconciliation_info["start_time"]
+        logging.info(f"[Reconcile Thread] Reconciliation complete. Duration: {duration:.2f}s. Status: {current_app.reconciliation_info['status']}")
 
 
 def reconcile_state_threaded(): 
@@ -298,12 +302,12 @@ def reconcile_state_threaded():
         logging.warning("Tunnel not initialized (no ID), skipping reconciliation.")
         return
 
-    if not hasattr(flask_app, 'reconciliation_info'):
-        logging.error("flask_app.reconciliation_info not initialized. Cannot start reconciliation.")
-
-        flask_app.reconciliation_info = {"in_progress": False}
+    # Use main_app_instance_for_context to access reconciliation_info
+    if not hasattr(main_app_instance_for_context, 'reconciliation_info'):
+        logging.error("main_app_instance_for_context.reconciliation_info not initialized. Cannot start reconciliation.")
+        main_app_instance_for_context.reconciliation_info = {"in_progress": False} # Fallback
         
-    if flask_app.reconciliation_info.get("in_progress", False):
+    if main_app_instance_for_context.reconciliation_info.get("in_progress", False):
         logging.info("Reconciliation is already in progress. Skipping new request.")
         return
 
@@ -314,6 +318,7 @@ def reconcile_state_threaded():
     )
     reconcile_thread.start()
     logging.info(f"Started reconciliation in background thread {reconcile_thread.name}")
+
 
 def cleanup_expired_rules(stop_event_param):
     logging.info("Starting cleanup task for expired rules...")
@@ -376,7 +381,7 @@ def cleanup_expired_rules(stop_event_param):
                         if delete_cloudflare_access_application(access_app_id_del):
                             access_app_deleted = True
                         else: logging.error(f"Failed Access App delete for {hostname}, App ID: {access_app_id_del}.")
-                    else: access_app_deleted = True # No app to delete
+                    else: access_app_deleted = True 
 
                     hostnames_fully_cleaned.append(hostname)
 
