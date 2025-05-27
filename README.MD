@@ -57,7 +57,7 @@ DockFlare simplifies Cloudflare Tunnel and Zero Trust Access policy management b
 ## ⚙️ Getting Started
 
 <details>
-<summary>📋 Prerequisites</summary>
+<summary>📋 Important Prerequisites - Cloudflare API</summary>
 
 - Docker: [Install Docker](https://docs.docker.com/engine/install/)
 - Docker Compose: [Install Docker Compose](https://docs.docker.com/compose/install/)
@@ -365,6 +365,9 @@ DockFlare handles services across multiple Cloudflare zones (domains).
 </details>
 
 ---
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=ChrispyBacon-dev/DockFlare&type=Date)](https://www.star-history.com/#ChrispyBacon-dev/DockFlare&Date)
 
 ## 🤝 Contributing
 
@@ -373,4 +376,3 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) or open
 ## 📜 License
 
 DockFlare is licensed under the GNU General Public License v3.0. See [LICENSE.MD](LICENSE.MD) for details.
-```
