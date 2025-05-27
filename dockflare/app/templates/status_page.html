@@ -186,7 +186,6 @@
                 </div>
             </div>
         </section>
-
         <section class="card bg-base-100 shadow-xl mb-8 sm:mb-12 transition-all duration-300 hover:shadow-2xl">
              <div class="card-body">
                 <h2 class="card-title text-2xl sm:text-3xl border-b border-base-300 pb-3 mb-6">
@@ -202,19 +201,21 @@
                         <table class="table table-zebra table-sm w-full">
                             <thead>
                                 <tr>
-                                    <th class="p-3 w-1/12">Status</th>
+                                    <th class="p-3 w-auto">Status</th>
                                     <th class="p-3 w-1/4">Hostname</th> 
+                                    <th class="p-3 w-1/6">Path</th>
                                     <th class="p-3 w-1/5">Service Target</th>
-                                    <th class="p-3 w-1/6">Identifier</th>
+                                    <th class="p-3 w-auto">Identifier</th>
                                     <th class="p-3 w-1/5">Access Policy</th>
                                     <th class="p-3 w-1/4">Manage Policy</th>
-                                    <th class="p-3 w-1/6">Expires At</th>
+                                    <th class="p-3 w-auto">Expires At</th>
                                     <th class="p-3 w-auto">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for hostname, details in rules.items()|sort %}
-                                    <td class="p-3 whitespace-nowrap">
+                                    <tr> 
+                                        <td class="p-3 whitespace-nowrap">
                                             {% if details.source == 'manual' %}
                                                 <span class="badge badge-info badge-sm">Manual</span>                                               
                                             {% else %}
@@ -225,13 +226,20 @@
                                             {% endif %}
                                         </td>
                                         <td class="p-3 whitespace-nowrap">
-                                            <a href="https://{{ hostname }}" target="_blank" rel="noopener noreferrer" title="Open https://{{ hostname }}" class="link link-hover link-primary text-sm">
+                                            <a href="https://{{ hostname }}{{ details.path if details.path else '' }}" target="_blank" rel="noopener noreferrer" title="Open https://{{ hostname }}{{ details.path if details.path else '' }}" class="link link-hover link-primary text-sm">
                                                {{ hostname }}
                                            </a>
                                            {% if hostname.startswith('*.') %}
                                            <span class="badge badge-info badge-xs ml-2">wildcard</span>
                                            {% endif %}
                                        </td>
+                                       <td class="p-3 whitespace-nowrap">
+                                            {% if details.path and details.path.strip() %}
+                                                <code class="text-xs opacity-70">{{ details.path }}</code>
+                                            {% else %}
+                                                <span class="text-xs opacity-50 italic">(root)</span>
+                                            {% endif %}
+                                        </td>
                                         <td class="p-3 whitespace-nowrap"><code class="text-xs opacity-80">{{ details.service }}</code></td>
                                         <td class="p-3 whitespace-nowrap">
                                             {% if details.source == 'manual' %}
@@ -334,7 +342,6 @@
                 {% endif %}
             </div>
         </section>
-        
         <section class="card bg-base-100 shadow-xl mb-8 sm:mb-12 transition-all duration-300 hover:shadow-2xl">
             <div class="card-body">
                 <h2 class="card-title text-2xl sm:text-3xl border-b border-base-300 pb-3 mb-6">All Cloudflare Tunnels on Account</h2>
@@ -406,7 +413,6 @@
                 {% endif %}
             </div>
         </section>
-
         <section class="card bg-base-100 shadow-xl mb-8 sm:mb-12 transition-all duration-300 hover:shadow-2xl">
              <div class="card-body">
                  <h2 class="card-title text-2xl sm:text-3xl border-b border-base-300 pb-3 mb-4">
@@ -418,7 +424,6 @@
             </div>
         </section>
     </main>
-
     <footer class="text-center py-6 mt-auto text-sm opacity-70 border-t border-base-300">
         <div class="container mx-auto px-4 sm:px-6 lg:px-8">
             <p class="mb-1"><a href="https://github.com/ChrispyBacon-dev/DockFlare" target="_blank" rel="noopener noreferrer" class="link link-hover link-primary">DockFlare on GitHub</a></p>
@@ -428,7 +433,7 @@
             <p class="mt-2 text-xs opacity-60">DockFlare v1.8.0</p>
         </div>
     </footer>
-    <dialog id="add_manual_rule_modal" class="modal">
+        <dialog id="add_manual_rule_modal" class="modal">
       <div class="modal-box w-11/12 max-w-lg">
         <form method="dialog">
           <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
@@ -438,6 +443,11 @@
             <div>
                 <label class="label" for="manual_hostname"><span class="label-text">Hostname (e.g., router.example.com)</span></label>
                 <input type="text" id="manual_hostname" name="manual_hostname" placeholder="mydevice.yourdomain.com" class="input input-bordered w-full" required />
+            </div>
+            <div>
+                <label class="label" for="manual_path"><span class="label-text">Path (Optional, e.g., /app or /api/v1)</span></label>
+                <input type="text" id="manual_path" name="manual_path" placeholder="/optional-service-path" class="input input-bordered w-full" />
+                <div class="text-xs opacity-60 mt-1">If blank, rule applies to the root of the hostname. Must start with '/' if specified.</div>
             </div>
             <div>
                 <label class="label" for="manual_service"><span class="label-text">Service URL (e.g., http://192.168.1.1:80)</span></label>

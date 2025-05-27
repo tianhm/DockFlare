@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 import traceback 
 import json
 from app.core import access_manager
-
+from urllib.parse import urlparse, urlunparse 
 from flask import (
     Blueprint, render_template, jsonify, redirect, url_for, request, Response,
     stream_with_context, current_app
@@ -504,16 +504,17 @@ def stream_logs_route():
 
 @bp.route('/ui/manual-rules/add', methods=['POST'])
 def ui_add_manual_rule_route():
-    if not docker_client:
-        cloudflared_agent_state["last_action_status"] = "Error: System not ready to add manual rule. Docker client unavailable."
+    if not docker_client: 
+        cloudflared_agent_state["last_action_status"] = "Error: Docker client unavailable, cannot guarantee full system health for adding manual rule."
         return redirect(url_for('web.status_page'))
     
     effective_tunnel_id = tunnel_state.get("id") if not config.USE_EXTERNAL_CLOUDFLARED else config.EXTERNAL_TUNNEL_ID
     if not effective_tunnel_id:
-        cloudflared_agent_state["last_action_status"] = "Error: System not ready to add manual rule. Tunnel not initialized or ID missing."
+        cloudflared_agent_state["last_action_status"] = "Error: System not ready to add manual rule. Tunnel not initialized or essential Tunnel ID missing."
         return redirect(url_for('web.status_page'))
 
     hostname = request.form.get('manual_hostname', '').strip()
+    path_input = request.form.get('manual_path', '').strip() # <-- ADDED: Get path input
     service_input = request.form.get('manual_service', '').strip() 
     zone_name_from_form = request.form.get('manual_zone_name', '').strip() 
     no_tls_verify = request.form.get('manual_no_tls_verify') == 'on'
@@ -526,8 +527,16 @@ def ui_add_manual_rule_route():
         cloudflared_agent_state["last_action_status"] = f"Error: Invalid hostname provided for manual rule: {hostname}"
         return redirect(url_for('web.status_page'))
 
+    processed_path = None
+    if path_input:
+        processed_path = path_input.strip()
+        if not processed_path.startswith('/'):
+            cloudflared_agent_state["last_action_status"] = f"Error: Path '{processed_path}' must start with a '/'."
+            return redirect(url_for('web.status_page'))
+        if len(processed_path) > 1 and processed_path.endswith('/'):
+            processed_path = processed_path.rstrip('/')
+
     processed_service_for_cf = ""
-    from urllib.parse import urlparse, urlunparse 
     try:
         parsed_url = urlparse(service_input)
         if not parsed_url.scheme or not parsed_url.netloc:
@@ -540,7 +549,6 @@ def ui_add_manual_rule_route():
     if not is_valid_service(processed_service_for_cf): 
         cloudflared_agent_state["last_action_status"] = f"Error: Processed service URL '{processed_service_for_cf}' is invalid."
         return redirect(url_for('web.status_page'))
-
     target_zone_id = None 
     if zone_name_from_form:
         target_zone_id = get_zone_id_from_name(zone_name_from_form) 
@@ -552,18 +560,19 @@ def ui_add_manual_rule_route():
     else:
         cloudflared_agent_state["last_action_status"] = "Error: Zone Name required for manual rule as CF_ZONE_ID is not set."
         return redirect(url_for('web.status_page'))
-
     with state_lock:
         existing_rule_details = managed_rules.get(hostname)
+        
         if existing_rule_details and existing_rule_details.get("source", "docker") == "docker":
             cloudflared_agent_state["last_action_status"] = f"Error: Hostname {hostname} is already managed by Docker labels. Manual rule not added/updated."
             return redirect(url_for('web.status_page'))
         
         log_action = "Adding new" if not existing_rule_details else "Updating existing"
-        logging.info(f"{log_action} manual rule for {hostname} with service {processed_service_for_cf}")
+        logging.info(f"{log_action} manual rule for {hostname} (Path: {processed_path if processed_path else '(root)'}) with service {processed_service_for_cf}")
 
         managed_rules[hostname] = {
             "service": processed_service_for_cf,
+            "path": processed_path, 
             "container_id": None, 
             "status": "active",
             "delete_at": None,
@@ -578,10 +587,10 @@ def ui_add_manual_rule_route():
         save_state() 
 
     if update_cloudflare_config(): 
-        create_cloudflare_dns_record(target_zone_id, hostname, effective_tunnel_id) # from cloudflare_api
-        cloudflared_agent_state["last_action_status"] = f"Success: Manual rule for {hostname} added/updated."
+        create_cloudflare_dns_record(target_zone_id, hostname, effective_tunnel_id)
+        cloudflared_agent_state["last_action_status"] = f"Success: Manual rule for {hostname} (Path: {processed_path if processed_path else '(root)'}) added/updated."
     else:
-        cloudflared_agent_state["last_action_status"] = f"Error: Failed to update Cloudflare config for manual rule {hostname}."
+        cloudflared_agent_state["last_action_status"] = f"Error: Failed to update Cloudflare config for manual rule {hostname} (Path: {processed_path if processed_path else '(root)'})."
 
     return redirect(url_for('web.status_page'))
 
