@@ -365,7 +365,7 @@ DockFlare handles services across multiple Cloudflare zones (domains).
 </details>
 
 ---
-## Star History
+## ✨ Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=ChrispyBacon-dev/DockFlare&type=Date)](https://www.star-history.com/#ChrispyBacon-dev/DockFlare&Date)
 
