@@ -453,12 +453,13 @@
                         <div class="text-xs opacity-60 mt-1">This will be combined with the subdomain to form the full hostname.</div>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="label" for="manual_path"><span class="label-text">Path</span></label>
+                        <label class="label" for="manual_path_display"><span class="label-text">Path</span></label>
                         <div class="join w-full">
                             <span class="join-item btn btn-disabled normal-case pointer-events-none bg-base-200 border-base-300 !min-h-[3rem] !h-[3rem] px-3">/</span>
-                            <input type="text" id="manual_path" name="manual_path" placeholder="(optional) path" class="input input-bordered join-item w-full" />
+                            <input type="text" id="manual_path_display" placeholder="(optional) path" class="input input-bordered join-item w-full" />
                         </div>
-                         <div class="text-xs opacity-60 mt-1">If blank, rule applies to the root. Must start with '/' if specified.</div>
+                        <input type="hidden" id="manual_path" name="manual_path" />
+                         <div class="text-xs opacity-60 mt-1">If blank, rule applies to the root. User types "app", submitted as "/app".</div>
                     </div>
                 </div>
             </div>
