@@ -535,7 +535,7 @@
                   </label>
                   <div class="text-xs opacity-60 ml-8">Check if the origin service uses self-signed SSL or is HTTP. (Only applies to HTTP/HTTPS services).</div>
                 </div>
-                <div class="form-control">
+                <div class="form-control" id="manual_origin_server_name_div"> 
                     <label class="label" for="manual_origin_server_name">
                         <span class="label-text">Origin Server Name (SNI for TLS)</span>
                     </label>
@@ -546,7 +546,6 @@
                         <span class="label-text-alt">Specify the hostname Cloudflare should use for TLS SNI when connecting to your origin. Leave blank if not needed. (Only applies to HTTP/HTTPS services).</span>
                     </label>
                 </div>
-            </div>
             <div class="modal-action mt-8">
               <button type="submit" class="btn btn-primary">Add Rule</button>
             </div>
