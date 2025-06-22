@@ -15,6 +15,23 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 # app/web/routes.py
+# DockFlare: Automates Cloudflare Tunnel ingress from Docker labels.
+# Copyright (C) 2025 ChrispyBacon-Dev <https://github.com/ChrispyBacon-dev/DockFlare>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+#
+# app/web/routes.py
 import copy
 import logging
 import time
@@ -376,68 +393,6 @@ def revert_access_policy_to_labels(rule_key):
     reconcile_state_threaded() 
     action_status_message += " Reconciliation triggered."
     cloudflared_agent_state["last_action_status"] = action_status_message
-    return redirect(url_for('web.status_page'))
-
-@bp.route('/tunnel-dns-records/<tunnel_id>')
-def tunnel_dns_records(tunnel_id):
-    if not tunnel_id: return jsonify({"error": "Tunnel ID is required"}), 400
-    all_found_dns_records = []
-    zone_ids_to_scan = set()
-    if config.CF_ZONE_ID: zone_ids_to_scan.add(config.CF_ZONE_ID)
-    for zone_name in config.TUNNEL_DNS_SCAN_ZONE_NAMES:
-        resolved_zone_id = get_zone_id_from_name(zone_name) 
-        if resolved_zone_id: zone_ids_to_scan.add(resolved_zone_id)
-    
-    if not zone_ids_to_scan:
-        return jsonify({"dns_records": [], "message": "No zones configured or resolved for DNS scan."})
-
-    for z_id in zone_ids_to_scan:
-        records_in_zone = get_dns_records_for_tunnel(z_id, tunnel_id) 
-        if records_in_zone: all_found_dns_records.extend(records_in_zone)
-    
-    all_found_dns_records.sort(key=lambda r: r.get("name", "").lower())
-    return jsonify({"dns_records": all_found_dns_records})
-
-@bp.route('/ping')
-def ping():
-    return jsonify({ "status": "ok", "timestamp": int(time.time()), "version": "1.7.1", 
-                     "protocol": request.environ.get('wsgi.url_scheme', 'unknown')})
-
-@bp.route('/debug')
-def debug_info():
-    try:
-        headers = {k: v for k, v in request.headers.items()}
-        return jsonify({
-            "request": { "scheme": request.scheme, "is_secure": request.is_secure, "host": request.host, 
-                         "path": request.path, "url": request.url, "headers": headers },
-            "environment": { "wsgi.url_scheme": request.environ.get('wsgi.url_scheme'),
-                             "HTTP_X_FORWARDED_PROTO": request.environ.get('HTTP_X_FORWARDED_PROTO') },
-            "timestamp": int(time.time())
-        })
-    except Exception as e:
-        return jsonify({ "error": str(e), "traceback": traceback.format_exc() }), 500
-
-@bp.route('/reconciliation-status')
-def reconciliation_status_route(): 
-    reconciliation_info_data = getattr(current_app, 'reconciliation_info', {})
-    return jsonify({
-        "in_progress": reconciliation_info_data.get("in_progress", False),
-        "progress": reconciliation_info_data.get("progress", 0),
-        "total_items": reconciliation_info_data.get("total_items", 0),
-        "processed_items": reconciliation_info_data.get("processed_items", 0),
-        "status": reconciliation_info_data.get("status", "Not started")
-    })
-
-@bp.route('/start-tunnel', methods=['POST'])
-def start_tunnel_route(): 
-    start_cloudflared_container() 
-    time.sleep(1)
-    return redirect(url_for('web.status_page'))
-
-@bp.route('/stop-tunnel', methods=['POST'])
-def stop_tunnel_route(): 
-    stop_cloudflared_container() 
-    time.sleep(1)
     return redirect(url_for('web.status_page'))
 
 @bp.route('/force_delete_rule/<path:rule_key>', methods=['POST']) 
