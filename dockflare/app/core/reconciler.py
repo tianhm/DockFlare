@@ -151,7 +151,6 @@ def _run_reconciliation_logic():
                 batch = containers[i:i+batch_size]
                 processed_container_count += len(batch)
                 current_app.reconciliation_info["progress"] = min(100, int((processed_container_count / container_count) * 100)) if container_count > 0 else 0
-                current_app.reconciliation_info["processed_items"] = processed_container_count
                 current_app.reconciliation_info["status"] = f"Scanning containers: batch {i//batch_size + 1}/{(container_count+batch_size-1)//batch_size}"
                 
                 for c_obj in batch:
@@ -175,12 +174,12 @@ def _run_reconciliation_logic():
         current_app.reconciliation_info["total_items"] = len(running_labeled_rules_details) + len(managed_rules) 
         current_app.reconciliation_info["processed_items"] = 0 
         processed_reconcile_items = 0
-        hostnames_requiring_dns_setup = set() 
+        hostnames_requiring_dns_setup = set()
 
         with state_lock:
             now_utc = datetime.now(timezone.utc)
             current_managed_rule_keys_in_state = set(managed_rules.keys())
-            
+                            
             for rule_key, desired_details in running_labeled_rules_details.items():
                 processed_reconcile_items +=1
                 current_app.reconciliation_info["processed_items"] = processed_reconcile_items
@@ -376,11 +375,10 @@ def cleanup_expired_rules(stop_event_param):
                 save_state()
 
             if rules_to_process_for_deletion:
-                hostnames_fully_cleaned = []
+                rule_keys_fully_cleaned = []
                 effective_tunnel_id_cleanup = tunnel_state.get("id") if not config.USE_EXTERNAL_CLOUDFLARED else config.EXTERNAL_TUNNEL_ID
-
                 for rule_key, delete_info in rules_to_process_for_deletion.items():
-                    hostname_del = delete_info["hostname"]
+                    hostname_del = delete_info.get("hostname")
                     zone_id_del = delete_info["zone_id"]
                     access_app_id_del = delete_info["access_app_id"]
                     
@@ -389,19 +387,20 @@ def cleanup_expired_rules(stop_event_param):
                         if delete_cloudflare_dns_record(zone_id_del, hostname_del, effective_tunnel_id_cleanup):
                             dns_deleted = True
                         else: logging.error(f"Failed DNS delete for expired rule {hostname_del} in zone {zone_id_del}.")
-                    elif not zone_id_del: logging.warning(f"Skipping DNS delete for {hostname_del}: Zone ID unavailable.")
-                    elif not effective_tunnel_id_cleanup: logging.warning(f"Skipping DNS delete for {hostname_del}: Tunnel ID unavailable.")
-                    
+                    elif not zone_id_del: logging.warning(f"Skipping DNS delete for {hostname_del or rule_key}: Zone ID unavailable.")
+                    elif not effective_tunnel_id_cleanup: logging.warning(f"Skipping DNS delete for {hostname_del or rule_key}: Tunnel ID unavailable.")
+                    elif not hostname_del: logging.warning(f"Skipping DNS delete for rule key {rule_key}: Simple hostname missing in state.")
+
                     access_app_deleted = False
                     if access_app_id_del:
                         if delete_cloudflare_access_application(access_app_id_del):
                             access_app_deleted = True
-                        else: logging.error(f"Failed Access App delete for {hostname_del}, App ID: {access_app_id_del}.")
+                        else: logging.error(f"Failed Access App delete for {hostname_del or rule_key}, App ID: {access_app_id_del}.")
                     else: access_app_deleted = True 
 
-                    hostnames_fully_cleaned.append(rule_key)
+                    rule_keys_fully_cleaned.append(rule_key)
 
-                if hostnames_fully_cleaned:
+                if rule_keys_fully_cleaned:
                     config_updated_after_delete = False
                     if not config.USE_EXTERNAL_CLOUDFLARED:
                         if update_cloudflare_config(): 
@@ -414,7 +413,7 @@ def cleanup_expired_rules(stop_event_param):
                     if config_updated_after_delete:
                         with state_lock:
                             deleted_count = 0
-                            for rule_key_rem in hostnames_fully_cleaned:
+                            for rule_key_rem in rule_keys_fully_cleaned:
                                 if rule_key_rem in managed_rules and managed_rules[rule_key_rem].get("status") == "pending_deletion":
                                     del managed_rules[rule_key_rem]
                                     deleted_count += 1
