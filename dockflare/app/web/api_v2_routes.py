@@ -312,7 +312,7 @@ def add_manual_rule():
             return jsonify({"status": "error", "message": f"Rule for '{rule_key}' is Docker-managed and cannot be manually overridden this way."}), 409 
 
         managed_rules[rule_key] = {
-            "hostname": full_hostname,
+            "hostname": full_hostname, 
             "path": processed_path,
             "service": processed_service_for_cf, 
             "container_id": None, 
@@ -409,7 +409,7 @@ def delete_manual_rule(rule_key):
         if not access_app_deleted_ok: message += " Access App deletion failed or skipped."
         return jsonify({"status": "success", "message": message}), 200
     else:
-        return jsonify({"status": "warning", "message": f"Manual rule {rule_key} removed from state, but Cloudflare tunnel config update FAILED."}), 207 
+        return jsonify({"status": "warning", "message": f"Manual rule {rule_key} removed from state, but Cloudflare tunnel config update FAILED."}), 207 # Multi-Status
 
 @api_v2_bp.route('/rules/<path:rule_key>/force-delete', methods=['POST']) 
 def force_delete_rule(rule_key):
@@ -505,6 +505,7 @@ def update_rule_access_policy(rule_key):
         current_rule = managed_rules.get(rule_key)
         if not current_rule:
             return jsonify({"status": "error", "message": f"Rule '{rule_key}' not found."}), 404
+        
         hostname_for_access_app = current_rule.get("hostname") 
         if not hostname_for_access_app:
             hostname_for_access_app = rule_key.split('|')[0]
