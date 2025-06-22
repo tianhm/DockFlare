@@ -101,16 +101,9 @@ def update_cloudflare_config():
         desired_dockflare_rules = []
         for rule_key, rule_details in managed_rules.items():
             if rule_details.get("status") == "active":
-                service_str = rule_details.get("service") 
-                
-                actual_hostname_for_cf = rule_details.get("hostname_for_dns")
-                actual_path_for_cf = rule_details.get("path") 
-
-                if not actual_hostname_for_cf: 
-                    parts = rule_key.split('|', 1)
-                    actual_hostname_for_cf = parts[0]
-                    if not actual_path_for_cf and len(parts) > 1 and parts[1]: 
-                         actual_path_for_cf = parts[1] 
+                service_str = rule_details.get("service")
+                actual_hostname_for_cf = rule_details.get("hostname")
+                actual_path_for_cf = rule_details.get("path")
                 
                 if service_str and actual_hostname_for_cf: 
                     no_tls_verify_flag = rule_details.get("no_tls_verify", False) 
@@ -174,13 +167,8 @@ def update_cloudflare_config():
             is_actively_managed_by_dockflare = False
             if not is_catch_all : 
                 for df_rule_key, df_rule_details in managed_rules.items():
-                    df_hostname_for_cf = df_rule_details.get("hostname_for_dns")
+                    df_hostname_for_cf = df_rule_details.get("hostname")
                     df_path_for_cf = df_rule_details.get("path")
-                    if not df_hostname_for_cf: 
-                        parts = df_rule_key.split('|',1)
-                        df_hostname_for_cf = parts[0]
-                        if not df_path_for_cf and len(parts) > 1 and parts[1]:
-                            df_path_for_cf = parts[1]
 
                     if df_rule_details.get("status") == "active" and \
                        df_hostname_for_cf == api_hostname and \
