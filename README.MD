@@ -185,6 +185,7 @@ To help you get started immediately, a pre-built, detailed Grafana dashboard is 
 -   And more...
 <details>
 <summary><b>Grafana Dashboard Example</b></summary>
+
 ![Grafana Dashboard Example](images/grafana_dashboard_example.png)
 </details>
 <br>
