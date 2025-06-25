@@ -108,6 +108,8 @@ def update_cloudflare_config():
                 if service_str and actual_hostname_for_cf: 
                     no_tls_verify_flag = rule_details.get("no_tls_verify", False) 
                     origin_server_name_val = rule_details.get("origin_server_name")
+                    http_host_header_val = rule_details.get("http_host_header")
+
                     rule_config = {"hostname": actual_hostname_for_cf, "service": service_str} 
                     
                     if actual_path_for_cf and actual_path_for_cf.strip(): 
@@ -130,7 +132,11 @@ def update_cloudflare_config():
                         origin_request_settings["originServerName"] = origin_server_name_val
                     elif origin_server_name_val:
                         logging.debug(f"Rule for {rule_key} has origin_server_name='{origin_server_name_val}', but service '{service_str}' is not HTTP/HTTPS. 'originServerName' might be ignored by Cloudflare for this service type or cause issues.")
-
+                    if http_host_header_val and isinstance(service_str, str) and \
+                       (service_str.lower().startswith("http://") or service_str.lower().startswith("https://")):
+                        origin_request_settings["httpHostHeader"] = http_host_header_val
+                    elif http_host_header_val:
+                        logging.debug(f"Rule for {rule_key} has http_host_header='{http_host_header_val}', but service '{service_str}' is not HTTP/HTTPS. 'httpHostHeader' might be ignored by Cloudflare for this service type or cause issues.")
                     if origin_request_settings:
                         rule_config["originRequest"] = origin_request_settings
                     
@@ -232,6 +238,9 @@ def update_cloudflare_config():
                     comp_dict["noTLSVerify"] = True 
                 if origin_request.get("originServerName"):
                     comp_dict["originServerName"] = origin_request.get("originServerName")
+                if origin_request.get("httpHostHeader"):
+                    comp_dict["httpHostHeader"] = origin_request.get("httpHostHeader")
+
             return comp_dict
 
         current_api_comparable_set = {json.dumps(rule_to_comparable_dict(r), sort_keys=True) for r in current_api_ingress_rules}

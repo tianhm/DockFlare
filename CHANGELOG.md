@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.9.2] - 2025-06-25
+
+### Added
+- **HTTP Host Header Support:** Implemented support for the new `dockflare.httpHostHeader` Docker label, allowing users to override the `Host` header sent to their origin service. This feature is also fully supported for manual ingress rules via the web UI (Add/Edit modals and display in the Managed Rules table). Applies only to HTTP/HTTPS services.
+
 ## [1.9.1] - 2025-06-23
 
 ### Added

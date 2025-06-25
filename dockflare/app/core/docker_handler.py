@@ -110,6 +110,7 @@ def process_container_start(container_obj):
         
         default_path_label = get_label(labels, "path") 
         default_originsrvname_label = get_label(labels, "originsrvname")
+        default_http_host_header_label = get_label(labels, "httpHostHeader")
         default_access_policy_type_label = get_label(labels, "access.policy")
         default_access_app_name_label = get_label(labels, "access.name")
         default_access_session_duration_label = get_label(labels, "access.session_duration", "24h")
@@ -117,7 +118,6 @@ def process_container_start(container_obj):
         default_access_allowed_idps_label_str = get_label(labels, "access.allowed_idps")
         default_access_auto_redirect_label = get_label(labels, "access.auto_redirect_to_identity", "false").lower() in ["true", "1", "t", "yes"]
         default_access_custom_rules_label_str = get_label(labels, "access.custom_rules")
-
         hostname_label = get_label(labels, "hostname")
         service_label = get_label(labels, "service")
         zone_name_label = get_label(labels, "zonename")
@@ -130,6 +130,7 @@ def process_container_start(container_obj):
                     "path": default_path_label, 
                     "no_tls_verify": no_tls_verify_label,
                     "origin_server_name": default_originsrvname_label.strip() if default_originsrvname_label else None,
+                    "http_host_header": default_http_host_header_label.strip() if default_http_host_header_label else None,
                     "access_policy_type": default_access_policy_type_label, 
                     "access_app_name": default_access_app_name_label,
                     "access_session_duration": default_access_session_duration_label, 
@@ -154,7 +155,7 @@ def process_container_start(container_obj):
             no_tls_verify_indexed_val = get_label(labels, f"{index}.no_tls_verify", str(no_tls_verify_label).lower())
             no_tls_verify_indexed = no_tls_verify_indexed_val.lower() in ["true", "1", "t", "yes"]
             originsrvname_indexed_val = get_label(labels, f"{index}.originsrvname", default_originsrvname_label)
-            
+            http_host_header_indexed_val = get_label(labels, f"{index}.httpHostHeader", default_http_host_header_label)
             access_policy_type_indexed = get_label(labels, f"{index}.access.policy", default_access_policy_type_label)
             access_app_name_indexed = get_label(labels, f"{index}.access.name", default_access_app_name_label)
             access_session_duration_indexed = get_label(labels, f"{index}.access.session_duration", default_access_session_duration_label)
@@ -171,6 +172,7 @@ def process_container_start(container_obj):
                     "path": path_indexed, 
                     "no_tls_verify": no_tls_verify_indexed,
                     "origin_server_name": originsrvname_indexed_val.strip() if originsrvname_indexed_val else None,
+                    "http_host_header": http_host_header_indexed_val.strip() if http_host_header_indexed_val else None,
                     "access_policy_type": access_policy_type_indexed, 
                     "access_app_name": access_app_name_indexed,
                     "access_session_duration": access_session_duration_indexed, 
@@ -198,6 +200,7 @@ def process_container_start(container_obj):
             zone_name_from_item = config_item["zone_name"] 
             no_tls_verify_from_item = config_item["no_tls_verify"] 
             origin_server_name_from_item = config_item.get("origin_server_name")
+            http_host_header_from_item = config_item.get("http_host_header")
 
             target_zone_id = None
             if zone_name_from_item:
@@ -231,6 +234,7 @@ def process_container_start(container_obj):
                     if existing_rule.get("zone_id") != target_zone_id: existing_rule["zone_id"] = target_zone_id; rule_data_changed = True
                     if existing_rule.get("no_tls_verify") != no_tls_verify_from_item: existing_rule["no_tls_verify"] = no_tls_verify_from_item; rule_data_changed = True
                     if existing_rule.get("origin_server_name") != origin_server_name_from_item: existing_rule["origin_server_name"] = origin_server_name_from_item; rule_data_changed = True
+                    if existing_rule.get("http_host_header") != http_host_header_from_item: existing_rule["http_host_header"] = http_host_header_from_item; rule_data_changed = True
                     
                     existing_rule["source"] = "docker"
 
@@ -258,6 +262,7 @@ def process_container_start(container_obj):
                         "zone_id": target_zone_id,
                         "no_tls_verify": no_tls_verify_from_item,
                         "origin_server_name": origin_server_name_from_item,
+                        "http_host_header": http_host_header_from_item,
                         "access_app_id": None, 
                         "access_policy_type": None, 
                         "access_app_config_hash": None, 
