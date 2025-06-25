@@ -448,6 +448,8 @@ def ui_add_manual_rule_route():
     zone_name_override_input = request.form.get('manual_zone_name_override', '').strip()
     no_tls_verify = request.form.get('manual_no_tls_verify') == 'on'
     origin_server_name_input = request.form.get('manual_origin_server_name', '').strip()
+    manual_http_host_header = request.form.get('manual_http_host_header', '').strip()
+
     manual_access_policy_type = request.form.get('manual_access_policy_type', 'none').strip().lower()
     manual_auth_email = request.form.get('manual_auth_email', '').strip()
 
@@ -611,6 +613,7 @@ def ui_add_manual_rule_route():
             "zone_id": target_zone_id, 
             "no_tls_verify": no_tls_verify,
             "origin_server_name": origin_server_name_input if origin_server_name_input else None,
+            "http_host_header": manual_http_host_header if manual_http_host_header else None,
             "access_app_id": access_app_created_or_updated_id if manual_access_policy_type in ["bypass", "authenticate_email"] \
                              else (existing_rule_details.get("access_app_id") if existing_rule_details else None),
             "access_policy_type": manual_access_policy_type if manual_access_policy_type != "none" else None,
@@ -766,6 +769,7 @@ def ui_edit_manual_rule_route():
     zone_name_override_input = request.form.get('manual_zone_name_override', '').strip()
     no_tls_verify = request.form.get('manual_no_tls_verify') == 'on'
     origin_server_name_input = request.form.get('manual_origin_server_name', '').strip()
+    manual_http_host_header = request.form.get('manual_http_host_header', '').strip()
     manual_access_policy_type = request.form.get('manual_access_policy_type', 'none').strip().lower()
     manual_auth_email = request.form.get('manual_auth_email', '').strip()
     
@@ -846,6 +850,7 @@ def ui_edit_manual_rule_route():
             "service": processed_service_for_cf, "path": processed_path, "hostname_for_dns": full_hostname, 
             "container_id": None, "status": "active", "delete_at": None, "zone_id": target_zone_id, 
             "no_tls_verify": no_tls_verify, "origin_server_name": origin_server_name_input or None,
+            "http_host_header": manual_http_host_header if manual_http_host_header else None,
             "access_app_id": access_app_created_or_updated_id, "access_policy_type": manual_access_policy_type if manual_access_policy_type != "none" else None,
             "access_app_config_hash": access_app_final_config_hash, "auth_email": manual_auth_email if manual_access_policy_type == "authenticate_email" else None,
             "access_policy_ui_override": True if manual_access_policy_type != "none" else False, "source": "manual"

@@ -2,7 +2,7 @@
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/ChrispyBacon-dev/DockFlare)
 [![OS](https://img.shields.io/badge/os-linux%20%7C%20windows%20%7C%20macos-brightgreen)]()
 [![CPU Architectures](https://img.shields.io/badge/CPU-x86_64%20%7C%20arm64-brightgreen)](https://en.wikipedia.org/wiki/Central_processing_unit)
-[![Generic badge](https://img.shields.io/badge/Release-1.9.1-blue.svg)](https://github.com/ChrispyBacon-dev/DockFlare/releases/tag/v1.8.9)
+[![Generic badge](https://img.shields.io/badge/Release-1.9.2-blue.svg)](https://github.com/ChrispyBacon-dev/DockFlare/releases/tag/v1.8.9)
 [![Docker Pulls](https://img.shields.io/docker/pulls/alplat/dockflare)](https://hub.docker.com/r/alplat/dockflare)
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![GitHub issues](https://img.shields.io/github/issues/ChrispyBacon-dev/dockflare)](https://github.com/ChrispyBacon-dev/dockflare/issues)
@@ -25,6 +25,7 @@ DockFlare simplifies Cloudflare Tunnel and Zero Trust Access policy management b
     -   Auto-configures Tunnel ingress & DNS from Docker labels using the new `dockflare.*` prefix (backward compatible with `cloudflare.tunnel.*`).
     -   Supports various service types (`http`, `https`, `tcp`, `ssh`, `rdp`, `http_status`).
     -   Controls `no_tls_verify` and `originServerName` (SNI) for origin connections.
+    -   **NEW:** Define `httpHostHeader` to override the Host header sent to your origin service.
 -   **Flexible Routing: Multi-Path, Multi-Hostname & Multi-Zone**:
     -   **NEW:** Route multiple URL paths on the same hostname to a single service (e.g., `app.com/api` and `app.com/web`).
     -   Supports multiple hostnames (unique targets, zones, policies) per Docker container using indexed labels.
@@ -326,6 +327,10 @@ services:
 
       # Optional: Specify Origin Server Name (SNI) for TLS connection to origin
       # - "dockflare.originsrvname=internal.service.local" 
+
+      # Optional: Override the HTTP Host header sent to the origin
+      # Applies only to HTTP/HTTPS services.
+      # - "dockflare.httpHostHeader=actual.backend.host"
     networks:
       - cloudflare-net 
 ```
@@ -344,11 +349,13 @@ services:
       # --- Rule 0: Root path (/) for api.example.com ---
       - "dockflare.0.hostname=api.example.com"
       - "dockflare.0.service=http://my-api-gateway:80"
+      - "dockflare.0.httpHostHeader=internal-api-service" # Specific Host header for this rule
       
       # --- Rule 1: /v1 path for api.example.com ---
       - "dockflare.1.hostname=api.example.com"
       - "dockflare.1.path=/v1"
       - "dockflare.1.service=http://my-api-gateway:80"
+      - "dockflare.1.no_tls_verify=true"
       
       # --- Rule 2: A different hostname and service on the same container ---
       - "dockflare.2.hostname=status.example.com"
@@ -543,3 +550,4 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) or open
 ## 📜 License
 
 DockFlare is licensed under the GNU General Public License v3.0. See [LICENSE.MD](LICENSE.MD) for details.
+```
