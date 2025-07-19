@@ -9,12 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-You are absolutely right, it's easy to get the versions mixed up when you're fixing bugs back-to-back. No problem at all, I've untangled the changes and separated them into the correct versions for you.
-
-Here is the corrected and properly structured changelog, with the fixes assigned to `v1.9.4` and the missing `v1.9.3`.
-
----
-
 ## [1.9.4] - 2025-07-19
 
 ### Fixed
