@@ -216,10 +216,13 @@ def ui_update_access_policy(hostname):
                     return redirect(url_for('web.status_page'))
                 
                 allowed_idps_str_for_hash = "ea94073b-1175-4089-81a2-3498c8c147b3"
+                policy_include_rules = [
+                    {"email": {"email": auth_email}},
+                    {"login_method": {"id": allowed_idps_str_for_hash}}
+                ]
                 cf_access_policies = [
-                    {"name": f"UI Allow Email {auth_email}", "decision": "allow", "include": [{"email": {"email": auth_email}}]},
-                    {"name": "UI Deny Fallback", "decision": "deny", "include": [{"everyone": {}}]},
-                    {"name": "Enable Email Auth", "decision": "non_identity", "include": [{"login_method": {"id": allowed_idps_str_for_hash}}]}
+                    {"name": f"UI Allow Access for {auth_email}", "decision": "allow", "include": policy_include_rules},
+                    {"name": "UI Deny Fallback", "decision": "deny", "include": [{"everyone": {}}]}
                 ]
 
             desired_session_duration = request.form.get("session_duration", current_rule.get("access_session_duration", "24h"))
@@ -286,7 +289,7 @@ def ui_update_access_policy(hostname):
 @bp.route('/revert_access_policy_to_labels/<path:hostname>', methods=['POST'])
 def revert_access_policy_to_labels(hostname):
     fqdn = hostname.split('|')[0]
-    if not docker_client: 
+    if not docker_client:
         return redirect(url_for('web.status_page'))
     
     action_status_message = f"Attempting to revert Access Policy for '{fqdn}' to label configuration..."
@@ -553,10 +556,13 @@ def ui_add_manual_rule_route():
         custom_rules_for_hash_str = json.dumps(cf_access_policies_for_app)
     elif manual_access_policy_type == "authenticate_email":
         desired_allowed_idps_str = "ea94073b-1175-4089-81a2-3498c8c147b3"
+        policy_include_rules = [
+            {"email": {"email": manual_auth_email}},
+            {"login_method": {"id": desired_allowed_idps_str}}
+        ]
         cf_access_policies_for_app = [
-            {"name": f"UI Manual Allow Email {manual_auth_email}", "decision": "allow", "include": [{"email": {"email": manual_auth_email}}]},
-            {"name": "UI Manual Deny Fallback", "decision": "deny", "include": [{"everyone": {}}]},
-            {"name": "Enable Email Auth", "decision": "non_identity", "include": [{"login_method": {"id": desired_allowed_idps_str}}]}
+            {"name": f"UI Allow Access for {manual_auth_email}", "decision": "allow", "include": policy_include_rules},
+            {"name": "UI Deny Fallback", "decision": "deny", "include": [{"everyone": {}}]}
         ]
         custom_rules_for_hash_str = json.dumps(cf_access_policies_for_app)
     
@@ -823,10 +829,13 @@ def ui_edit_manual_rule_route():
             cf_access_policies_for_app = [{"name": "UI Manual Public Bypass", "decision": "bypass", "include": [{"everyone": {}}]}]
         else: 
             allowed_idps_str_for_hash = "ea94073b-1175-4089-81a2-3498c8c147b3"
+            policy_include_rules = [
+                {"email": {"email": manual_auth_email}},
+                {"login_method": {"id": allowed_idps_str_for_hash}}
+            ]
             cf_access_policies_for_app = [
-                {"name": f"UI Manual Allow Email {manual_auth_email}", "decision": "allow", "include": [{"email": {"email": manual_auth_email}}]},
-                {"name": "UI Manual Deny Fallback", "decision": "deny", "include": [{"everyone": {}}]},
-                {"name": "Enable Email Auth", "decision": "non_identity", "include": [{"login_method": {"id": allowed_idps_str_for_hash}}]}
+                {"name": f"UI Allow Access for {manual_auth_email}", "decision": "allow", "include": policy_include_rules},
+                {"name": "UI Deny Fallback", "decision": "deny", "include": [{"everyone": {}}]}
             ]
         
         app_id_to_update = old_access_app_id if old_hostname_for_dns == full_hostname else None
