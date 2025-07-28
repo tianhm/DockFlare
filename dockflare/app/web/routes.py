@@ -168,15 +168,15 @@ def status_page():
 
 @bp.route('/ui_update_access_policy/<path:hostname>', methods=['POST'])
 def ui_update_access_policy(hostname):
-    if not docker_client: 
+    if not docker_client:
         cloudflared_agent_state["last_action_status"] = "Error: UI Policy Update - Docker client unavailable."
-        return redirect(url_for('web.status_page')) 
+        return redirect(url_for('web.status_page'))
     fqdn = hostname.split('|')[0]
 
     new_policy_type = request.form.get('access_policy_type')
     auth_email = request.form.get('auth_email', '').strip()
     action_status_message = f"Processing UI policy update for {fqdn}..."
-    state_changed_locally = False 
+    state_changed_locally = False
     operation_successful = False
 
     with state_lock:
@@ -206,7 +206,7 @@ def ui_update_access_policy(hostname):
 
         elif new_policy_type in ["bypass", "authenticate_email"]:
             cf_access_policies = []
-            allowed_idps_str_for_hash = None
+            allowed_idps_for_api_call = None
 
             if new_policy_type == "bypass":
                 cf_access_policies = [{"name": "UI Public Bypass", "decision": "bypass", "include": [{"everyone": {}}]}]
@@ -215,13 +215,8 @@ def ui_update_access_policy(hostname):
                     cloudflared_agent_state["last_action_status"] = f"Error: Email address required for 'authenticate_email' policy for {fqdn}."
                     return redirect(url_for('web.status_page'))
                 
-                allowed_idps_str_for_hash = "ea94073b-1175-4089-81a2-3498c8c147b3"
-                policy_include_rules = [
-                    {"email": {"email": auth_email}},
-                    {"login_method": {"id": allowed_idps_str_for_hash}}
-                ]
                 cf_access_policies = [
-                    {"name": f"UI Allow Access for {auth_email}", "decision": "allow", "include": policy_include_rules},
+                    {"name": f"UI Allow Access for {auth_email}", "decision": "allow", "include": [{"email": {"email": auth_email}}]},
                     {"name": "UI Deny Fallback", "decision": "deny", "include": [{"everyone": {}}]}
                 ]
 
@@ -230,8 +225,9 @@ def ui_update_access_policy(hostname):
             desired_auto_redirect = request.form.get("auto_redirect", str(current_rule.get("access_auto_redirect", False))).lower() in ["true", "on", "1", "yes"]
             
             new_config_hash = generate_access_app_config_hash(
-                new_policy_type, 
-                desired_session_duration, desired_app_launcher_visible, allowed_idps_str_for_hash, desired_auto_redirect,
+                new_policy_type,
+                desired_session_duration, desired_app_launcher_visible, allowed_idps_for_api_call,
+                desired_auto_redirect,
                 custom_access_rules_str=json.dumps(cf_access_policies)
             )
 
@@ -250,19 +246,20 @@ def ui_update_access_policy(hostname):
                         logging.info(f"UI Update: Found existing Access App ID '{effective_app_id_for_operation}' on Cloudflare for {fqdn}.")
 
                 app_result = None
-                if effective_app_id_for_operation: 
+                if effective_app_id_for_operation:
                     logging.info(f"UI: Attempting to update Access App. ID: {effective_app_id_for_operation}, Target Name: {desired_app_name}, Target Policy: {new_policy_type}")
                     app_result = update_cloudflare_access_application(
                         effective_app_id_for_operation, fqdn, desired_app_name,
                         desired_session_duration, desired_app_launcher_visible,
-                        [fqdn], cf_access_policies, desired_auto_redirect
+                        [fqdn], cf_access_policies, allowed_idps_for_api_call, desired_auto_redirect
                     )
-                else: 
+                else:
                     logging.info(f"UI: Attempting to create Access App. Target Name: {desired_app_name}, Target Policy: {new_policy_type}")
                     app_result = create_cloudflare_access_application(
                         fqdn, desired_app_name,
                         desired_session_duration, desired_app_launcher_visible,
-                        [fqdn], cf_access_policies, desired_auto_redirect
+                        [fqdn], cf_access_policies, allowed_idps_for_api_call,
+                        desired_auto_redirect
                     )
 
                 if app_result and app_result.get("id"):
@@ -436,7 +433,7 @@ def stream_logs_route():
 
 @bp.route('/ui/manual-rules/add', methods=['POST'])
 def ui_add_manual_rule_route():
-    if not docker_client: 
+    if not docker_client:
         cloudflared_agent_state["last_action_status"] = "Error: Docker client unavailable."
         return redirect(url_for('web.status_page'))
     
@@ -458,7 +455,7 @@ def ui_add_manual_rule_route():
     manual_access_policy_type = request.form.get('manual_access_policy_type', 'none').strip().lower()
     manual_auth_email = request.form.get('manual_auth_email', '').strip()
 
-    if not domain_name_input or not service_type_input: 
+    if not domain_name_input or not service_type_input:
         cloudflared_agent_state["last_action_status"] = "Error: Domain Name and Service Type are required for manual rule."
         return redirect(url_for('web.status_page'))
     
@@ -475,7 +472,7 @@ def ui_add_manual_rule_route():
     else:
         full_hostname = domain_name_input
     
-    if not is_valid_hostname(full_hostname): 
+    if not is_valid_hostname(full_hostname):
         cloudflared_agent_state["last_action_status"] = f"Error: Constructed hostname '{full_hostname}' is invalid."
         return redirect(url_for('web.status_page'))
     
@@ -492,12 +489,12 @@ def ui_add_manual_rule_route():
 
     processed_service_for_cf = ""
     if service_type_input in ["http", "https"]:
-        if ":" not in service_address_input and "." not in service_address_input and service_address_input != "localhost": 
-             cloudflared_agent_state["last_action_status"] = f"Error: For HTTP/S, address '{service_address_input}' should be host:port or a resolvable hostname."
-             return redirect(url_for('web.status_page'))
+        if ":" not in service_address_input and "." not in service_address_input and service_address_input != "localhost":
+            cloudflared_agent_state["last_action_status"] = f"Error: For HTTP/S, address '{service_address_input}' should be host:port or a resolvable hostname."
+            return redirect(url_for('web.status_page'))
         processed_service_for_cf = f"{service_type_input}://{service_address_input}"
     elif service_type_input in ["tcp", "ssh", "rdp"]:
-        if ":" not in service_address_input: 
+        if ":" not in service_address_input:
             cloudflared_agent_state["last_action_status"] = f"Error: For {service_type_input.upper()}, address '{service_address_input}' must be in host:port format."
             return redirect(url_for('web.status_page'))
         processed_service_for_cf = f"{service_type_input}://{service_address_input}"
@@ -510,7 +507,7 @@ def ui_add_manual_rule_route():
         cloudflared_agent_state["last_action_status"] = f"Error: Unsupported service type '{service_type_input}' submitted."
         return redirect(url_for('web.status_page'))
 
-    if not is_valid_service(processed_service_for_cf): 
+    if not is_valid_service(processed_service_for_cf):
         cloudflared_agent_state["last_action_status"] = f"Error: Constructed service string '{processed_service_for_cf}' is invalid."
         return redirect(url_for('web.status_page'))
     
@@ -518,19 +515,19 @@ def ui_add_manual_rule_route():
     zone_name_to_lookup = None
     if zone_name_override_input:
         zone_name_to_lookup = zone_name_override_input
-    else: 
+    else:
         parts = domain_name_input.split('.')
         if len(parts) >= 2:
             potential_zone = f"{parts[-2]}.{parts[-1]}"
             zone_name_to_lookup = potential_zone
-        else: 
-            zone_name_to_lookup = None 
+        else:
+            zone_name_to_lookup = None
 
     if zone_name_to_lookup:
         target_zone_id = get_zone_id_from_name(zone_name_to_lookup)
-        if not target_zone_id and config.CF_ZONE_ID: 
+        if not target_zone_id and config.CF_ZONE_ID:
             logging.info(f"Could not find zone for '{zone_name_to_lookup}', trying default CF_ZONE_ID.")
-            target_zone_id = config.CF_ZONE_ID 
+            target_zone_id = config.CF_ZONE_ID
         elif not target_zone_id:
             cloudflared_agent_state["last_action_status"] = f"Error: Could not find Zone ID for '{zone_name_to_lookup}' and no default CF_ZONE_ID to fallback."
             return redirect(url_for('web.status_page'))
@@ -543,25 +540,20 @@ def ui_add_manual_rule_route():
 
     access_app_created_or_updated_id = None
     access_app_final_config_hash = None
-    cf_access_policies_for_app = [] 
-    custom_rules_for_hash_str = None 
-    desired_session_duration = "24h" 
-    desired_app_launcher_visible = False 
-    desired_allowed_idps_str = None 
+    cf_access_policies_for_app = []
+    custom_rules_for_hash_str = None
+    desired_session_duration = "24h"
+    desired_app_launcher_visible = False
+    desired_allowed_idps_for_api = None
     desired_auto_redirect = False
-    desired_app_name = f"DockFlare-{full_hostname}" 
+    desired_app_name = f"DockFlare-{full_hostname}"
 
     if manual_access_policy_type == "bypass":
         cf_access_policies_for_app = [{"name": "UI Manual Public Bypass", "decision": "bypass", "include": [{"everyone": {}}]}]
         custom_rules_for_hash_str = json.dumps(cf_access_policies_for_app)
     elif manual_access_policy_type == "authenticate_email":
-        desired_allowed_idps_str = "ea94073b-1175-4089-81a2-3498c8c147b3"
-        policy_include_rules = [
-            {"email": {"email": manual_auth_email}},
-            {"login_method": {"id": desired_allowed_idps_str}}
-        ]
         cf_access_policies_for_app = [
-            {"name": f"UI Allow Access for {manual_auth_email}", "decision": "allow", "include": policy_include_rules},
+            {"name": f"UI Allow Access for {manual_auth_email}", "decision": "allow", "include": [{"email": {"email": manual_auth_email}}]},
             {"name": "UI Deny Fallback", "decision": "deny", "include": [{"everyone": {}}]}
         ]
         custom_rules_for_hash_str = json.dumps(cf_access_policies_for_app)
@@ -574,29 +566,31 @@ def ui_add_manual_rule_route():
             updated_app = update_cloudflare_access_application(
                 access_app_created_or_updated_id, full_hostname, desired_app_name,
                 desired_session_duration, desired_app_launcher_visible,
-                [full_hostname], cf_access_policies_for_app, desired_auto_redirect
+                [full_hostname], cf_access_policies_for_app, desired_allowed_idps_for_api,
+                desired_auto_redirect
             )
             if updated_app:
                 access_app_created_or_updated_id = updated_app.get("id")
                 access_app_final_config_hash = generate_access_app_config_hash(
                     manual_access_policy_type, desired_session_duration, desired_app_launcher_visible,
-                    desired_allowed_idps_str, desired_auto_redirect, custom_access_rules_str=custom_rules_for_hash_str
+                    desired_allowed_idps_for_api, desired_auto_redirect, custom_access_rules_str=custom_rules_for_hash_str
                 )
             else:
                 logging.error(f"Failed to update existing Access App for manual rule {full_hostname}")
-                access_app_created_or_updated_id = None 
+                access_app_created_or_updated_id = None
         else:
             created_app = create_cloudflare_access_application(
                 full_hostname, desired_app_name,
                 desired_session_duration, desired_app_launcher_visible,
-                [full_hostname], cf_access_policies_for_app, 
+                [full_hostname], cf_access_policies_for_app,
+                desired_allowed_idps_for_api,
                 desired_auto_redirect
             )
             if created_app and created_app.get("id"):
                 access_app_created_or_updated_id = created_app.get("id")
                 access_app_final_config_hash = generate_access_app_config_hash(
                     manual_access_policy_type, desired_session_duration, desired_app_launcher_visible,
-                    desired_allowed_idps_str, desired_auto_redirect, custom_access_rules_str=custom_rules_for_hash_str
+                    desired_allowed_idps_for_api, desired_auto_redirect, custom_access_rules_str=custom_rules_for_hash_str
                 )
             else:
                 logging.error(f"Failed to create Access App for manual rule {full_hostname}")
@@ -610,15 +604,15 @@ def ui_add_manual_rule_route():
         log_action = "Adding new" if not existing_rule_details else "Updating existing"
         logging.info(f"{log_action} manual rule for Key: {key_for_managed_rules} (FQDN: {full_hostname}, Path: {processed_path or '(root)'}) with service {processed_service_for_cf}")
         
-        managed_rules[key_for_managed_rules] = { 
+        managed_rules[key_for_managed_rules] = {
             "hostname": full_hostname,
             "service": processed_service_for_cf,
-            "path": processed_path, 
-            "hostname_for_dns": full_hostname, 
-            "container_id": None, 
+            "path": processed_path,
+            "hostname_for_dns": full_hostname,
+            "container_id": None,
             "status": "active",
             "delete_at": None,
-            "zone_id": target_zone_id, 
+            "zone_id": target_zone_id,
             "no_tls_verify": no_tls_verify,
             "origin_server_name": origin_server_name_input if origin_server_name_input else None,
             "http_host_header": manual_http_host_header if manual_http_host_header else None,
@@ -631,9 +625,9 @@ def ui_add_manual_rule_route():
             "access_policy_ui_override": True if manual_access_policy_type != "none" else (existing_rule_details.get("access_policy_ui_override", False) if existing_rule_details else False),
             "source": "manual"
         }
-        save_state() 
+        save_state()
         
-    if update_cloudflare_config(): 
+    if update_cloudflare_config():
         if create_cloudflare_dns_record(target_zone_id, full_hostname, effective_tunnel_id):
             cloudflared_agent_state["last_action_status"] = f"Success: Manual rule for {full_hostname} (Path: {processed_path if processed_path else '(root)'}) added/updated. Policy: {manual_access_policy_type.upper()}."
         else:
