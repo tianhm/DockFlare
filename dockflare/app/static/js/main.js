@@ -1,5 +1,4 @@
 // app/static/js/main.js
-// app/static/js/main.js
 const maxLogLines = 250;
 let initialConnectMessageCleared = false;
 let activeLogSource = null;
@@ -457,19 +456,81 @@ function openEditAccessGroupModal(groupId, details) {
     modal.showModal();
 }
 
+function updateManualRuleServiceFields() {
+    const manualServiceTypeSelect = document.getElementById('manual_service_type');
+    if (!manualServiceTypeSelect) return;
+    
+    const selectedType = manualServiceTypeSelect.value.toLowerCase();
+    const noTlsVerifyDiv = document.getElementById('manual_no_tls_verify_div');
+    const originServerNameDiv = document.getElementById('manual_origin_server_name_div');
+    const manualServiceAddressInput = document.getElementById('manual_service_address');
+    const manualServiceAddressLabel = document.getElementById('manual_service_address_label');
+    const manualServiceHelpText = document.getElementById('manual_service_help');
+    const manualServicePrefixSpan = document.getElementById('manual_service_prefix_span');
+    let showNoTlsVerify = false;
+    let showOriginServerName = false;
+
+    if (manualServicePrefixSpan) manualServicePrefixSpan.classList.add('hidden');
+    if (manualServiceAddressInput) manualServiceAddressInput.placeholder = 'host:port or status code';
+    if (manualServiceAddressLabel) manualServiceAddressLabel.textContent = 'URL (Required for most types)';
+    if (manualServiceHelpText) manualServiceHelpText.textContent = 'e.g., 192.168.1.10:8000 or my-service.local:3000 for HTTP/S/TCP etc.';
+
+    if (selectedType === 'http' || selectedType === 'https') {
+        if (manualServicePrefixSpan) {
+            manualServicePrefixSpan.textContent = selectedType + '://';
+            manualServicePrefixSpan.classList.remove('hidden');
+        }
+        if (manualServiceAddressInput) manualServiceAddressInput.placeholder = 'host:port or resolvable hostname';
+        if (manualServiceAddressLabel) manualServiceAddressLabel.textContent = 'Origin URL (Required)';
+        if (manualServiceHelpText) manualServiceHelpText.textContent = 'e.g., 192.168.1.10:8000 or my-service.local:3000';
+        showNoTlsVerify = true;
+        showOriginServerName = true;
+    } else if (selectedType === 'tcp' || selectedType === 'ssh' || selectedType === 'rdp') {
+        if (manualServicePrefixSpan) {
+            manualServicePrefixSpan.textContent = selectedType + '://';
+            manualServicePrefixSpan.classList.remove('hidden');
+        }
+        if (manualServiceAddressInput) manualServiceAddressInput.placeholder = 'host:port';
+        if (manualServiceAddressLabel) manualServiceAddressLabel.textContent = `Origin Address for ${selectedType.toUpperCase()} (host:port)`;
+        if (manualServiceHelpText) manualServiceHelpText.textContent = `e.g., my-internal-server:22`;
+    } else if (selectedType === 'http_status') {
+        if (manualServiceAddressInput) manualServiceAddressInput.placeholder = 'e.g., 404';
+        if (manualServiceAddressLabel) manualServiceAddressLabel.textContent = 'HTTP Status Code (e.g., 200, 404, 503)';
+        if (manualServiceHelpText) manualServiceHelpText.textContent = 'Enter a valid HTTP status code (100-599).';
+    }
+
+    if (noTlsVerifyDiv) {
+        noTlsVerifyDiv.style.display = showNoTlsVerify ? '' : 'none';
+    }
+    if (originServerNameDiv) {
+        originServerNameDiv.style.display = showOriginServerName ? '' : 'none';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     fixResourcesAndBase();
     themeManager.initialize();
     
+    // Setup for Manual Rule Modal (only if on Dashboard Page)
     const manualServiceTypeSelect = document.getElementById('manual_service_type');
     if (manualServiceTypeSelect) {
         manualServiceTypeSelect.addEventListener('change', updateManualRuleServiceFields);
-        updateManualRuleServiceFields();
+        updateManualRuleServiceFields(); // Run once on load
+        setupPathInput(document.getElementById('manual_path_display'), document.getElementById('manual_path'));
+        setupPathInput(document.getElementById('edit_manual_path_display'), document.getElementById('edit_manual_path'));
+        initializeEditManualRuleModal();
     }
 
-    setupPathInput(document.getElementById('manual_path_display'), document.getElementById('manual_path'));
-    setupPathInput(document.getElementById('edit_manual_path_display'), document.getElementById('edit_manual_path'));
-    
+    // Setup for Access Group Modal (only if on Access Groups Page)
+    document.querySelectorAll('.edit-access-group-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const groupId = this.dataset.groupId;
+            const details = JSON.parse(this.dataset.groupDetails);
+            openEditAccessGroupModal(groupId, details);
+        });
+    });
+
+    // Universal Form/Link Protocol Correction
     document.querySelectorAll('form.protocol-aware-form').forEach(form => {
         if (form.getAttribute('action')) {
             try {
@@ -479,6 +540,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Universal Page Timers and Connections
     updateCountdowns();
     setInterval(updateCountdowns, 30000);
 
@@ -491,62 +553,9 @@ document.addEventListener('DOMContentLoaded', function() {
         setInterval(updateReconciliationStatus, 2000);
     }
     
-    document.querySelectorAll('.policy-type-select').forEach(select => {
-        select.addEventListener('change', function() {
-            const form = this.closest('form');
-            if (!form) return;
-            const emailFieldDiv = form.querySelector('.auth-email-field');
-            if (emailFieldDiv) {
-                emailFieldDiv.style.display = (this.value === 'authenticate_email') ? '' : 'none';
-            }
-        });
-        select.dispatchEvent(new Event('change'));
-    });
-
-    document.querySelectorAll('.tunnel-dns-toggle').forEach(button => {
-        button.addEventListener('click', async function() {
-            const tunnelId = this.dataset.tunnelId;
-            const dnsRecordsDisplayRow = this.closest('tr').nextElementSibling;
-            const targetDiv = document.getElementById(this.getAttribute('aria-controls'));
-            const isExpanded = this.getAttribute('aria-expanded') === 'true';
-
-            if (isExpanded) {
-                dnsRecordsDisplayRow.classList.add('hidden');
-                this.setAttribute('aria-expanded', 'false');
-            } else {
-                this.setAttribute('aria-expanded', 'true');
-                if (targetDiv.dataset.loaded !== 'true') {
-                    targetDiv.innerHTML = '<p class="opacity-60 italic animate-pulse p-2">Loading DNS records...</p>';
-                    try {
-                        const response = await fetch(`${document.baseURI}tunnel-dns-records/${encodeURIComponent(tunnelId)}?t=${Date.now()}`);
-                        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-                        const data = await response.json();
-                        if (data.dns_records && data.dns_records.length > 0) {
-                            targetDiv.innerHTML = '<ul class="list-none pl-4 space-y-1.5">' + data.dns_records.map(r => `...`).join('') + '</ul>';
-                        } else {
-                            targetDiv.innerHTML = `<p class="opacity-60 italic p-2">${data.message || 'No CNAME records found.'}</p>`;
-                        }
-                        targetDiv.dataset.loaded = 'true';
-                    } catch (error) {
-                        targetDiv.innerHTML = `<p class="text-error p-2">Error loading DNS records: ${error.message}</p>`;
-                    }
-                }
-                dnsRecordsDisplayRow.classList.remove('hidden');
-            }
-        });
-    });
-
-    document.querySelectorAll('.edit-access-group-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const groupId = this.dataset.groupId;
-            const details = JSON.parse(this.dataset.groupDetails);
-            openEditAccessGroupModal(groupId, details);
-        });
-    });
-
     startServerPing();
-    initializeEditManualRuleModal();
 
+    // Universal Cleanup
     window.addEventListener('beforeunload', function() {
         if (activeLogSource) activeLogSource.close();
         if (eventSourceHealthCheck) clearInterval(eventSourceHealthCheck);
