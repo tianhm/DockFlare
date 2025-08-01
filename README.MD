@@ -1,86 +1,78 @@
-![DockFlareBanner](images/bannertr.png)
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/ChrispyBacon-dev/DockFlare)
-[![OS](https://img.shields.io/badge/os-linux%20%7C%20windows%20%7C%20macos-brightgreen)]()
-[![CPU Architectures](https://img.shields.io/badge/CPU-x86_64%20%7C%20arm64-brightgreen)](https://en.wikipedia.org/wiki/Central_processing_unit)
-[![Generic badge](https://img.shields.io/badge/Release-v2.0.0-blue.svg)](https://github.com/ChrispyBacon-dev/DockFlare/releases/tag/v2.0.0)
-[![Docker Pulls](https://img.shields.io/docker/pulls/alplat/dockflare)](https://hub.docker.com/r/alplat/dockflare)
-[![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
-[![GitHub issues](https://img.shields.io/github/issues/ChrispyBacon-dev/dockflare)](https://github.com/ChrispyBacon-dev/dockflare/issues)
-[![GitHub last commit](https://img.shields.io/github/last-commit/ChrispyBacon-dev/dockflare)](https://github.com/ChrispyBacon-dev/dockflare/commits/stable)
-[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/ChrispyBacon-dev/dockflare)](https://github.com/ChrispyBacon-dev/dockflare/commits/stable)
-![swiss_made](https://img.shields.io/badge/Swiss_Made-FFFFFF?labelColor=FF0000&logo=data:image/svg%2bxml;base64,PHN2ZyB2ZXJzaW9uPSIxIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDMyIDMyIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDxyZWN0IHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgZmlsbD0idHJhbnNwYXJlbnQiLz4KICA8cGF0aCBkPSJtMTMgNmg2djdoN3Y2aC03djdoLTZ2LTdoLTd2LTZoN3oiIGZpbGw9IiNmZmYiLz4KPC9zdmc+)
+<p align="center">
+  <a href="https://dockflare.app">
+    <img src="images/bannertr.png" width="500px" alt="DockFlare Banner" />
+  </a>
+</p>
+
+<h1 align="center">Automated Cloudflare Tunnels & Access Management</h1>
+
+<p align="center">
+  <a href="https://github.com/ChrispyBacon-dev/DockFlare/releases/tag/v2.0.0"><img src="https://img.shields.io/badge/Release-v2.0.0-blue.svg?style=for-the-badge" alt="Release"></a>
+  <a href="https://hub.docker.com/r/alplat/dockflare"><img src="https://img.shields.io/docker/pulls/alplat/dockflare?style=for-the-badge" alt="Docker Pulls"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Made%20with-Python-1f425f.svg?style=for-the-badge" alt="Python"></a>
+  <a href="https://github.com/ChrispyBacon-dev/DockFlare/blob/main/LICENSE.MD"><img src="https://img.shields.io/badge/License-GPL--3.0-blue.svg?style=for-the-badge" alt="License"></a>
+  <a href="#"><img src="https://img.shields.io/badge/Swiss_Made-FFFFFF?style=for-the-badge&labelColor=FF0000&logo=data:image/svg%2bxml;base64,PHN2ZyB2ZXJzaW9uPSIxIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDMyIDMyIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDxyZWN0IHdpZHRoPSIzMiIgaGVpZHRoPSIzMiIgZmlsbD0idHJhbnNwYXJlbnQiLz4KICA8cGF0aCBkPSJtMTMgNmg2djdoN3Y2aC03djdoLTZ2LTdoLTd2LTZoN3oiIGZpbGw9IiNmZmYiLz4KPC9zdmc+" alt="Swiss Made"></a>
+</p>
+
+<p align="center">
+  <a href="https://dockflare.app">🌐 Website</a> ·
+  <a href="https://dockflare.app/docs">📚 Documentation</a> ·
+  <a href="https://github.com/ChrispyBacon-dev/DockFlare/issues">🐛 Report a Bug</a> ·
+  <a href="https://github.com/sponsors/ChrispyBacon-dev">❤️ Sponsor</a>
+</p>
+
+<p align="center">
+  <img src="images/status_web.png" alt="DockFlare Dashboard" style="border-radius: 8px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);" />
+</p>
 
 ---
 
-### ✨ Visit the new official project website at [dockflare.app](https://dockflare.app) ✨
+## Introduction
 
----
+DockFlare is a powerful, self-hosted ingress controller that simplifies Cloudflare Tunnel and Zero Trust management. It uses Docker labels for automated configuration while providing a robust web UI for manual service definitions and policy overrides.
 
-## 🚀 What is DockFlare?
+It enables secure, hassle-free public access to both Dockerized and non-Dockerized applications with minimal direct interaction with Cloudflare, making it the perfect tool for centralizing and streamlining your access management.
 
-DockFlare simplifies your Cloudflare Tunnel and Zero Trust management. It began as a tool to automate ingress configuration from Docker labels, but has evolved into much more. With a powerful web UI, you can now centrally manage reusable access policies (**Access Groups**), define rules for non-Dockerized services, and override any configuration on the fly. It's a self-hosted ingress controller designed to make securing your applications hassle-free, persistent, and centralized.
+**Key Features:**
+- **Centralized Policy Management** - **New in v2.0**, create reusable **Access Groups** in the UI and apply them to any service with a single Docker label.
+- **Dynamic Ingress via Docker Labels** - Automatically configure Tunnel ingress rules and DNS records from container labels.
+- **Full UI Control** - Manage non-Docker services, override any access policy, view all account tunnels, and monitor real-time logs from a clean web interface.
+- **State Persistence & Reconciliation** - Persists all rules and UI overrides in a state file and continuously syncs your desired state with Cloudflare.
+- **Prometheus Metrics** - Natively export `cloudflared` metrics for monitoring in Grafana (pre-built dashboard included).
+
+## Getting Started & Documentation
+
+For comprehensive documentation, please refer to the official project website:
+
+- **[Quick Start Guide](https://dockflare.app/docs)** - Step-by-step guide to get up and running.
+- **[Label Reference](https://dockflare.app/docs/container-labels)** - Detailed information on all available Docker labels.
+- **[Advanced Configuration](https://dockflare.app/docs/managing-dns-zones)** - Details on multi-zone setups, external mode, and more.
+
+### Prerequisites
+
+Before you begin, ensure you have the following:
+- Docker & Docker Compose installed.
+- A Cloudflare Account.
+- Your **Cloudflare Account ID**.
+- The **Zone ID** for the domain you wish to use.
+- A **Cloudflare API Token** with the following permissions:
+    - `Account:Cloudflare Tunnel:Edit`
+    - `Account:Account Settings:Read`
+    - `Account:Access: Apps and Policies:Edit`
+    - `Zone:Zone:Read`
+    - `Zone:DNS:Edit`
+
+![Cloudflare API Permissions](images/cf.png)
 
 <details>
-<summary>✨ Key Features in v2.0</summary>
-
--   **Centralized Access Policy Management via UI (Access Groups)**:
-    -   **NEW in v2.0:** Create reusable Access Groups (e.g., "family", "dev-team") with specific rules in the UI.
-    -   Apply a complete, complex policy to any container with a single, simple label: `dockflare.access.group=family`.
-    -   Update a group in the UI, and the changes are automatically applied to all services using it.
--   **Dynamic Ingress via Docker Labels**:
-    -   Auto-configures Tunnel ingress & DNS from Docker labels (`dockflare.*` prefix, backward compatible with `cloudflare.tunnel.*`).
-    -   Supports various service types (`http`, `https`, `tcp`, `ssh`, `rdp`, `http_status`).
-    -   Controls `no_tls_verify`, `originServerName` (SNI), and `httpHostHeader` for origin connections.
--   **Flexible Routing**:
-    -   Route multiple URL paths on the same hostname to different services.
-    -   Supports multiple hostnames (with unique targets, zones, or policies) per container using indexed labels.
--   **Manual Ingress Rule Management**:
-    -   Add & manage public hostnames for non-Docker services (e.g., a router or NAS) directly from the Web UI.
--   **Comprehensive Web UI**:
-    -   **NEW in v2.0:** A focused **Dashboard** for viewing managed rules and real-time logs.
-    -   **NEW in v2.0:** A dedicated **Settings** page for managing Access Groups, viewing all account tunnels, and controlling the agent.
-    -   Override policies for any rule; UI changes persist over container labels, with an option to revert.
--   **State Persistence & Graceful Deletion**:
-    -   A configurable grace period prevents services from disappearing immediately after a container stops.
-    -   Persists all rules, Access App IDs, and UI overrides in a `state.json` file.
--   **Intelligent Reconciliation**:
-    -   Continuously syncs the desired state from Docker, manual entries, and groups with your live Cloudflare configuration (Tunnel, DNS, Access Apps).
-
-[Learn more on the GitHub Wiki](https://github.com/ChrispyBacon-dev/DockFlare/wiki)
-
-</details>
-
----
-
-## 🖼️ Web UI Preview (v2.0)
-
-![Web UI example](images/status_web.png)
-
----
-
-## ⚙️ Getting Started
-
-<details>
-<summary>📋 Important Prerequisites for Cloudflare API</summary>
-
-- Docker: [Install Docker](https://docs.docker.com/engine/install/)
-- Docker Compose: [Install Docker Compose](https://docs.docker.com/compose/install/)
-- Cloudflare Account with:
-  - API Token with the following permissions: Account:Cloudflare Tunnel:Edit, Account:Account Settings:Read, Account:Access: Apps and Policies:Edit, Zone:Zone:Read, Zone:DNS:Edit
-  ![Cloudflare API](images/cf.png)
-  - Account ID (found in Cloudflare Dashboard → Overview)
-  - Zone ID (found in Cloudflare Dashboard → Overview for your primary domain)
-
-</details>
-
-### 🚀 Quick Start (Docker Compose)
+<summary>🚀 Quick Start Docker Compose</summary>
 
 1.  **Create `docker-compose.yml`**:
     ```yaml
     version: '3.8'
     services:
       dockflare:
-        image: alplat/dockflare:stable # Or :unstable for the latest features
+        image: alplat/dockflare:stable
         container_name: dockflare
         restart: unless-stopped
         ports:
@@ -99,38 +91,20 @@ DockFlare simplifies your Cloudflare Tunnel and Zero Trust management. It began 
     networks:
       cloudflare-net:
        name: cloudflare-net
-       external: true # Assumes you have a network named 'cloudflare-net'
+       external: true
     ```
 
 2.  **Create `.env` File**:
-    Copy `env.example` to `.env` and fill in your details.
-    <details>
-    <summary>📄 Example `.env` content (Click to expand)</summary>
-
-    ```dotenv
-    # === REQUIRED CLOUDFLARE CREDENTIALS ===
-    CF_API_TOKEN=your_cloudflare_api_token_here
-    CF_ACCOUNT_ID=your_cloudflare_account_id_here
-    CF_ZONE_ID=your_default_cloudflare_zone_id_here
-    
-    # === TUNNEL CONFIGURATION ===
-    TUNNEL_NAME=DockFlare-Tunnel
-      
-    # === DOCKFLARE BEHAVIOR & CUSTOMIZATION ===
-    GRACE_PERIOD_SECONDS=28800
-    # ... and other variables
-    ```
-    *Refer to `env.example` for a full list of options and detailed comments.*
-    </details>
+    Copy `env.example` to `.env` and fill in your `CF_API_TOKEN`, `CF_ACCOUNT_ID`, and `CF_ZONE_ID`.
 
 3.  **Run DockFlare**:
     ```bash
     docker compose up -d
     ```
 
-4.  **Access the Web UI**: Open `http://your-server-ip:5000` in your browser.
+4.  **Access the Web UI**: Open `http://your-server-ip:5000`.
 
----
+</details>
 
 ## 🏷️ How It Works & Labeling Containers
 
@@ -142,8 +116,6 @@ DockFlare's power comes from its flexible, layered approach to configuration.
 
 <details>
 <summary>📝 Labeling Your Containers (v2.0 Examples)</summary>
-
-> **Note:** The recommended label prefix is `dockflare.`. The old `cloudflare.tunnel.` prefix is still supported for backward compatibility.
 
 #### 1. Recommended Method: Using an Access Group
 
@@ -198,26 +170,10 @@ Use these labels only when **not** using `dockflare.access.group`.
 
 </details>
 
----
+## License
 
-## ✨ Prometheus Metrics & Observability
-(This section remains unchanged, you can keep your existing content here)
+DockFlare is open-source software licensed under the [GPL-3.0 license](LICENSE.MD).
 
----
-
-## 🔧 Advanced Configuration & Usage
-(This section remains unchanged, you can keep your existing content here)
-
----
-## ✨ Star History
+## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=ChrispyBacon-dev/DockFlare&type=Date)](https://www.star-history.com/#ChrispyBacon-dev/DockFlare&Date)
-
-## 🤝 Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) or open an issue/PR.
-
-## 📜 License
-
-DockFlare is licensed under the GNU General Public License v3.0. See [LICENSE.MD](LICENSE.MD) for details.
-```
