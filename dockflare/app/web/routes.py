@@ -919,7 +919,7 @@ def _parse_and_build_policy_from_form(email_str):
         if part.startswith('@'):
             domains.append({"domain": part[1:]})
         else:
-            emails.append({"email": part})
+            emails.append({"email": {"email": part}})
             
     include_rules = []
     if emails:
