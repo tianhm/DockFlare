@@ -158,6 +158,13 @@
                                                     </form>
                                                 </div>
                                             </div>
+                                            {% if details.source != 'manual' %}
+                                                {% if details.access_policy_ui_override %}
+                                                <form action="{{ url_for('web.revert_access_policy_to_labels', hostname=hostname) }}" method="POST" onsubmit="return confirm('Revert policy for {{ display_hostname }} to be managed by labels/defaults?');" class="protocol-aware-form inline-block">
+                                                    <button type="submit" class="btn btn-xs btn-warning btn-outline" title="Revert to Label/Default Policy">Revert</button>
+                                                </form>
+                                                {% endif %}
+                                            {% endif %}
                                             {% if details.access_policy_ui_override %}
                                             <form action="{{ url_for('web.revert_access_policy_to_labels', hostname=hostname) }}" method="POST" onsubmit="return confirm('Revert policy for {{ display_hostname }} to be managed by labels/defaults?');" class="protocol-aware-form inline-block">
                                                 <button type="submit" class="btn btn-xs btn-warning btn-outline" title="Revert to Label/Default Policy">Revert</button>
