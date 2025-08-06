@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://dockflare.app" title="Now you're thinking with tunnels">
+  <a href="https://dockflare.app/podcast.mp4" title="Now you're thinking with tunnels">
     <img src="images/bannertr.png" width="500px" alt="DockFlare Banner" />
   </a>
 </p>
