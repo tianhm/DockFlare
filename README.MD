@@ -11,7 +11,7 @@
 </p>
 <p align="center">
   <a href="https://dockflare.app/podcast" target="_blank" rel="noopener noreferrer">
-    <img src="https://img.shields.io/badge/Listen_to_the-Podcast-20a6e2?style=for-the-badge&logo=soundcloud" alt="Listen to the Podcast">
+    <img src="https://img.shields.io/badge/Listen_to_the-Podcast-20a6e2?style=for-the-badge&logo=soundcloud" alt="Listen to the DockFlare Podcast">
   </a>
 </p>
 
