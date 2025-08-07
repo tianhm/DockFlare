@@ -657,19 +657,25 @@ document.querySelectorAll('.tunnel-dns-toggle').forEach(button => {
     
     startServerPing();
 
-    const securityWarning = document.getElementById('security-warning');
-    if (securityWarning) {
-        if (sessionStorage.getItem('security_warning_dismissed') !== 'true') {
-            securityWarning.style.display = 'flex';
-        }
+    try {
+        const securityWarning = document.getElementById('security-warning');
+        if (securityWarning) {
+            if (window.sessionStorage && sessionStorage.getItem('security_warning_dismissed') !== 'true') {
+                securityWarning.style.display = 'flex';
+            }
 
-        const dismissButton = document.getElementById('dismiss-security-warning');
-        if (dismissButton) {
-            dismissButton.addEventListener('click', function() {
-                securityWarning.style.display = 'none';
-                sessionStorage.setItem('security_warning_dismissed', 'true');
-            });
+            const dismissButton = document.getElementById('dismiss-security-warning');
+            if (dismissButton) {
+                dismissButton.addEventListener('click', function() {
+                    securityWarning.style.display = 'none';
+                    if (window.sessionStorage) {
+                        sessionStorage.setItem('security_warning_dismissed', 'true');
+                    }
+                });
+            }
         }
+    } catch (e) {
+        console.error("DockFlare: Could not display the security warning.", e);
     }
 
     // Universal Cleanup
