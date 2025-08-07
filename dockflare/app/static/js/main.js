@@ -659,7 +659,7 @@ document.querySelectorAll('.tunnel-dns-toggle').forEach(button => {
 
     const securityWarning = document.getElementById('security-warning');
     if (securityWarning) {
-        if (localStorage.getItem('security_warning_dismissed') !== 'true') {
+        if (sessionStorage.getItem('security_warning_dismissed') !== 'true') {
             securityWarning.style.display = 'flex';
         }
 
@@ -667,7 +667,7 @@ document.querySelectorAll('.tunnel-dns-toggle').forEach(button => {
         if (dismissButton) {
             dismissButton.addEventListener('click', function() {
                 securityWarning.style.display = 'none';
-                localStorage.setItem('security_warning_dismissed', 'true');
+                sessionStorage.setItem('security_warning_dismissed', 'true');
             });
         }
     }
