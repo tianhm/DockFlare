@@ -656,10 +656,11 @@ document.querySelectorAll('.tunnel-dns-toggle').forEach(button => {
     }
     
     startServerPing();
-
+    
     try {
         const securityWarning = document.getElementById('security-warning');
         if (securityWarning) {
+
             if (window.sessionStorage && sessionStorage.getItem('security_warning_dismissed') !== 'true') {
                 securityWarning.style.display = 'flex';
             }
@@ -668,6 +669,7 @@ document.querySelectorAll('.tunnel-dns-toggle').forEach(button => {
             if (dismissButton) {
                 dismissButton.addEventListener('click', function() {
                     securityWarning.style.display = 'none';
+
                     if (window.sessionStorage) {
                         sessionStorage.setItem('security_warning_dismissed', 'true');
                     }
@@ -676,6 +678,7 @@ document.querySelectorAll('.tunnel-dns-toggle').forEach(button => {
         }
     } catch (e) {
         console.error("DockFlare: Could not display the security warning.", e);
+
     }
 
     // Universal Cleanup
