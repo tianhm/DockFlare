@@ -14,8 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 # dockflare/requirements.txt
-requests
-docker
-python-dotenv
-Flask
-waitress
+requests==2.31.0
+docker==6.1.3
+python-dotenv==1.0.0
+Flask==2.3.3
+Flask-Login==0.6.2
+Flask-WTF==1.1.1
+waitress==2.1.2
+werkzeug==2.3.7

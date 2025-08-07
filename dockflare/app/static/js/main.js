@@ -657,6 +657,21 @@ document.querySelectorAll('.tunnel-dns-toggle').forEach(button => {
     
     startServerPing();
 
+    const securityWarning = document.getElementById('security-warning');
+    if (securityWarning) {
+        if (sessionStorage.getItem('security_warning_dismissed') !== 'true') {
+            securityWarning.style.display = 'flex';
+        }
+
+        const dismissButton = document.getElementById('dismiss-security-warning');
+        if (dismissButton) {
+            dismissButton.addEventListener('click', function() {
+                securityWarning.style.display = 'none';
+                sessionStorage.setItem('security_warning_dismissed', 'true');
+            });
+        }
+    }
+
     // Universal Cleanup
     window.addEventListener('beforeunload', function() {
         if (activeLogSource) activeLogSource.close();

@@ -29,10 +29,12 @@ from app.core import access_manager
 from urllib.parse import urlparse, urlunparse 
 from flask import (
     Blueprint, render_template, jsonify, redirect, url_for, request, Response,
-    stream_with_context, current_app
+    stream_with_context, current_app, flash, session
 )
+from flask_login import login_user, logout_user, login_required, current_user
+from werkzeug.security import check_password_hash
 
-from app import config, docker_client, tunnel_state, cloudflared_agent_state, log_queue 
+from app import config, docker_client, tunnel_state, cloudflared_agent_state, log_queue, User
 from app.core.state_manager import managed_rules, access_groups, state_lock, save_state, load_state
 from app.core.tunnel_manager import (
     start_cloudflared_container,
@@ -57,18 +59,49 @@ from app.core.access_manager import (
     find_cloudflare_access_application_by_hostname 
 )
 from app.core.reconciler import reconcile_state_threaded 
-from app.core.docker_handler import is_valid_hostname, is_valid_service 
+from app.core.docker_handler import is_valid_hostname, is_valid_service
 from app.core.utils import get_rule_key
+from app.web.forms import LoginForm
 
 bp = Blueprint('web', __name__)
+
+@bp.route('/login', methods=['GET', 'POST'])
+def login():
+    if not config.DOCKFLARE_PASSWORD:
+        return redirect(url_for('web.status_page'))
+    if current_user.is_authenticated:
+        return redirect(url_for('web.status_page'))
+
+    form = LoginForm()
+    if request.method == 'POST':
+        password = request.form.get('password')
+        if check_password_hash(config.DOCKFLARE_PASSWORD, password):
+            user = User.get('dockflare_user')
+            login_user(user)
+            return redirect(url_for('web.status_page'))
+        else:
+            flash("Invalid password", "error")
+
+    return render_template('login.html', form=form)
+
+@bp.route('/logout')
+@login_required
+def logout():
+    if not config.DOCKFLARE_PASSWORD:
+        return redirect(url_for('web.status_page'))
+    logout_user()
+    return redirect(url_for('web.login'))
 
 def get_display_token_ui(token_value): 
     if not token_value: return "Not available"
     return f"{token_value[:5]}...{token_value[-5:]}" if len(token_value) > 10 else "Token (short)"
 
-@bp.before_app_request 
-def detect_protocol_bp():
-        
+@bp.before_app_request
+def before_request():
+    if config.DOCKFLARE_PASSWORD and config.SECRET_KEY:
+        if not current_user.is_authenticated and request.endpoint and 'static' not in request.endpoint and request.endpoint != 'web.login':
+            return redirect(url_for('web.login'))
+
     forwarded_proto = request.headers.get('X-Forwarded-Proto', '').lower()
     current_app.config['PREFERRED_URL_SCHEME'] = 'https' if forwarded_proto == 'https' or request.is_secure else 'http'
 
@@ -80,13 +113,21 @@ def add_security_headers_bp(response):
         
     is_https = current_app.config.get('PREFERRED_URL_SCHEME') == 'https'
     
-    csp = ("default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; "
-           "script-src * 'unsafe-inline' 'unsafe-eval'; "
-           "style-src * 'unsafe-inline'; "
-           "img-src * data: blob:; font-src * data:; "
-           "connect-src *; frame-src *; ")
-    if is_https: csp += "upgrade-insecure-requests; "
-    response.headers['Content-Security-Policy'] = csp
+    csp = {
+        "default-src": ["'self'"],
+        "script-src": ["'self'"],
+        "style-src": ["'self'", "'unsafe-inline'"],
+        "img-src": ["'self'", "data:"],
+        "font-src": ["'self'"],
+        "connect-src": ["'self'"],
+        "frame-src": ["'none'"]
+    }
+
+    if is_https:
+        csp["upgrade-insecure-requests"] = []
+
+    csp_string = "; ".join([f"{key} {' '.join(value)}" if value else key for key, value in csp.items()])
+    response.headers['Content-Security-Policy'] = csp_string
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     if is_https: response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
         
@@ -106,7 +147,8 @@ def inject_protocol_bp():
         'base_url': base_url,
         'host': request.host,
         'request_scheme': request.scheme,
-        'app_version': config.APP_VERSION
+        'app_version': config.APP_VERSION,
+        'config': config
     }
 
 @bp.route('/')
