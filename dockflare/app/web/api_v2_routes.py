@@ -23,7 +23,6 @@ import traceback
 import json 
 from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request, current_app, url_for
-from flask_login import current_user
 
 from app import config, docker_client, tunnel_state, cloudflared_agent_state, log_queue
 from app.core.state_manager import managed_rules, state_lock, save_state
@@ -54,12 +53,6 @@ from app.core.docker_handler import is_valid_hostname, is_valid_service
 from app.core.utils import get_rule_key
 
 api_v2_bp = Blueprint('api_v2', __name__, url_prefix='/api/v2')
-
-@api_v2_bp.before_request
-def before_request_api():
-    if config.DOCKFLARE_PASSWORD and config.SECRET_KEY:
-        if not current_user.is_authenticated:
-            return jsonify({"status": "error", "message": "Unauthorized"}), 401
 
 def serialize_rule(rule_data):
     if not rule_data:

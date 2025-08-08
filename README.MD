@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://dockflare.app/podcast.mp4" title="Now you're thinking with tunnels">
+  <a href="https://dockflare.app" title="Now you're thinking with tunnels">
     <img src="images/bannertr.png" width="500px" alt="DockFlare Banner" />
   </a>
 </p>
@@ -9,15 +9,9 @@
 <p align="center">
   <em>Go from container to publicly-secured URL in seconds. No manual Cloudflare dashboard configuration required.</em>
 </p>
-<p align="center">
-  <a href="https://dockflare.app/podcast" target="_blank" rel="noopener noreferrer">
-    <img src="https://img.shields.io/badge/DockFlare-Podcast-20a6e2?style=for-the-badge&logo=soundcloud" alt="Listen to the DockFlare Podcast">
-  </a>
-</p>
 
-</p>
 <p align="center">
-  <a href="https://github.com/ChrispyBacon-dev/DockFlare/releases/tag/v2.0.5"><img src="https://img.shields.io/badge/Release-v2.0.5-blue.svg?style=for-the-badge" alt="Release"></a>
+  <a href="https://github.com/ChrispyBacon-dev/DockFlare/releases/tag/v2.0.0"><img src="https://img.shields.io/badge/Release-v2.0.1-blue.svg?style=for-the-badge" alt="Release"></a>
   <a href="https://hub.docker.com/r/alplat/dockflare"><img src="https://img.shields.io/docker/pulls/alplat/dockflare?style=for-the-badge" alt="Docker Pulls"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Made%20with-Python-1f425f.svg?style=for-the-badge" alt="Python"></a>
   <a href="https://github.com/ChrispyBacon-dev/DockFlare/blob/main/LICENSE.MD"><img src="https://img.shields.io/badge/License-GPL--3.0-blue.svg?style=for-the-badge" alt="License"></a>
