@@ -200,7 +200,17 @@ def step4_finalize():
 @setup_bp.route('/import-env', methods=['GET', 'POST'])
 def step_import_env():
     """Handles the import of settings from environment variables for migration."""
-
+    if request.method == 'POST' and 'cancel' in request.form:
+        
+        keys_to_clear = [
+            'is_env_import', 'cf_api_token', 'cf_account_id', 'tunnel_name', 
+            'cf_zone_id', 'tunnel_dns_scan_zone_names', 'grace_period_seconds'
+        ]
+        for key in keys_to_clear:
+            session.pop(key, None)
+        flash('Migration cancelled. Please start the setup from scratch.', 'info')
+        return redirect(url_for('setup.step1_admin_user'))
+    
     if not session.get('is_env_import'):
         
         return redirect(url_for('setup.step1_admin_user'))

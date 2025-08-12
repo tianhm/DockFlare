@@ -30,8 +30,9 @@
 
 <form method="POST" action="{{ url_for('setup.step_import_env') }}" class="mt-6">
     {{ form.hidden_tag() }}
-    <div class="card-actions">
-        {{ form.submit(class="btn btn-primary w-full") }}
+    <div class="card-actions justify-center">
+        <button type="submit" name="submit" class="btn btn-primary">Proceed with Migration</button>
+        <button type="submit" name="cancel" class="btn btn-ghost">Start Fresh</button>
     </div>
 </form>
 {% endblock %}
