@@ -1,7 +1,17 @@
 {% extends "setup/base.html" %}
 
 {% block setup_content %}
-<form method="POST" action="{{ url_for('setup.step3_admin_user') }}" class="space-y-4">
+<div class="text-center mb-6">
+    {% if is_migration %}
+        <h2 class="text-xl font-bold">Final Step: Create Admin User</h2>
+        <p class="py-4 text-gray-500">Your settings have been imported. Please create an administrator account to complete the migration.</p>
+    {% else %}
+        <h2 class="text-xl font-bold">Step 1: Create Admin User</h2>
+        <p class="py-4 text-gray-500">Create a secure administrator account to access the DockFlare web interface. All your data, including your password, will be encrypted to ensure it remains safe and confidential.</p>
+    {% endif %}
+</div>
+
+<form method="POST" action="{{ url_for('setup.step1_admin_user') }}" class="space-y-4">
     {{ form.hidden_tag() }}
 
     <div class="form-control">
@@ -44,4 +54,8 @@
         {{ form.submit(class="btn btn-primary w-full") }}
     </div>
 </form>
+{% endblock %}
+
+{% block step_indicator %}
+    {% include 'setup/_steps.html' with context %}
 {% endblock %}

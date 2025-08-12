@@ -17,6 +17,9 @@ class LoginForm(FlaskForm):
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """Handles the user login process."""
+    if current_app.config.get('DISABLE_PASSWORD_LOGIN'):
+        return redirect(url_for('web.status_page'))
+
     if current_user.is_authenticated:
         return redirect(url_for('web.status_page'))
 
@@ -44,4 +47,6 @@ def logout():
     """Handles the user logout process."""
     logout_user()
     flash('You have been logged out.', 'success')
+    if current_app.config.get('DISABLE_PASSWORD_LOGIN'):
+        return redirect(url_for('web.status_page'))
     return redirect(url_for('auth.login'))

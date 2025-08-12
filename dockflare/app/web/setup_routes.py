@@ -27,75 +27,64 @@ from cryptography.fernet import Fernet
 from werkzeug.security import generate_password_hash
 from app import config
 
-
 setup_bp = Blueprint('setup', __name__, url_prefix='/setup', template_folder='../templates')
 
+# Step 1
+class AdminUserForm(FlaskForm):
+    """Form for Step 1: Admin User Creation."""
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired(), EqualTo('confirm_password', message='Passwords must match.')])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired()])
+    submit = SubmitField('Next')
 
+# Step 2
 class CredentialsForm(FlaskForm):
-    """Form for Step 1: Cloudflare API Credentials."""
+    """Form for Step 2: Cloudflare API Credentials."""
     cf_api_token = PasswordField('Cloudflare API Token', validators=[DataRequired()])
     cf_account_id = StringField('Cloudflare Account ID', validators=[DataRequired()])
     submit = SubmitField('Next')
 
+# Step 3
 class TunnelForm(FlaskForm):
-    """Form for Step 2: Tunnel and Zone Configuration."""
+    """Form for Step 3: Tunnel and Zone Configuration."""
     tunnel_name = StringField('Tunnel Name', default='dockflare-tunnel', validators=[DataRequired()])
     cf_zone_id = StringField('Primary Cloudflare Zone ID (Optional)', validators=[Optional()])
     tunnel_dns_scan_zone_names = StringField('Other Zones to Scan (comma-separated, optional)', description="e.g. my-other-domain.com,another.dev")
     grace_period_seconds = IntegerField('Grace Period (seconds)', default=28800, validators=[DataRequired()])
     submit = SubmitField('Next')
 
-class AdminUserForm(FlaskForm):
-    """Form for Step 3: Admin User Creation."""
-    username = StringField('Username', validators=[DataRequired()])
-    password = PasswordField('Password', validators=[DataRequired(), EqualTo('confirm_password', message='Passwords must match.')])
-    confirm_password = PasswordField('Confirm Password', validators=[DataRequired()])
-    submit = SubmitField('Next')
+# Step 4
+class FinalizeForm(FlaskForm):
+    """Form for Step 4: Finalization."""
+    submit = SubmitField('Complete Setup')
 
 class ImportEnvForm(FlaskForm):
     """Form for acknowledging the .env import."""
     submit = SubmitField('Proceed to User Creation')
 
-class FinalizeForm(FlaskForm):
-    """Form for Step 4: Finalization."""
-    submit = SubmitField('Complete Setup')
-
-
-@setup_bp.route('/import-env', methods=['GET', 'POST'])
-def step_import_env():
-    """Handles the import of settings from environment variables for migration."""
-
-    if not session.get('is_env_import'):
-        return redirect(url_for('setup.step1_api_credentials'))
-
-    form = ImportEnvForm()
+@setup_bp.route('/', methods=['GET'])
+@setup_bp.route('/step1', methods=['GET', 'POST'])
+def step1_admin_user():
+    form = AdminUserForm()
+    is_migration = session.get('is_env_import', False)
 
     if form.validate_on_submit():
+        session['username'] = form.username.data
+        session['password'] = form.password.data
+        
+        if is_migration:
+            
+            return redirect(url_for('setup.step4_finalize'))
+        else:
+            
+            return redirect(url_for('setup.step2_api_credentials'))
+        
+    return render_template('setup/step1_user.html', form=form, title="Step 1: Setup Web Access", current_step=1, is_migration=is_migration)
 
-        if not session.get('cf_api_token') or not session.get('cf_account_id'):
-            flash('Critical information (API Token or Account ID) was missing from the import. Please configure manually.', 'danger')
-            session.clear()
-            return redirect(url_for('setup.step1_api_credentials'))
-
-        flash('Settings confirmed. Please create an admin user to continue.', 'info')
-        return redirect(url_for('setup.step3_admin_user'))
-
-    imported_settings = {
-        'CF_API_TOKEN': '********' if session.get('cf_api_token') else 'Not Found',
-        'CF_ACCOUNT_ID': session.get('cf_account_id', 'Not Found'),
-        'TUNNEL_NAME': session.get('tunnel_name', 'Not Found'),
-        'CF_ZONE_ID': session.get('cf_zone_id') or 'Not Set',
-        'TUNNEL_DNS_SCAN_ZONE_NAMES': session.get('tunnel_dns_scan_zone_names') or 'Not Set',
-        'GRACE_PERIOD_SECONDS': session.get('grace_period_seconds') or 'Not Set',
-    }
-   
-    if not session.get('cf_api_token') or not session.get('cf_account_id'):
-        flash('Warning: Missing required fields (CF_API_TOKEN or CF_ACCOUNT_ID). You will not be able to proceed.', 'warning')
-
-    return render_template('setup/step_import_env.html', form=form, title="Setup: Import from .env", summary=imported_settings)
-
-@setup_bp.route('/credentials', methods=['GET', 'POST'])
-def step1_api_credentials():
+@setup_bp.route('/step2', methods=['GET', 'POST'])
+def step2_api_credentials():
+    if 'username' not in session:
+        return redirect(url_for('setup.step1_admin_user'))
     
     form = CredentialsForm()
     if form.validate_on_submit():
@@ -110,7 +99,7 @@ def step1_api_credentials():
                 session['cf_api_token'] = token
                 session['cf_account_id'] = account_id
                 flash('Credentials verified successfully.', 'success')
-                return redirect(url_for('setup.step2_tunnel_config'))
+                return redirect(url_for('setup.step3_tunnel_config'))
             else:
                 error_message = "Invalid credentials or permissions."
                 try:
@@ -121,13 +110,12 @@ def step1_api_credentials():
         except requests.exceptions.RequestException as e:
             flash(f'Could not connect to the Cloudflare API: {e}', 'danger')
         
-    return render_template('setup/step1.html', form=form, title="Setup: API Credentials")
+    return render_template('setup/step2_cloudflare.html', form=form, title="Step 2: Cloudflare Configuration", current_step=2)
 
-@setup_bp.route('/tunnel', methods=['GET', 'POST'])
-def step2_tunnel_config():
-    
+@setup_bp.route('/step3', methods=['GET', 'POST'])
+def step3_tunnel_config():
     if 'cf_api_token' not in session:
-        return redirect(url_for('setup.step1_api_credentials'))
+        return redirect(url_for('setup.step2_api_credentials'))
     
     form = TunnelForm()
     if form.validate_on_submit():
@@ -135,29 +123,14 @@ def step2_tunnel_config():
         session['cf_zone_id'] = form.cf_zone_id.data
         session['tunnel_dns_scan_zone_names'] = form.tunnel_dns_scan_zone_names.data
         session['grace_period_seconds'] = form.grace_period_seconds.data
-        return redirect(url_for('setup.step3_admin_user'))
-        
-    return render_template('setup/step2.html', form=form, title="Setup: Tunnel Configuration")
-
-@setup_bp.route('/admin', methods=['GET', 'POST'])
-def step3_admin_user():
-    
-    if 'tunnel_name' not in session:
-        return redirect(url_for('setup.step2_tunnel_config'))
-
-    form = AdminUserForm()
-    if form.validate_on_submit():
-        session['username'] = form.username.data
-        session['password'] = form.password.data
         return redirect(url_for('setup.step4_finalize'))
         
-    return render_template('setup/step3.html', form=form, title="Setup: Admin User")
+    return render_template('setup/step3_tunnel.html', form=form, title="Step 3: Tunnel Configuration", current_step=3)
 
-@setup_bp.route('/finalize', methods=['GET', 'POST'])
+@setup_bp.route('/step4', methods=['GET', 'POST'])
 def step4_finalize():
-    
-    if 'username' not in session:
-        return redirect(url_for('setup.step3_admin_user'))
+    if 'tunnel_name' not in session:
+        return redirect(url_for('setup.step3_tunnel_config'))
 
     form = FinalizeForm()
     if form.validate_on_submit():
@@ -227,4 +200,49 @@ def step4_finalize():
     if 'password' in config_summary:
         del config_summary['password']
         
-    return render_template('setup/step4.html', form=form, title="Setup: Finalize", summary=config_summary)
+    return render_template('setup/step4_finalize.html', form=form, title="Step 4: Finalize Setup", summary=config_summary, current_step=4)
+
+@setup_bp.route('/import-env', methods=['GET', 'POST'])
+def step_import_env():
+    """Handles the import of settings from environment variables for migration."""
+    if request.method == 'POST' and 'cancel' in request.form:
+        # Clear session data from .env import
+        keys_to_clear = [
+            'is_env_import', 'cf_api_token', 'cf_account_id', 'tunnel_name', 
+            'cf_zone_id', 'tunnel_dns_scan_zone_names', 'grace_period_seconds'
+        ]
+        for key in keys_to_clear:
+            session.pop(key, None)
+        flash('Migration cancelled. Please start the setup from scratch.', 'info')
+        return redirect(url_for('setup.step1_admin_user'))
+
+    if not session.get('is_env_import'):
+        
+        return redirect(url_for('setup.step1_admin_user'))
+
+    form = ImportEnvForm()
+
+    if form.validate_on_submit():
+
+        if not session.get('cf_api_token') or not session.get('cf_account_id'):
+            flash('Critical information (API Token or Account ID) was missing from the import. Please configure manually.', 'danger')
+            session.clear()
+            
+            return redirect(url_for('setup.step2_api_credentials'))
+
+        flash('Settings confirmed. Please create an admin user to continue.', 'info')
+        return redirect(url_for('setup.step1_admin_user'))
+
+    imported_settings = {
+        'CF_API_TOKEN': '********' if session.get('cf_api_token') else 'Not Found',
+        'CF_ACCOUNT_ID': session.get('cf_account_id', 'Not Found'),
+        'TUNNEL_NAME': session.get('tunnel_name', 'Not Found'),
+        'CF_ZONE_ID': session.get('cf_zone_id') or 'Not Set',
+        'TUNNEL_DNS_SCAN_ZONE_NAMES': session.get('tunnel_dns_scan_zone_names') or 'Not Set',
+        'GRACE_PERIOD_SECONDS': session.get('grace_period_seconds') or 'Not Set',
+    }
+   
+    if not session.get('cf_api_token') or not session.get('cf_account_id'):
+        flash('Warning: Missing required fields (CF_API_TOKEN or CF_ACCOUNT_ID). You will not be able to proceed.', 'warning')
+
+    return render_template('setup/step_import_env.html', form=form, title="Setup: Import from .env", summary=imported_settings)

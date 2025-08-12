@@ -1,7 +1,9 @@
 {% extends "setup/base.html" %}
 
 {% block setup_content %}
-<form method="POST" action="{{ url_for('setup.step2_tunnel_config') }}" class="space-y-4">
+<p class="text-center text-gray-500 mb-6">Configure the settings for your Cloudflare Tunnel. The tunnel name you specify will identify your tunnel within the Cloudflare dashboard. Additionally, you have the option to designate a primary zone and other zones for DNS scanning.</p>
+
+<form method="POST" action="{{ url_for('setup.step3_tunnel_config') }}" class="space-y-4">
     {{ form.hidden_tag() }}
 
     <div class="form-control">
@@ -9,6 +11,9 @@
             <span class="label-text">{{ form.tunnel_name.label }}</span>
         </label>
         {{ form.tunnel_name(class="input input-bordered w-full") }}
+    <label class="label">
+        <span class="label-text-alt">A descriptive name for your Cloudflare Tunnel. This name will appear in your Cloudflare dashboard.</span>
+    </label>
         {% for error in form.tunnel_name.errors %}
             <label class="label">
                 <span class="label-text-alt text-error">{{ error }}</span>
@@ -21,6 +26,9 @@
             <span class="label-text">{{ form.cf_zone_id.label }}</span>
         </label>
         {{ form.cf_zone_id(class="input input-bordered w-full", placeholder="e.g., abc123def456...") }}
+    <label class="label">
+        <span class="label-text-alt">The main domain (zone) you want DockFlare to manage DNS records for. If you leave this blank, DockFlare will attempt to find a suitable zone automatically.</span>
+    </label>
         {% for error in form.cf_zone_id.errors %}
             <label class="label">
                 <span class="label-text-alt text-error">{{ error }}</span>
@@ -48,6 +56,9 @@
             <span class="label-text">{{ form.grace_period_seconds.label }}</span>
         </label>
         {{ form.grace_period_seconds(class="input input-bordered w-full") }}
+    <label class="label">
+        <span class="label-text-alt">The time (in seconds) to wait before automatically removing DNS records for a stopped container. This prevents records from being deleted immediately if a container is just being restarted. Minimum: 60 seconds.</span>
+    </label>
         {% for error in form.grace_period_seconds.errors %}
             <label class="label">
                 <span class="label-text-alt text-error">{{ error }}</span>
@@ -59,4 +70,8 @@
         {{ form.submit(class="btn btn-primary w-full") }}
     </div>
 </form>
+{% endblock %}
+
+{% block step_indicator %}
+    {% include 'setup/_steps.html' with context %}
 {% endblock %}

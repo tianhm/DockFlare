@@ -2,8 +2,7 @@
 
 {% block setup_content %}
 <div class="prose mb-6">
-    <h3 class="text-lg font-bold">Confirm Configuration</h3>
-    <p>Please review the configuration below. This is your final chance to go back and make changes. Clicking "Complete Setup" will write the configuration, encrypt it, and start the application.</p>
+    <p class="text-center text-gray-500 mb-6">Review your configuration details below before completing the setup. Once you finalize, DockFlare will begin managing your tunnels based on these settings, and you will be redirected to the login page.</p>
 
     <div class="overflow-x-auto">
         <table class="table w-full">
@@ -23,7 +22,11 @@
     {{ form.hidden_tag() }}
     <div class="card-actions">
         {{ form.submit(class="btn btn-primary w-full") }}
-        <a href="{{ url_for('setup.step3_admin_user') }}" class="btn btn-ghost w-full">Go Back</a>
+        <a href="{{ url_for('setup.step3_tunnel_config') }}" class="btn btn-ghost w-full">Go Back</a>
     </div>
 </form>
+{% endblock %}
+
+{% block step_indicator %}
+    {% include 'setup/_steps.html' with context %}
 {% endblock %}

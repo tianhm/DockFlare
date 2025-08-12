@@ -6,6 +6,67 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.1.1] - 2025-08-12
+
+### Added
+
+*   **Revamped Setup Wizard:** The initial setup wizard has been re-sequenced for a more logical flow (User -> Cloudflare -> Tunnel -> Finalize).
+*   **Setup Step Indicator:** A visual progress indicator has been added to all setup pages.
+*   **Detailed Setup Explanations:** Added clear, descriptive text to each step and field in the setup process to improve user guidance.
+*   **Disable Password Login:** Added a new option on the Settings page under "Security" to disable password-based login. This allows for public access to the dashboard, intended for use with an external authentication provider like Cloudflare Access.
+*   **Cancel Migration Option:** Added a "Start Fresh" button to the `.env` migration screen, allowing you to cancel the migration and begin a manual setup.
+
+### Fixed
+
+*   Corrected the initial redirect for the setup process, which was pointing to a non-existent route.
+*   Fixed a template error that caused a crash on the final step of the setup wizard.
+*   Corrected the setup flow logic. When a user proceeds with a migration, they are now correctly taken to the final step after user creation, bypassing unnecessary manual configuration.
+*   The "Disable Password Login" setting now persists correctly after restarting the DockFlare container.
+*   Resolved a redirect loop (`ERR_TOO_MANY_REDIRECTS`) that occurred when password login was disabled.
+
+### Changed
+
+*   The `/ping` endpoint is now exempt from authentication to allow for Docker health checks.
+*   The `/ping` endpoint now dynamically reports the application version via the config.APP_VERSION variable.
+*   The "Change Password" form on the settings page is now hidden when password login is disabled.
+*   The user creation page now provides clearer instructions depending on whether the user is in a migration or a fresh setup flow.
+*   Updated the security warning text related to disabling password login for better clarity.
+
+## [v2.1.0] - 2025-08-12
+
+This release focuses on simplifying the initial setup, enhancing security with UI authentication, and improving overall usability.
+
+### New
+
+-   **Pre-Flight Setup Wizard:** A new browser-based setup wizard for first-time installations replaces the need for `.env` files. This guides users through configuring Cloudflare credentials and tunnel settings step-by-step.
+-   **UI Authentication:** The DockFlare UI is now protected by a login page.
+-   **Password Management:** Users can now change their UI password from a new "Security" section on the Settings page. A secure, manual process for password resets has been implemented.
+-   **Post-Setup Configuration:** Core settings (Tunnel Name, Zone IDs, Rule Grace Period) can now be modified directly from the UI at any time.
+-   **Seamless Migration:** An automatic migration process is in place for existing users to import settings from their `.env` file and create a new UI password.
+
+### Changed
+
+-   **Logout Button:** A logout button has been added to the main navigation bar.
+-   **UI/UX:** The theme selector is now an icon-only button for a cleaner interface.
+
+### Security
+
+-   **Encrypted Configuration:** All sensitive credentials, including the Cloudflare API token and UI password, are now stored in a fully encrypted `dockflare_config.dat` file.
+
+### Removed
+
+-   **`.env` File Support:** DockFlare no longer uses `.env` files for configuration after the initial migration. All settings are managed through the UI and the encrypted configuration file.
+
+## [v2.0.4] - 2025-08-12
+
+This is a dedicated security hardening release that reintroduces security enhancements from a previously rolled-back version (v2.0.5). A special thanks to GitHub user **@bcurran3** and Reddit user **t2_hur2hqu6k** for their valuable feedback and for helping make DockFlare more secure.
+
+### Security
+
+-   **CSRF Protection:** All forms in the web UI are now protected with anti-CSRF tokens to prevent Cross-Site Request Forgery attacks.
+-   **Strengthened Content Security Policy (CSP):** The CSP has been made more restrictive to mitigate the risk of Cross-Site Scripting (XSS) and other injection attacks.
+-   **Pinned Dependencies:** All Python dependencies in `requirements.txt` are now pinned to specific versions to ensure build reliability and prevent potential supply-chain attacks.
+
 ## [v2.0.1] - 2025-08-05
 
 This is a follow-up release to address several minor bugs found after the major v2.0 update. It also restores support for Bastion mode and introduces a new backup and restore feature.

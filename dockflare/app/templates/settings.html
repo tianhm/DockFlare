@@ -287,19 +287,41 @@
                     </form>
                 </div>
                 <div>
-                    <h3 class="font-semibold text-lg mb-2">Password Reset</h3>
-                    <div role="alert" class="alert alert-info text-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <span>
-                            To reset your password, you must have filesystem access to the DockFlare container.
-                            <br>
-                            1. Stop the DockFlare container.
-                            <br>
-                            2. Delete the `dockflare_config.dat` and `dockflare.key` files from your persistent data volume.
-                            <br>
-                            3. Restart the container. You will be prompted to go through the initial setup again.
-                        </span>
-                    </div>
+                    <h3 class="font-semibold text-lg mb-2">Disable Password Login</h3>
+                    <form method="POST" action="{{ url_for('web.settings_page') }}" class="space-y-4 protocol-aware-form">
+                        {{ security_settings_form.hidden_tag() }}
+
+                        <div class="form-control">
+                            <label class="label cursor-pointer p-0">
+                                <span class="label-text">{{ security_settings_form.disable_password_login.label.text }}</span>
+                                {{ security_settings_form.disable_password_login(class="toggle toggle-primary") }}
+                            </label>
+                        </div>
+
+                        <div role="alert" class="alert alert-warning text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                            <span><strong>Security Warning:</strong> When disabling password login, you become responsible for securing DockFlare access. Best practice is to use a Cloudflare Tunnel with an Access Policy and ensure Docker ports are not exposed, preventing access from the local network (LAN).</span>
+                        </div>
+
+                        <div class="card-actions">
+                             {{ security_settings_form.submit_security_settings(class="btn btn-warning") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="mt-8">
+                <h3 class="font-semibold text-lg mb-2">Password Reset</h3>
+                <div role="alert" class="alert alert-info text-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>
+                        To reset your password, you must have filesystem access to the DockFlare container.
+                        <br>
+                        1. Stop the DockFlare container.
+                        <br>
+                        2. Delete the `dockflare_config.dat` and `dockflare.key` files from your persistent data volume.
+                        <br>
+                        3. Restart the container. You will be prompted to go through the initial setup again.
+                    </span>
                 </div>
             </div>
         </div>

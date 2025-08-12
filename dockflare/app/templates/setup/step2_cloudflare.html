@@ -1,7 +1,9 @@
 {% extends "setup/base.html" %}
 
 {% block setup_content %}
-<form method="POST" action="{{ url_for('setup.step1_api_credentials') }}" class="space-y-4">
+<p class="text-center text-gray-500 mb-6">Provide your Cloudflare API Token and Account ID. This is necessary for DockFlare to securely manage your tunnels and DNS records. You can find your Account ID in the Cloudflare dashboard, on the right side of the overview page for any of your domains. An API token can be created from the API Tokens page located in your profile.</p>
+
+<form method="POST" action="{{ url_for('setup.step2_api_credentials') }}" class="space-y-4">
     {{ form.hidden_tag() }}
 
     <div class="form-control">
@@ -32,4 +34,8 @@
         {{ form.submit(class="btn btn-primary w-full") }}
     </div>
 </form>
+{% endblock %}
+
+{% block step_indicator %}
+    {% include 'setup/_steps.html' with context %}
 {% endblock %}
