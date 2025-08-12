@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="flex justify-center items-center min-h-screen">
+    <div class="card w-96 bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title">{{ title }}</h2>
+            <p>Password login has been disabled by the administrator.</p>
+            <p>Please use an alternative login method, such as a Cloudflare Access policy.</p>
+            <div class="card-actions justify-end">
+                <a href="{{ url_for('web.status_page') }}" class="btn btn-primary">Go to Status Page</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

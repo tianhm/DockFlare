@@ -15,7 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 # app/web/forms.py
 from flask_wtf import FlaskForm
-from wtforms import PasswordField, SubmitField, StringField, IntegerField
+from wtforms import PasswordField, SubmitField, StringField, IntegerField, BooleanField
 from wtforms.validators import DataRequired, EqualTo, Length, Optional
 
 class SettingsForm(FlaskForm):
@@ -38,6 +38,14 @@ class SettingsForm(FlaskForm):
         validators=[DataRequired(message="Grace period is required.")]
     )
     submit_settings = SubmitField('Save General Settings')
+
+class SecuritySettingsForm(FlaskForm):
+    """Form for editing security settings."""
+    disable_password_login = BooleanField(
+        'Disable Password Login',
+        description="If selected, password-based login will be disabled. Access to DockFlare will only be possible through a Cloudflare Access policy."
+    )
+    submit_security_settings = SubmitField('Save Security Settings')
 
 class ChangePasswordForm(FlaskForm):
     """Form for changing the user's password."""
