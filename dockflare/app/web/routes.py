@@ -31,7 +31,8 @@ from flask import (
     Blueprint, render_template, jsonify, redirect, url_for, request, Response,
     stream_with_context, current_app, session, flash
 )
-from flask_login import current_user, login_required
+from flask_login import current_user, login_required, login_user
+from app.core.user import User
 
 from app import config, docker_client, tunnel_state, cloudflared_agent_state, log_queue 
 from app.core.state_manager import managed_rules, access_groups, state_lock, save_state, load_state
@@ -103,6 +104,8 @@ def gating_logic():
     
     if hasattr(current_app, 'login_manager'):
         if current_app.config.get('DISABLE_PASSWORD_LOGIN'):
+            if not current_user.is_authenticated:
+                login_user(User("anonymous"))
             return
 
         if not current_user.is_authenticated:
