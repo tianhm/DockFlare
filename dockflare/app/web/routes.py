@@ -102,6 +102,9 @@ def gating_logic():
 
     
     if hasattr(current_app, 'login_manager'):
+        if current_app.config.get('DISABLE_PASSWORD_LOGIN'):
+            return
+
         if not current_user.is_authenticated:
     
             if request.endpoint and not request.endpoint.startswith('auth.') and request.endpoint != 'static':

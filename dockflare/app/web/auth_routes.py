@@ -18,9 +18,7 @@ class LoginForm(FlaskForm):
 def login():
     """Handles the user login process."""
     if current_app.config.get('DISABLE_PASSWORD_LOGIN'):
-        flash('Password login is disabled. Please use an alternative login method.', 'warning')
-        # Still render a basic page, but without the form.
-        return render_template('auth/login_disabled.html', title="Login Disabled")
+        return redirect(url_for('web.status_page'))
 
     if current_user.is_authenticated:
         return redirect(url_for('web.status_page'))

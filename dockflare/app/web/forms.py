@@ -15,7 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 # app/web/forms.py
 from flask_wtf import FlaskForm
-from wtforms import PasswordField, SubmitField, StringField, IntegerField, BooleanField
+from wtforms import BooleanField, PasswordField, SubmitField, StringField, IntegerField
 from wtforms.validators import DataRequired, EqualTo, Length, Optional
 
 class SettingsForm(FlaskForm):
