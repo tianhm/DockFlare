@@ -192,7 +192,7 @@ def main_application_entrypoint():
     logging.info("--- web: http://dockflare.app ---")
     logging.info("-" * 52)
 
-    # === DockFlare Pre-Flight Setup Check ===
+    # === DockFlare Config Check & Pre-Flight Setup ===
     data_path = os.path.dirname(config.STATE_FILE_PATH)
     key_file = os.path.join(data_path, 'dockflare.key')
     config_file = os.path.join(data_path, 'dockflare_config.dat')
@@ -225,7 +225,8 @@ def main_application_entrypoint():
             app.config['GRACE_PERIOD_SECONDS'] = int(config_data.get('grace_period_seconds', 28800))
             app.config['DOCKFLARE_USERNAME'] = config_data.get('username')
             app.config['DOCKFLARE_PASSWORD_HASH'] = config_data.get('password')
-            
+            app.config['DISABLE_PASSWORD_LOGIN'] = config_data.get('disable_password_login', False)
+
             if app.config['CF_API_TOKEN']:
                 config.CF_HEADERS['Authorization'] = f"Bearer {app.config['CF_API_TOKEN']}"
 
@@ -240,7 +241,7 @@ def main_application_entrypoint():
         if os.getenv('CF_API_TOKEN'):
             logging.info("Found CF_API_TOKEN environment variable. Activating migration import flow.")
             app.import_from_env = True
-    # === End Pre-Flight Setup Check ===
+    # === DockFlare Config Check & Pre-Flight Setup ===
 
     load_state()
     logging.info("Initial state loading from file complete.")
