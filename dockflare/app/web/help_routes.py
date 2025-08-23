@@ -69,7 +69,7 @@ def help_page(page='Home.md'):
     with open(file_path, 'r', encoding='utf-8') as f:
         md_content = f.read()
 
-    html_content = markdown.markdown(md_content, extensions=['fenced_code', 'tables', 'admonition'])
+    html_content = markdown.markdown(md_content, extensions=['fenced_code', 'tables', 'admonition', 'nl2br'])
     
     navigation = parse_docs_nav()
 
