@@ -8,10 +8,10 @@ from flask_login import login_required
 help_bp = Blueprint('help', __name__, template_folder='../templates')
 
 def parse_docs_nav():
-    """Parses the Home.md file to build the navigation structure for the help pages."""
+    """Parses the navigation.md file to build the navigation structure for the help pages."""
     nav_structure = []
     docs_path = os.path.join(current_app.root_path, 'templates', 'docs')
-    home_md_path = os.path.join(docs_path, 'Home.md')
+    home_md_path = os.path.join(docs_path, 'navigation.md')
 
     if not os.path.exists(home_md_path):
         current_app.logger.error(f"Help navigation file not found at {home_md_path}")
