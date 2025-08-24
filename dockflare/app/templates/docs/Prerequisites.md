@@ -13,4 +13,4 @@ Before you begin, ensure you have the following:
     *   `Zone:Zone:Read`
     *   `Zone:DNS:Edit`  
 
-![Cloudflare API Permissions](../images/cf.png)
+![Cloudflare API Permissions](../static/images/cf.png)
