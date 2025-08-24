@@ -73,7 +73,6 @@ def help_page(page='Home.md'):
     extensions = [
         'markdown.extensions.extra',
         'markdown.extensions.toc',
-        'markdown.extensions.nl2br',
         'markdown.extensions.meta',
         'markdown.extensions.sane_lists',
         'pymdownx.superfences',
@@ -91,7 +90,15 @@ def help_page(page='Home.md'):
         'pymdownx.tasklist': {'custom_checkbox': True},
         'pymdownx.magiclink': {},
     }
-    html_content = markdown.markdown(md_content, extensions=extensions, extension_configs=extension_configs, output_format='html5')
+
+  
+    html_content = markdown.markdown(
+        md_content,
+        extensions=extensions,
+        extension_configs=extension_configs,
+        output_format='html5',
+        nl2br=True
+    )
     
     navigation = parse_docs_nav()
 
