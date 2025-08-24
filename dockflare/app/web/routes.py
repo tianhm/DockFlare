@@ -135,7 +135,7 @@ def add_security_headers_bp(response):
         "default-src": ["'self'"],
         "script-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
         "style-src": ["'self'", "'unsafe-inline'", "https://rsms.me", "https://cdn.jsdelivr.net"],
-        "img-src": ["'self'", "data:"],
+        "img-src": ["'self'", "data:", "https://img.shields.io"],
         "font-src": ["'self'", "https://rsms.me"],
         "connect-src": ["'self'"],
         "frame-src": ["'none'"]

@@ -5,6 +5,43 @@ let activeLogSource = null;
 let eventSourceHealthCheck = null;
 let pingInterval = null;
 
+function initializeAllTomSelects() {
+    const multiCheckboxOptions = {
+        plugins: {
+            'checkbox_options': {},
+            'remove_button': {
+                title: 'Remove this item',
+            }
+        },
+        create: false,
+        sortField: {
+            field: "text",
+            direction: "asc"
+        }
+    };
+    
+    const countrySelectOptions = {
+        ...multiCheckboxOptions,
+        maxOptions: null, 
+    };
+
+    // Initialize selects on the Dashboard page (Add/Edit Rule modals)
+    const addGroupSelect = document.getElementById('manual_access_group');
+    if (addGroupSelect) {
+        new TomSelect(addGroupSelect, multiCheckboxOptions);
+    }
+    const editGroupSelect = document.getElementById('edit_manual_access_group');
+    if (editGroupSelect) {
+        new TomSelect(editGroupSelect, multiCheckboxOptions);
+    }
+
+    // Initialize select on the Access Policies page (Access Group modal)
+    const countrySelect = document.getElementById('group_countries');
+    if (countrySelect) {
+        new TomSelect(countrySelect, countrySelectOptions);
+    }
+}
+
 const themeManager = (function() {
     let themeMenuScoped;
     const htmlElementScoped = document.documentElement;
@@ -559,6 +596,7 @@ function updateManualRuleServiceFields() {
 document.addEventListener('DOMContentLoaded', function() {
     fixResourcesAndBase();
     themeManager.initialize();
+    initializeAllTomSelects();
     
     // Setup for Manual Rule Modal (only if on Dashboard Page)
     const manualServiceTypeSelect = document.getElementById('manual_service_type');

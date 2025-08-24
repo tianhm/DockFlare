@@ -102,6 +102,11 @@ def create_app():
             return User(user_id)
         return None
 
+    @app_instance.context_processor
+    def inject_version():
+        """Injects the app version into all templates."""
+        return dict(app_version=config.APP_VERSION)
+
     app_instance.reconciliation_info = {
         "in_progress": False,
         "progress": 0,
@@ -130,6 +135,10 @@ def create_app():
         from .web.auth_routes import auth_bp
         app_instance.register_blueprint(auth_bp)
         logging.info("Auth blueprint registered.")
+
+        from .web.help_routes import help_bp
+        app_instance.register_blueprint(help_bp)
+        logging.info("Help blueprint registered.")
 
     return app_instance
 

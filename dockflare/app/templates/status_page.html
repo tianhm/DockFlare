@@ -482,33 +482,3 @@
         <form method="dialog" class="modal-backdrop"><button>close</button></form>
     </dialog>
 {% endblock %}
-
-{% block scripts %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const tomSelectOptions = {
-            plugins: {
-                'checkbox_options': {},
-                'remove_button': {
-                    title: 'Remove this item',
-                }
-            },
-            create: false,
-            sortField: {
-                field: "text",
-                direction: "asc"
-            }
-        };
-
-        const addGroupSelect = document.getElementById('manual_access_group');
-        if (addGroupSelect) {
-            new TomSelect(addGroupSelect, tomSelectOptions);
-        }
-
-        const editGroupSelect = document.getElementById('edit_manual_access_group');
-        if (editGroupSelect) {
-            new TomSelect(editGroupSelect, tomSelectOptions);
-        }
-    });
-</script>
-{% endblock %}

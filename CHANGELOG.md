@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [v2.1.5] - 2025-08-24
+
+### New
+- **Help Documentation:** Added a comprehensive help section to the web UI, providing users with easy access to documentation and guides.
+
+### Fixed
+- **Country Dropdown Menu:** Fixed an issue where the country dropdown menu in the Access Group modal was limited to 50 entries.
+- **UI Refinements:** Made various minor refinements to the web UI for improved usability and a more polished user experience.
+
 ## [v2.1.4] - 2025-08-23
 
 ### New
