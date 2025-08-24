@@ -189,7 +189,7 @@ def main_application_entrypoint():
     logging.info("-" * 52)
     logging.info("--- DockFlare Starting ---")
     logging.info(f"--- Version: {config.APP_VERSION} ---")
-    logging.info("--- web: http://dockflare.app ---")
+    logging.info("--- web: https://dockflare.app ---")
     logging.info("-" * 52)
 
     # === DockFlare Config Check & Pre-Flight Setup ===
