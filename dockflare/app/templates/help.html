@@ -28,33 +28,14 @@
         background-color: transparent;
         padding: 0;
     }
-    .prose-xl {
-        font-size: 1rem;
-        line-height: 1.7;
+    .prose h1 {
+        font-size: 1.75rem;
     }
-    .prose-xl p {
-        margin-top: 1.25em;
-        margin-bottom: 1.25em;
+    .prose h2 {
+        font-size: 1.375rem;
     }
-    .prose-xl h1 {
-        font-size: 1.8rem;
-        margin-top: 1.5em;
-        margin-bottom: 0.8em;
-    }
-    .prose-xl h2 {
-        font-size: 1.5rem;
-        margin-top: 1.5em;
-        margin-bottom: 0.8em;
-    }
-    .prose-xl h3 {
-        font-size: 1.2rem;
-        margin-top: 1.5em;
-        margin-bottom: 0.8em;
-    }
-    .prose-xl h4 {
-        font-size: 1rem;
-        margin-top: 1.5em;
-        margin-bottom: 0.8em;
+    .prose h3 {
+        font-size: 1.125rem;
     }
 </style>
 {% endblock %}
@@ -86,7 +67,7 @@
     </aside>
 
     <main class="w-full sm:w-2/3 md:w-3/4 lg:w-4/5">
-        <article class="prose lg:prose-xl max-w-none bg-base-100 p-6 sm:p-8 rounded-box shadow-lg">
+        <article class="prose max-w-none bg-base-100 p-6 sm:p-8 rounded-box shadow-lg">
             {{ content|safe }}
         </article>
     </main>
