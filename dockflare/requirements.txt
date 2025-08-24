@@ -57,5 +57,5 @@ wtforms==3.2.1
 
 # Help/Docs
 Markdown==3.6
-pymdown-extensions==9.0.0
-Pygments==2.14.0
+pymdown-extensions==10.16.1
+Pygments==2.19.2
