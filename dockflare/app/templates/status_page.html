@@ -78,6 +78,21 @@
                                     <a href="https://{{ display_hostname }}{% if display_path %}{{ display_path }}{% endif %}" target="_blank" rel="noopener noreferrer" title="Open https://{{ display_hostname }}{% if display_path %}{{ display_path }}{% endif %}" class="link link-hover link-primary text-sm">
                                        {{ display_hostname }}
                                    </a>
+                                   {# Cloudflare Zero Trust: link to Tunnel -> Public Hostname (uses account id + tunnel id + optional index) #}
+                                   {% set effective_tunnel_id = tunnel_state.get('id') if tunnel_state else None %}
+                                   {% set display_hostname_lc = display_hostname.lower() if display_hostname else None %}
+                                   {% set public_index = public_hostname_indices.get(display_hostname_lc) if public_hostname_indices else None %}
+                                   {% if ACCOUNT_ID_FOR_DISPLAY and effective_tunnel_id and display_hostname %}
+                                       {% if public_index is not none %}
+                                           <a href="https://one.dash.cloudflare.com/{{ ACCOUNT_ID_FOR_DISPLAY }}/networks/tunnels/{{ effective_tunnel_id }}/public-hostname/{{ display_hostname }}/{{ public_index }}" target="_blank" rel="noopener noreferrer" title="Open Cloudflare: Tunnel public-hostname ({{ display_hostname }})" class="ml-2 inline-block text-info align-middle">
+                                               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4"/><path stroke-linecap="round" stroke-linejoin="round" d="M14 4h6v6M14 10L20 4"/></svg>
+                                           </a>
+                                       {% else %}
+                                           <a href="https://one.dash.cloudflare.com/{{ ACCOUNT_ID_FOR_DISPLAY }}/networks/tunnels/{{ effective_tunnel_id }}/public-hostname/{{ display_hostname }}" target="_blank" rel="noopener noreferrer" title="Open Cloudflare: Tunnel public-hostname ({{ display_hostname }})" class="ml-2 inline-block text-info align-middle">
+                                               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4"/><path stroke-linecap="round" stroke-linejoin="round" d="M14 4h6v6M14 10L20 4"/></svg>
+                                           </a>
+                                       {% endif %}
+                                   {% endif %}
                                    {% if display_hostname and display_hostname.startswith('*.') %}
                                    <span class="badge badge-info badge-xs ml-2">wildcard</span>
                                    {% endif %}
