@@ -670,7 +670,7 @@ def version_check():
             except Exception as e_local_img:
                 logging.debug(f"Version check: failed to determine local image digest: {e_local_img}")
 
-        # Try to fetch manifest from Docker Hub (Registry v2) to get Docker-Content-Digest
+        
         try:
             token = None
             auth_url = f"https://auth.docker.io/token?service=registry.docker.io&scope=repository:{repo}:pull"
@@ -684,7 +684,7 @@ def version_check():
             r = requests.get(manifest_url, headers=headers, timeout=10)
             if r.status_code == 200:
                 remote_digest = r.headers.get('Docker-Content-Digest')
-                # attempt to parse manifest and fetch the image config blob to determine push/created timestamp
+                
                 try:
                     manifest_json = r.json()
                     config_digest = None
@@ -698,6 +698,7 @@ def version_check():
                         if r_blob.status_code == 200:
                             try:
                                 cfg_json = r_blob.json()
+                                logging.debug(f"Version check: config blob content: {json.dumps(cfg_json, indent=2)}")
                                 created = None
                                 if isinstance(cfg_json, dict):
                                     created = cfg_json.get('created')
@@ -710,11 +711,13 @@ def version_check():
                                                 created = None
                                 if created:
                                     result['remote_pushed_at'] = created
-                            except Exception:
-                                # ignore parsing errors for blob
+                            except Exception as e_blob_parse:
+                                logging.debug(f"Version check: failed to parse config blob: {e_blob_parse}")
+                                
                                 pass
-                except Exception:
-                    # ignore manifest parsing errors
+                except Exception as e_manifest_parse:
+                    logging.debug(f"Version check: failed to parse manifest: {e_manifest_parse}")
+                    
                     pass
         except Exception as e_remote:
             logging.debug(f"Version check: failed to fetch remote manifest/digest: {e_remote}")
