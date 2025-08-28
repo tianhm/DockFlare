@@ -19,6 +19,13 @@
                 <li><a href="{{ url_for('web.settings_page') }}#security">Security</a></li>
                 <li><a href="{{ url_for('web.settings_page') }}#tunnel-agent-status">Tunnel & Agent Status</a></li>
             </ul>
+            <div class="mt-4 px-2">
+                <button id="btn-check-version" class="btn btn-sm btn-outline w-full" type="button" title="Check DockFlare version">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Check version
+                </button>
+                <div id="version-check-status" class="text-xs opacity-70 mt-2 hidden"></div>
+            </div>
         </div>
     </aside>
 
@@ -453,6 +460,64 @@
     });
   } catch (err) {
     console.debug('Settings left-nav script error', err);
+  }
+})();
+</script>
+
+<script>
+(function () {
+  try {
+    const btn = document.getElementById('btn-check-version');
+    const status = document.getElementById('version-check-status');
+    if (!btn || !status) return;
+
+    function renderMessage(html) {
+      status.innerHTML = html;
+      status.classList.remove('hidden');
+    }
+
+    btn.addEventListener('click', async function () {
+      btn.disabled = true;
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = '<span class="loading loading-spinner"></span> Checking...';
+      status.classList.add('hidden');
+
+      try {
+        const resp = await fetch('{{ url_for("web.version_check") }}', { credentials: 'same-origin' });
+        if (!resp.ok) throw new Error('Network response was not ok');
+        const data = await resp.json();
+
+        if (data.method === 'digest') {
+          if (data.up_to_date) {
+            renderMessage('<span class="text-success">Up to date — running the same image as {{ config.CLOUDFLARED_IMAGE if false else "" }}</span>');
+          } else {
+            let repoPart = data.repo ? `${data.repo}:${data.tag || 'stable'}` : '';
+            let cmd = repoPart ? `docker pull ${data.repo}:${data.tag || 'stable'} && docker compose restart dockflare` : 'docker pull alplat/dockflare:stable && docker compose restart dockflare';
+            renderMessage(`<span class="text-warning">Update available</span><div class="mt-1">Run: <code class="text-xs">${cmd}</code></div>`);
+          }
+        } else if (data.method === 'version') {
+          if (data.up_to_date) {
+            renderMessage('<span class="text-success">Up to date (APP_VERSION matches latest release).</span>');
+          } else if (data.latest) {
+            renderMessage(`<span class="text-warning">Latest: ${data.latest} · Current: ${data.current}</span><div class="mt-1">See the <a href="https://github.com/ChrispyBacon-dev/DockFlare/releases" target="_blank" rel="noopener noreferrer">release notes</a> for upgrade instructions.</div>`);
+          } else {
+            renderMessage('<span class="text-muted">Could not determine latest version.</span>');
+          }
+        } else if (data.error) {
+          renderMessage(`<span class="text-error">Version check error: ${String(data.error)}</span>`);
+        } else {
+          renderMessage('<span class="text-muted">Could not determine version status.</span>');
+        }
+      } catch (err) {
+        console.debug('Version check failed', err);
+        renderMessage('<span class="text-error">Version check failed (network or server error).</span>');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+    });
+  } catch (e) {
+    console.debug('Version check script error', e);
   }
 })();
 </script>
