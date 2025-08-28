@@ -24,6 +24,7 @@ from datetime import datetime, timezone
 import traceback 
 import json
 import io
+import requests
 from flask import send_file
 from app.core import access_manager
 from urllib.parse import urlparse, urlunparse 
@@ -585,6 +586,143 @@ def tunnel_dns_records(tunnel_id):
 def ping():
     return jsonify({ "status": "ok", "timestamp": int(time.time()), "version": config.APP_VERSION, 
                      "protocol": request.environ.get('wsgi.url_scheme', 'unknown')})
+
+@bp.route('/version/check')
+@login_required
+def version_check():
+    """
+    Check whether the running DockFlare image matches the remote tag (digest comparison).
+    Fallback to comparing APP_VERSION to GitHub latest release tag when digest method is not possible.
+    Returns JSON:
+      - method: "digest" or "version"
+      - up_to_date: true/false/null
+      - local_digest, remote_digest (when method == "digest")
+      - current, latest (when method == "version")
+      - repo, tag (when available)
+      - error (when any internal error occurred)
+    """
+    repo = os.getenv('DOCKER_REPO', 'alplat/dockflare')
+    tag = os.getenv('DOCKER_TAG', 'stable')
+    cache_key = f"version_check:{repo}:{tag}"
+    now = time.time()
+
+    # simple in-memory cache attached to app to limit upstream requests
+    cache = getattr(current_app, '_version_check_cache', {})
+    cached = cache.get(cache_key)
+    if cached and cached.get('expires_at', 0) > now:
+        return jsonify(cached['data'])
+
+    result = {"method": None, "up_to_date": None}
+    local_digest = None
+    remote_digest = None
+
+    try:
+        # Attempt to determine local container id (works when running in a container)
+        container_id = None
+        try:
+            with open('/proc/self/cgroup', 'r') as f:
+                cg = f.read()
+            import re
+            m = re.search(r'([0-9a-f]{64})', cg)
+            if m:
+                container_id = m.group(1)
+        except Exception:
+            container_id = None
+
+        if not container_id:
+            # fallback to HOSTNAME env (often the short container id)
+            container_id = os.getenv('HOSTNAME')
+
+        # If docker client available, attempt to read image/digest
+        if docker_client and container_id:
+            try:
+                # Try exact 64-char id first, otherwise attempt by short id/hostname
+                try:
+                    container = docker_client.containers.get(container_id)
+                except Exception:
+                    # try to find by matching short id
+                    containers = docker_client.containers.list(all=True)
+                    container = None
+                    for c in containers:
+                        if c.id.startswith(container_id) or c.name == container_id:
+                            container = c
+                            break
+                    if container is None:
+                        raise RuntimeError("Local Docker container not found via docker client.")
+                image = container.image
+                attrs = getattr(image, 'attrs', {}) or {}
+                repo_digests = attrs.get('RepoDigests') or []
+                if repo_digests:
+                    # Prefer the digest entry that matches configured repo if present
+                    matched = None
+                    for rd in repo_digests:
+                        # rd example: "alplat/dockflare@sha256:..."
+                        if rd.startswith(repo + "@"):
+                            matched = rd
+                            break
+                    if not matched:
+                        matched = repo_digests[0]
+                    if "@" in matched:
+                        local_digest = matched.split("@", 1)[1]
+                else:
+                    # fallback to image id (sha256:...)
+                    local_digest = getattr(image, 'id', None)
+            except Exception as e_local_img:
+                logging.debug(f"Version check: failed to determine local image digest: {e_local_img}")
+
+        # Try to fetch manifest from Docker Hub (Registry v2) to get Docker-Content-Digest
+        try:
+            token = None
+            auth_url = f"https://auth.docker.io/token?service=registry.docker.io&scope=repository:{repo}:pull"
+            r_tok = requests.get(auth_url, timeout=10)
+            if r_tok.status_code == 200:
+                token = r_tok.json().get('token')
+            headers = {'Accept': 'application/vnd.docker.distribution.manifest.v2+json'}
+            if token:
+                headers['Authorization'] = f"Bearer {token}"
+            manifest_url = f"https://registry-1.docker.io/v2/{repo}/manifests/{tag}"
+            r = requests.get(manifest_url, headers=headers, timeout=10)
+            if r.status_code == 200:
+                remote_digest = r.headers.get('Docker-Content-Digest')
+        except Exception as e_remote:
+            logging.debug(f"Version check: failed to fetch remote manifest/digest: {e_remote}")
+
+        if local_digest and remote_digest:
+            result['method'] = 'digest'
+            result['local_digest'] = local_digest
+            result['remote_digest'] = remote_digest
+            result['repo'] = repo
+            result['tag'] = tag
+            result['up_to_date'] = (local_digest == remote_digest)
+        else:
+            # Fallback: compare APP_VERSION against GitHub releases latest tag
+            result['method'] = 'version'
+            result['current'] = config.APP_VERSION
+            latest = None
+            try:
+                gh_url = 'https://api.github.com/repos/ChrispyBacon-dev/DockFlare/releases/latest'
+                rgh = requests.get(gh_url, timeout=10, headers={'Accept': 'application/vnd.github.v3+json'})
+                if rgh.status_code == 200:
+                    latest = rgh.json().get('tag_name') or rgh.json().get('name')
+            except Exception as e_gh:
+                logging.debug(f"Version check: failed to fetch GitHub latest release: {e_gh}")
+            result['latest'] = latest
+            result['up_to_date'] = (latest is not None and result['current'] == latest)
+
+    except Exception as e:
+        logging.error(f"Error while performing version check: {e}", exc_info=True)
+        result['error'] = str(e)
+        result['up_to_date'] = None
+
+    # Store in cache for TTL
+    try:
+        ttl = int(os.getenv('VERSION_CHECK_CACHE_TTL_SECONDS', '21600'))
+    except Exception:
+        ttl = 21600
+    cache[cache_key] = {'data': result, 'expires_at': now + ttl}
+    setattr(current_app, '_version_check_cache', cache)
+
+    return jsonify(result)
 
 @bp.route('/debug')
 def debug_info():
