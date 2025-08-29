@@ -606,7 +606,7 @@ def version_check():
     cache_key = f"version_check:{repo}:{tag}"
     now = time.time()
 
-    # simple in-memory cache attached to app to limit upstream requests
+    
     cache = getattr(current_app, '_version_check_cache', {})
     cached = cache.get(cache_key)
     if cached and cached.get('expires_at', 0) > now:
@@ -617,7 +617,7 @@ def version_check():
     remote_digest = None
 
     try:
-        # Attempt to determine local container id (works when running in a container)
+       
         container_id = None
         try:
             with open('/proc/self/cgroup', 'r') as f:
@@ -630,17 +630,17 @@ def version_check():
             container_id = None
 
         if not container_id:
-            # fallback to HOSTNAME env (often the short container id)
+           
             container_id = os.getenv('HOSTNAME')
 
-        # If docker client available, attempt to read image/digest
+        
         if docker_client and container_id:
             try:
-                # Try exact 64-char id first, otherwise attempt by short id/hostname
+                
                 try:
                     container = docker_client.containers.get(container_id)
                 except Exception:
-                    # try to find by matching short id
+                   
                     containers = docker_client.containers.list(all=True)
                     container = None
                     for c in containers:
@@ -653,10 +653,10 @@ def version_check():
                 attrs = getattr(image, 'attrs', {}) or {}
                 repo_digests = attrs.get('RepoDigests') or []
                 if repo_digests:
-                    # Prefer the digest entry that matches configured repo if present
+                    
                     matched = None
                     for rd in repo_digests:
-                        # rd example: "alplat/dockflare@sha256:..."
+                        
                         if rd.startswith(repo + "@"):
                             matched = rd
                             break
@@ -665,7 +665,7 @@ def version_check():
                     if "@" in matched:
                         local_digest = matched.split("@", 1)[1]
                 else:
-                    # fallback to image id (sha256:...)
+                    
                     local_digest = getattr(image, 'id', None)
             except Exception as e_local_img:
                 logging.debug(f"Version check: failed to determine local image digest: {e_local_img}")
@@ -691,7 +691,7 @@ def version_check():
                     if isinstance(manifest_json, dict):
                         cfg = manifest_json.get('config') or {}
                         config_digest = cfg.get('digest')
-                    # If config digest exists, fetch blob to read 'created' timestamp
+                    
                     if config_digest:
                         blob_url = f"https://registry-1.docker.io/v2/{repo}/blobs/{config_digest}"
                         r_blob = requests.get(blob_url, headers=headers, timeout=10)
@@ -730,7 +730,7 @@ def version_check():
             result['tag'] = tag
             result['up_to_date'] = (local_digest == remote_digest)
         else:
-            # Fallback: compare APP_VERSION against GitHub releases latest tag
+            
             result['method'] = 'version'
             result['current'] = config.APP_VERSION
             latest = None
@@ -738,7 +738,10 @@ def version_check():
                 gh_url = 'https://api.github.com/repos/ChrispyBacon-dev/DockFlare/releases/latest'
                 rgh = requests.get(gh_url, timeout=10, headers={'Accept': 'application/vnd.github.v3+json'})
                 if rgh.status_code == 200:
-                    latest = rgh.json().get('tag_name') or rgh.json().get('name')
+                    latest_release_data = rgh.json()
+                    latest = latest_release_data.get('tag_name') or latest_release_data.get('name')
+                    if not result.get('remote_pushed_at'):
+                        result['remote_pushed_at'] = latest_release_data.get('published_at')
             except Exception as e_gh:
                 logging.debug(f"Version check: failed to fetch GitHub latest release: {e_gh}")
             result['latest'] = latest
@@ -749,7 +752,7 @@ def version_check():
         result['error'] = str(e)
         result['up_to_date'] = None
 
-    # Store in cache for TTL
+    
     try:
         ttl = int(os.getenv('VERSION_CHECK_CACHE_TTL_SECONDS', '21600'))
     except Exception:
