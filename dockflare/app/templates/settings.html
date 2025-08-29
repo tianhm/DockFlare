@@ -391,7 +391,7 @@
 {{ super() }}
 <script>
 (function () {
-  // Active link highlighting for settings left nav
+  
   try {
     const nav = document.getElementById('settings-left-nav');
     if (!nav) return;
@@ -404,8 +404,7 @@
     });
 
     const sections = links.map(a => document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean);
-
-    // If IntersectionObserver available, use it
+  
     if ('IntersectionObserver' in window && sections.length) {
       const observer = new IntersectionObserver(entries => {
         entries.forEach(entry => {
@@ -421,7 +420,7 @@
 
       sections.forEach(s => observer.observe(s));
     } else {
-      // Fallback: on scroll choose the nearest section
+
       function onScroll() {
         const scrollY = window.scrollY || window.pageYOffset;
         let best = null;
@@ -439,18 +438,18 @@
         }
       }
       window.addEventListener('scroll', onScroll, { passive: true });
-      // initial
+
       setTimeout(onScroll, 200);
     }
 
-    // Improve keyboard + click behavior: collapse any open details in the page when navigating
+
     links.forEach(a => {
       a.addEventListener('click', (e) => {
-        // allow the hash navigation; but ensure focus is applied
+
         const href = a.getAttribute('href');
         const target = document.querySelector(href);
         if (target) {
-          // small timeout to ensure scrollIntoView completes, then focus
+
           setTimeout(() => {
             target.setAttribute('tabindex', '-1');
             target.focus({ preventScroll: true });
@@ -497,7 +496,7 @@
             if (data.remote_pushed_at) {
                 try {
                     const d = new Date(data.remote_pushed_at);
-                    pushedAt = `<div class="mt-1 text-xs">Latest version pushed on: ${d.toLocaleDateString()}</div>`;
+                    pushedAt = `<div class="mt-1 text-xs">Latest version from: ${d.toLocaleString()}</div>`;
                 } catch(e) {}
             }
             renderMessage(`<span class="text-warning">Update available</span><div class="mt-1">Run: <code class="text-xs">${cmd}</code></div>${pushedAt}`);
