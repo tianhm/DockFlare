@@ -26,7 +26,7 @@
   <a href="https://dockflare.app">🌐 Website</a> ·
   <a href="https://dockflare.app/docs">📚 Documentation</a> ·
   <a href="https://github.com/ChrispyBacon-dev/DockFlare/issues">🐛 Report a Bug</a> ·
-  <a href="https://github.com/sponsors/ChrispyBacon-dev">❤️ Sponsor</a>
+  <a href="https://ko-fi.com/chrispybacon">❤️ Sponsor</a>
 </p>
 
 <p align="center">
