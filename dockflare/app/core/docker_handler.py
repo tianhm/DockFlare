@@ -268,6 +268,10 @@ def process_container_start(container_obj):
                         logging.info(f"DOCKER_HANDLER: Rule {rule_key} is manual, skipping for {container_name_val}.")
                         continue
 
+                    if existing_rule and existing_rule.get("rule_ui_override", False):
+                        logging.info(f"DOCKER_HANDLER: Rule {rule_key} is UI-overridden, skipping Docker updates for {container_name_val}.")
+                        continue
+
                     original_existing_rule_for_comparison = copy.deepcopy(existing_rule) if existing_rule else None
                     
                     if existing_rule:
@@ -337,6 +341,7 @@ def process_container_start(container_obj):
                             "access_policy_type": None,
                             "access_app_config_hash": None,
                             "access_policy_ui_override": False,
+                            "rule_ui_override": False,
                             "source": "docker",
                             "access_group_id": None,
                             "tunnel_id": master_tunnel_id,

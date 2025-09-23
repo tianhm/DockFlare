@@ -264,6 +264,7 @@ def reconcile_agent_report(agent_id, reported_containers):
                             "access_policy_type": None,
                             "access_app_config_hash": None,
                             "access_policy_ui_override": False,
+                            "rule_ui_override": False,
                             "source": "agent",
                             "agent_id": agent_id,
                             "access_group_id": None,
@@ -389,7 +390,7 @@ def _run_reconciliation_logic():
                         "origin_server_name": desired_details.get("origin_server_name"),
                         "http_host_header": desired_details.get("http_host_header"),
                         "access_app_id": None, "access_policy_type": None, "access_app_config_hash": None,
-                        "access_policy_ui_override": False, "source": "docker",
+                        "access_policy_ui_override": False, "rule_ui_override": False, "source": "docker",
                         "access_group_id": None,
                         "tunnel_name": master_tunnel_name
                     }

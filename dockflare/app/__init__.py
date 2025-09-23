@@ -105,6 +105,16 @@ def create_app():
     login_manager.login_view = 'auth.login'
     login_manager.login_message_category = "info"
 
+    @login_manager.unauthorized_handler
+    def unauthorized():
+        """Handle unauthorized access - return JSON for API requests, redirect for web requests."""
+        from flask import request, jsonify, redirect, url_for
+        # Check if this is an API request
+        if request.path.startswith('/api/'):
+            return jsonify({"status": "error", "message": "authentication_required"}), 401
+        # For web requests, redirect to login page
+        return redirect(url_for('auth.login'))
+
     @login_manager.user_loader
     def load_user(user_id):
         """Load user from the config for session management."""

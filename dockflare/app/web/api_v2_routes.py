@@ -75,8 +75,12 @@ def _enforce_master_api_key():
         return
     if request.method == 'OPTIONS':
         return
+
+    # For agent endpoints in allowlist, skip all authentication (including Flask-Login)
     if endpoint in _AGENT_ENDPOINT_ALLOWLIST:
         return
+
+    # For all other API endpoints, ensure proper API authentication
     expected_key = current_app.config.get('MASTER_API_KEY') or config.MASTER_API_KEY
     if not expected_key:
         logging.warning("MASTER_AUTH: Master API key not configured; rejecting %s", endpoint)
@@ -495,6 +499,7 @@ def create_manual_rule_api():
                 "access_policy_type": None,
                 "access_app_config_hash": None,
                 "access_policy_ui_override": False,
+                "rule_ui_override": False,
                 "source": "manual",
                 "access_group_id": access_groups or None,
                 "tunnel_id": tunnel_id,
@@ -723,6 +728,7 @@ def process_agent_container_start(payload, agent_id):
                             "access_policy_type": None,
                             "access_app_config_hash": None,
                             "access_policy_ui_override": False,
+                            "rule_ui_override": False,
                             "source": "agent",
                             "agent_id": agent_id,
                             "tunnel_name": assigned_tunnel_name,

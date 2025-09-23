@@ -1262,6 +1262,7 @@ def ui_add_manual_rule_route():
             "access_app_config_hash": access_app_config_hash,
             "access_group_id": access_group_id,
             "access_policy_ui_override": True,
+            "rule_ui_override": False,
             "tunnel_id": target_tunnel_id,
             "tunnel_name": target_tunnel_name
         }
@@ -1277,6 +1278,49 @@ def ui_add_manual_rule_route():
         cloudflared_agent_state["last_action_status"] = f"Success: Manual rule for {full_hostname} added/updated."
     else:
         cloudflared_agent_state["last_action_status"] = "Error: Failed to update Cloudflare tunnel config."
+
+    return redirect(url_for('web.status_page'))
+
+@bp.route('/ui/docker-rules/revert', methods=['POST'])
+def ui_revert_docker_rule_route():
+    """
+    Reverts a UI-overridden Docker rule back to label-driven configuration.
+    """
+    if not docker_client:
+        cloudflared_agent_state["last_action_status"] = "Error: Docker client unavailable."
+        return redirect(url_for('web.status_page'))
+
+    rule_key = request.form.get('rule_key')
+    if not rule_key:
+        cloudflared_agent_state["last_action_status"] = "Error: Missing rule key for revert."
+        return redirect(url_for('web.status_page'))
+
+    with state_lock:
+        existing = managed_rules.get(rule_key)
+        if not existing:
+            cloudflared_agent_state["last_action_status"] = f"Error: Rule '{rule_key}' not found."
+            return redirect(url_for('web.status_page'))
+
+        if existing.get("source") != "docker":
+            cloudflared_agent_state["last_action_status"] = f"Error: Rule '{rule_key}' is not a Docker rule."
+            return redirect(url_for('web.status_page'))
+
+        if not existing.get("rule_ui_override", False):
+            cloudflared_agent_state["last_action_status"] = f"Info: Rule '{rule_key}' is not UI-overridden."
+            return redirect(url_for('web.status_page'))
+
+        # Revert the rule back to Docker label control
+        existing["rule_ui_override"] = False
+        save_state()
+
+        cloudflared_agent_state["last_action_status"] = f"Success: Rule '{rule_key}' reverted to Docker label control. Reconciliation will update it based on container labels."
+
+    # Trigger reconciliation to pick up Docker labels
+    try:
+        from app.core.reconciler import reconcile_state_threaded
+        reconcile_state_threaded()
+    except Exception as e:
+        logging.error(f"Failed to trigger reconciliation after Docker rule revert: {e}")
 
     return redirect(url_for('web.status_page'))
 
@@ -1301,9 +1345,9 @@ def ui_edit_manual_rule_route():
         if not existing:
             cloudflared_agent_state["last_action_status"] = f"Error: Rule '{rule_key}' not found."
             return redirect(url_for('web.status_page'))
-        if existing.get("source") == "docker":
-            cloudflared_agent_state["last_action_status"] = f"Error: Rule '{rule_key}' is Docker-managed and cannot be edited via UI."
-            return redirect(url_for('web.status_page'))
+
+        # Allow editing Docker rules but mark them as UI-overridden
+        is_docker_rule = existing.get("source") == "docker"
     
     subdomain_input = request.form.get('edit_subdomain', '').strip()
     domain_name_input = request.form.get('edit_domain_name', '').strip()
@@ -1442,6 +1486,7 @@ def ui_edit_manual_rule_route():
             "access_app_config_hash": access_app_config_hash,
             "access_group_id": access_group_id,
             "access_policy_ui_override": True,
+            "rule_ui_override": is_docker_rule,
             "source": existing.get("source", "manual")
         }
 

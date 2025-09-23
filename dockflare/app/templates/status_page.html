@@ -189,6 +189,9 @@
                                         {% if details.access_policy_ui_override and details.source != 'manual' %}
                                             <span class="badge badge-warning badge-xs ml-2 animate-pulse" title="This policy is managed by the UI and overrides container labels.">UI Override</span>
                                         {% endif %}
+                                        {% if details.rule_ui_override and details.source == 'docker' %}
+                                            <span class="badge badge-error badge-xs ml-2 animate-pulse" title="This Docker rule has been overridden via UI and no longer reflects container labels.">Rule UI Override</span>
+                                        {% endif %}
                                     </td>
                                     <td class="p-3 whitespace-nowrap text-sm policy-actions-cell" style="min-width: 180px;">
                                         <div class="flex items-center space-x-1 sm:space-x-2">
@@ -201,6 +204,13 @@
                                             <form action="{{ url_for('web.revert_access_policy_to_labels', hostname=hostname) }}" method="POST" onsubmit="return confirm('Revert policy for {{ display_hostname }} to be managed by labels/defaults?');" class="protocol-aware-form inline-block">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn btn-xs btn-warning btn-outline" title="Revert to Label/Default Policy">Revert</button>
+                                            </form>
+                                            {% endif %}
+                                            {% if details.rule_ui_override and details.source == 'docker' %}
+                                            <form action="{{ url_for('web.ui_revert_docker_rule_route') }}" method="POST" onsubmit="return confirm('Revert rule for {{ display_hostname }} to be managed by Docker labels?');" class="protocol-aware-form inline-block">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="rule_key" value="{{ hostname }}">
+                                                <button type="submit" class="btn btn-xs btn-error btn-outline" title="Revert to Docker Label Control">Revert to Labels</button>
                                             </form>
                                             {% endif %}
                                         </div>

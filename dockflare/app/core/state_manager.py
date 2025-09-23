@@ -128,6 +128,7 @@ def load_state():
                 rule_copy.setdefault("access_policy_type", None)
                 rule_copy.setdefault("access_app_config_hash", None)
                 rule_copy.setdefault("access_policy_ui_override", False)
+                rule_copy.setdefault("rule_ui_override", False)
                 rule_copy.setdefault("source", "docker")
                 rule_copy.setdefault("path", None)
                 rule_copy.setdefault("http_host_header", None)
@@ -197,6 +198,7 @@ def save_state():
                 "access_policy_type": rule.get("access_policy_type"),
                 "access_app_config_hash": rule.get("access_app_config_hash"),
                 "access_policy_ui_override": rule.get("access_policy_ui_override", False),
+                "rule_ui_override": rule.get("rule_ui_override", False),
                 "source": rule.get("source", "docker"),
                 "access_group_id": rule.get("access_group_id"),
                 "tunnel_id": rule.get("tunnel_id"),
@@ -355,7 +357,8 @@ def serialize_managed_rule(rule_key: str, rule: Dict[str, Any]) -> Dict[str, Any
         "tunnel_id": rule.get("tunnel_id"),
         "tunnel_name": rule.get("tunnel_name"),
         "access_policy_type": rule.get("access_policy_type"),
-        "access_policy_ui_override": rule.get("access_policy_ui_override", False)
+        "access_policy_ui_override": rule.get("access_policy_ui_override", False),
+        "rule_ui_override": rule.get("rule_ui_override", False)
     }
 
 
