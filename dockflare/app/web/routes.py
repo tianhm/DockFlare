@@ -50,7 +50,8 @@ from app.core.cloudflare_api import (
     get_zone_id_from_name,
     get_zone_details_by_id,
     list_account_zones,
-    delete_tunnel_via_api
+    delete_tunnel_via_api,
+    get_tunnel_name_by_id
 )
 from app.core.access_manager import (
     check_for_tld_access_policy,
@@ -1074,7 +1075,13 @@ def ui_add_manual_rule_route():
             return redirect(url_for('web.status_page'))
         target_tunnel_name = matching_tunnel.get("name") or "Unnamed Tunnel"
     else:
-        target_tunnel_name = tunnel_state.get("name") or "Default Tunnel"
+        target_tunnel_name = tunnel_state.get("name")
+        if not target_tunnel_name or target_tunnel_name == "dockflare-tunnel":
+            api_tunnel_name = get_tunnel_name_by_id(target_tunnel_id)
+            if api_tunnel_name:
+                target_tunnel_name = api_tunnel_name
+            else:
+                target_tunnel_name = "Default Tunnel"
 
     subdomain_input = request.form.get('manual_subdomain', '').strip()
     domain_name_input = request.form.get('manual_domain_name', '').strip()

@@ -52,9 +52,17 @@ def initialize_tunnel():
                 tunnel_id = config.EXTERNAL_TUNNEL_ID
                 logging.info(f"Using external tunnel ID: {tunnel_id}")
                 tunnel_state["id"] = tunnel_id
+                tunnel_state["name"] = tunnel_name or "External Tunnel"
                 tunnel_state["token"] = None
                 tunnel_state["status_message"] = "Using external tunnel to manage DNS and inbound routes."
                 logging.info(f"External tunnel (ID: {tunnel_id}) initialized for DNS and routes.")
+
+                # Update tunnel names for existing rules after tunnel initialization
+                try:
+                    from app.core.state_manager import update_tunnel_names_after_initialization
+                    update_tunnel_names_after_initialization()
+                except Exception as e:
+                    logging.warning(f"Failed to update tunnel names after initialization: {e}")
                 return
             else:
                 logging.warning("USE_EXTERNAL_CLOUDFLARED is true but EXTERNAL_TUNNEL_ID is not provided.")
@@ -77,10 +85,18 @@ def initialize_tunnel():
 
             if tunnel_id and token:
                 tunnel_state["id"] = tunnel_id
+                tunnel_state["name"] = tunnel_name
                 tunnel_state["token"] = token
                 tunnel_state["status_message"] = "Tunnel setup complete (using API)."
                 tunnel_state["error"] = None
                 logging.info(f"Tunnel '{tunnel_name}' initialized. ID: {tunnel_id}")
+
+                # Update tunnel names for existing rules after tunnel initialization
+                try:
+                    from app.core.state_manager import update_tunnel_names_after_initialization
+                    update_tunnel_names_after_initialization()
+                except Exception as e:
+                    logging.warning(f"Failed to update tunnel names after initialization: {e}")
             elif not tunnel_state.get("error"):
                 tunnel_state["status_message"] = "Tunnel initialization failed."
                 tunnel_state["error"] = "Failed to find/create tunnel or get token."

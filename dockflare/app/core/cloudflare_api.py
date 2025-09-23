@@ -628,6 +628,24 @@ def get_all_account_cloudflare_tunnels(force_refresh=False):
     logging.info(f"Returning {len(filtered_tunnels)} tunnels after client-side status check for relevant statuses.")
     return filtered_tunnels
 
+def get_tunnel_name_by_id(tunnel_id):
+    """
+    Get the name of a tunnel by its ID.
+    Returns the tunnel name if found, None otherwise.
+    """
+    if not tunnel_id:
+        return None
+
+    try:
+        tunnels = get_all_account_cloudflare_tunnels()
+        for tunnel in tunnels or []:
+            if tunnel.get("id") == tunnel_id:
+                return tunnel.get("name")
+    except Exception as e:
+        logging.warning(f"Error looking up tunnel name for ID {tunnel_id}: {e}")
+
+    return None
+
 def delete_tunnel_via_api(tunnel_id):
     """
     Delete a Cloudflare tunnel by ID.

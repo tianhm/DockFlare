@@ -220,6 +220,14 @@ def process_container_start(container_obj):
             master_tunnel_id = tunnel_state.get("id") if not config.USE_EXTERNAL_CLOUDFLARED else config.EXTERNAL_TUNNEL_ID
             master_tunnel_name = tunnel_state.get("name")
 
+            if not master_tunnel_name or master_tunnel_name == "dockflare-tunnel":
+                from app.core.cloudflare_api import get_tunnel_name_by_id
+                if master_tunnel_id:
+                    api_tunnel_name = get_tunnel_name_by_id(master_tunnel_id)
+                    if api_tunnel_name:
+                        master_tunnel_name = api_tunnel_name
+                        tunnel_state["name"] = api_tunnel_name
+
             for config_item in hostnames_to_process:
                 hostname = config_item["hostname"]
                 service = config_item["service"]

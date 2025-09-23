@@ -103,9 +103,10 @@ def load_state():
             )
 
             migrated_count = 0
+            tunnel_name_migration_count = 0
             for key, rule_data in rules_to_load.items():
                 rule_copy = rule_data.copy()
-                
+
                 final_key = key
                 if '|' not in key:
                     hostname_from_key = key
@@ -121,7 +122,7 @@ def load_state():
                     rule_copy["delete_at"] = _deserialize_datetime(delete_at_val)
                 elif not isinstance(delete_at_val, (datetime, type(None))):
                     rule_copy["delete_at"] = None
-                
+
                 rule_copy.setdefault("zone_id", None)
                 rule_copy.setdefault("access_app_id", None)
                 rule_copy.setdefault("access_policy_type", None)
@@ -133,11 +134,21 @@ def load_state():
                 rule_copy.setdefault("access_group_id", None)
                 rule_copy.setdefault("tunnel_id", None)
                 rule_copy.setdefault("zone_name", None)
-                
+
+                tunnel_name = rule_copy.get("tunnel_name")
+                if not tunnel_name or tunnel_name == "dockflare-tunnel":
+                    tunnel_name_migration_count += 1
+                    logging.debug(f"Rule '{final_key}' missing or has default tunnel name, will be updated later")
+                rule_copy.setdefault("tunnel_name", None)
+
                 managed_rules[final_key] = rule_copy
 
+            migration_needed = migrated_count > 0 or tunnel_name_migration_count > 0
             if migrated_count > 0:
                 logging.info(f"LOAD_STATE: Migrated {migrated_count} rules to the new key format.")
+            if tunnel_name_migration_count > 0:
+                logging.info(f"LOAD_STATE: Found {tunnel_name_migration_count} rules with missing/default tunnel names, will update after tunnel initialization.")
+            if migration_needed:
                 save_state()
             
             logging.info(f"LOAD_STATE: Loaded {len(managed_rules)} rules. managed_rules ID after populating: {id(managed_rules)}")
@@ -354,3 +365,46 @@ def get_services_snapshot() -> List[Dict[str, Any]]:
             serialize_managed_rule(rule_key, rule.copy())
             for rule_key, rule in managed_rules.items()
         ]
+
+def update_tunnel_names_after_initialization():
+    """
+    Update tunnel names for rules that have missing or default tunnel names.
+    This is called after tunnel initialization to fix migration issues.
+    """
+    from app import tunnel_state
+    from app.core.cloudflare_api import get_tunnel_name_by_id
+
+    updated_count = 0
+
+    with state_lock:
+        master_tunnel_id = tunnel_state.get("id")
+        master_tunnel_name = tunnel_state.get("name")
+
+        if not master_tunnel_id:
+            logging.debug("No master tunnel ID available, skipping tunnel name updates")
+            return updated_count
+
+        for rule_key, rule in managed_rules.items():
+            rule_tunnel_id = rule.get("tunnel_id")
+            current_tunnel_name = rule.get("tunnel_name")
+
+            if not current_tunnel_name or current_tunnel_name == "dockflare-tunnel":
+                new_tunnel_name = None
+
+                if rule_tunnel_id == master_tunnel_id and master_tunnel_name:
+                    new_tunnel_name = master_tunnel_name
+                elif rule_tunnel_id:
+                    api_tunnel_name = get_tunnel_name_by_id(rule_tunnel_id)
+                    if api_tunnel_name:
+                        new_tunnel_name = api_tunnel_name
+
+                if new_tunnel_name and new_tunnel_name != current_tunnel_name:
+                    rule["tunnel_name"] = new_tunnel_name
+                    updated_count += 1
+                    logging.debug(f"Updated tunnel name for rule '{rule_key}': '{current_tunnel_name}' -> '{new_tunnel_name}'")
+
+        if updated_count > 0:
+            logging.info(f"Updated tunnel names for {updated_count} rules after tunnel initialization")
+            save_state()
+
+    return updated_count
