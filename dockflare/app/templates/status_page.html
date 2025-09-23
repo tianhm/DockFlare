@@ -79,7 +79,7 @@
                             <label for="source-filter" class="label py-0 pb-1">
                                 <span class="label-text text-xs font-semibold opacity-70">Source</span>
                             </label>
-                            <select id="source-filter" class="select select-bordered select-sm w-full">
+                            <select id="source-filter" class="select select-bordered select-xs w-full">
                                 <option value="all">All Sources</option>
                                 <option value="docker">Local Docker</option>
                                 <option value="manual">Manual Rules</option>
@@ -92,7 +92,7 @@
                             <label for="status-filter" class="label py-0 pb-1">
                                 <span class="label-text text-xs font-semibold opacity-70">Status</span>
                             </label>
-                            <select id="status-filter" class="select select-bordered select-sm w-full">
+                            <select id="status-filter" class="select select-bordered select-xs w-full">
                                 <option value="all">All Status</option>
                                 <option value="active">Active</option>
                                 <option value="pending">Pending</option>
@@ -106,7 +106,7 @@
                             <label for="tunnel-filter" class="label py-0 pb-1">
                                 <span class="label-text text-xs font-semibold opacity-70">Tunnel</span>
                             </label>
-                            <select id="tunnel-filter" class="select select-bordered select-sm w-full">
+                            <select id="tunnel-filter" class="select select-bordered select-xs w-full">
                                 <option value="all">All Tunnels</option>
                                 
                             </select>
@@ -120,7 +120,7 @@
                             <label for="sort-select" class="label py-0 pb-1">
                                 <span class="label-text text-xs font-semibold opacity-70">Sort by</span>
                             </label>
-                            <select id="sort-select" class="select select-bordered select-sm w-full">
+                            <select id="sort-select" class="select select-bordered select-xs w-full">
                                 <option value="hostname">Hostname A-Z</option>
                                 <option value="hostname-desc">Hostname Z-A</option>
                                 <option value="status">Status</option>
@@ -140,7 +140,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
                                 </span>
-                                <input type="text" id="search-input" placeholder="Search..." class="input input-bordered input-sm w-full pl-9" />
+                                <input type="text" id="search-input" placeholder="Search..." class="input input-bordered input-xs w-full pl-9" />
                             </div>
                         </div>
                     </div>
@@ -707,7 +707,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (source === 'agent') {
                 const agentCell = row.querySelector('[data-role="agent-name"]');
                 if (agentCell && agentCell.textContent.trim()) {
-                    agents.add(agentCell.textContent.trim());
+                    // Extract just the agent name part (remove "Agent: " prefix)
+                    const fullText = agentCell.textContent.trim();
+                    const agentName = fullText.startsWith('Agent: ') ? fullText.substring(7) : fullText;
+                    agents.add(agentName);
                 }
             }
         });
@@ -756,7 +759,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (sourceValue.startsWith('agent:')) {
                     const agentName = sourceValue.substring(6);
                     const agentCell = row.querySelector('[data-role="agent-name"]');
-                    sourceMatch = source === 'agent' && agentCell && agentCell.textContent.trim() === agentName;
+                    if (agentCell) {
+                        const fullText = agentCell.textContent.trim();
+                        const cellAgentName = fullText.startsWith('Agent: ') ? fullText.substring(7) : fullText;
+                        sourceMatch = source === 'agent' && cellAgentName === agentName;
+                    } else {
+                        sourceMatch = false;
+                    }
                 }
             }
 
@@ -811,8 +820,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateDisplay() {
-        allRows.forEach(row => row.style.display = 'none');
-        filteredRows.forEach(row => row.style.display = '');
+        // Clear the table body
+        tableBody.innerHTML = '';
+
+        // Add the filtered and sorted rows back
+        filteredRows.forEach(row => {
+            tableBody.appendChild(row);
+        });
     }
 
     function updateStats() {
