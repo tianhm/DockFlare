@@ -2,6 +2,120 @@
 
 {% block title %}Agent Management{% endblock %}
 
+{% block head %}
+<style>
+.fuse-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 80px;
+}
+
+.fuse-bar {
+  width: 60px;
+  height: 6px;
+  background-color: #e5e7eb;
+  border-radius: 3px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #d1d5db;
+}
+
+.fuse-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.fuse-bar.healthy .fuse-fill {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.fuse-bar.warning .fuse-fill {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.fuse-bar.critical .fuse-fill {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+  animation: pulse-critical 1s ease-in-out infinite alternate;
+}
+
+.fuse-bar.expired .fuse-fill {
+  background: #ef4444;
+  width: 0% !important;
+}
+
+.fuse-bar.offline {
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.fuse-bar.offline .fuse-fill {
+  background: #9ca3af;
+}
+
+.fuse-spark {
+  position: absolute;
+  right: -2px;
+  top: -1px;
+  width: 4px;
+  height: 8px;
+  background: radial-gradient(circle, #fbbf24, transparent);
+  border-radius: 50%;
+  opacity: 0;
+  animation: spark 2s ease-in-out infinite;
+}
+
+.fuse-bar.healthy .fuse-spark {
+  animation: spark 3s ease-in-out infinite;
+  background: radial-gradient(circle, #34d399, transparent);
+}
+
+.fuse-bar.warning .fuse-spark {
+  animation: spark 1.5s ease-in-out infinite;
+  background: radial-gradient(circle, #fbbf24, transparent);
+}
+
+.fuse-bar.critical .fuse-spark {
+  animation: spark-critical 0.8s ease-in-out infinite;
+  background: radial-gradient(circle, #f87171, transparent);
+}
+
+.fuse-bar.expired .fuse-spark,
+.fuse-bar.offline .fuse-spark {
+  display: none;
+}
+
+.fuse-label {
+  font-weight: 500;
+  text-align: center;
+  min-width: 50px;
+}
+
+@keyframes pulse-critical {
+  0% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+@keyframes spark {
+  0%, 100% { opacity: 0; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes spark-critical {
+  0%, 100% { opacity: 0; transform: scale(0.5); }
+  50% { opacity: 1; transform: scale(1.5); }
+}
+
+.fuse-container:hover .fuse-bar {
+  transform: scale(1.05);
+  transition: transform 0.2s ease;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 
 <section class="card bg-base-100 shadow-xl mb-8 sm:mb-12 transition-all duration-300 hover:shadow-2xl">
@@ -183,23 +297,55 @@
     }
   }
 
-  function timeAgo(dateString) {
-    if (!dateString) return 'Never';
-    const now = new Date();
-    const past = new Date(dateString);
-    const seconds = Math.floor((now - past) / 1000);
+  function createFuseBar(agentId, lastSeen, isOnline) {
+    if (!lastSeen || !isOnline) {
+      return `
+        <div class="fuse-container" data-agent-id="${agentId}">
+          <div class="fuse-bar offline">
+            <div class="fuse-fill" style="width: 0%"></div>
+          </div>
+          <span class="fuse-label text-xs text-error">Offline</span>
+        </div>
+      `;
+    }
 
-    let interval = seconds / 31536000;
-    if (interval > 1) return Math.floor(interval) + " years ago";
-    interval = seconds / 2592000;
-    if (interval > 1) return Math.floor(interval) + " months ago";
-    interval = seconds / 86400;
-    if (interval > 1) return Math.floor(interval) + " days ago";
-    interval = seconds / 3600;
-    if (interval > 1) return Math.floor(interval) + " hours ago";
-    interval = seconds / 60;
-    if (interval > 1) return Math.floor(interval) + " minutes ago";
-    return Math.floor(seconds) + " seconds ago";
+    const now = new Date();
+    const lastSeenTime = new Date(lastSeen);
+    const secondsSinceLastSeen = Math.floor((now - lastSeenTime) / 1000);
+    const maxAge = 30; // 30 seconds heartbeat interval
+
+    let fusePercentage = Math.max(0, Math.min(100, ((maxAge - secondsSinceLastSeen) / maxAge) * 100));
+
+    let fuseClass = 'healthy';
+    let labelText = 'Active';
+    let labelClass = 'text-success';
+
+    if (fusePercentage < 30) {
+      fuseClass = 'critical';
+      labelText = 'Critical';
+      labelClass = 'text-error';
+    } else if (fusePercentage < 70) {
+      fuseClass = 'warning';
+      labelText = 'Warning';
+      labelClass = 'text-warning';
+    }
+
+    if (secondsSinceLastSeen > maxAge) {
+      fuseClass = 'expired';
+      labelText = 'Lost';
+      labelClass = 'text-error';
+      fusePercentage = 0;
+    }
+
+    return `
+      <div class="fuse-container" data-agent-id="${agentId}" data-last-seen="${lastSeen}">
+        <div class="fuse-bar ${fuseClass}">
+          <div class="fuse-fill" style="width: ${fusePercentage}%"></div>
+          <div class="fuse-spark"></div>
+        </div>
+        <span class="fuse-label text-xs ${labelClass}">${labelText}</span>
+      </div>
+    `;
   }
 
   const getStatusBadge = (status) => {
@@ -259,7 +405,7 @@
       const healthBadge = getStatusBadge(agent.health || (agent.online ? 'connected' : 'disconnected'));
       const statusHtml = `${enrollmentBadge} ${healthBadge}`;
 
-      const lastSeenText = timeAgo(agent.last_seen);
+      const fuseBarHtml = createFuseBar(agentId, agent.last_seen, agent.online);
       const cloudflaredVersion = agent.tunnel_version || (agent.tunnel_status && agent.tunnel_status.version) || '<i>N/A</i>';
 
       const migrationStatus = agent.migration_status;
@@ -278,22 +424,77 @@
       }
 
       tr.innerHTML = `
-        <td class="p-3 whitespace-nowrap">${agentId}</td>
+        <td class="p-3 whitespace-nowrap">
+          <span class="font-mono text-sm cursor-help" title="${agentId}">${agentId.substring(0, 8)}...</span>
+        </td>
         <td class="p-3 whitespace-nowrap">${agent.display_name || '<i>N/A</i>'}</td>
         <td class="p-3 whitespace-nowrap">${agent.version || '<i>N/A</i>'}</td>
         <td class="p-3">${statusHtml}</td>
-        <td class="p-3 whitespace-nowrap">${lastSeenText}</td>
+        <td class="p-3 whitespace-nowrap">${fuseBarHtml}</td>
         <td class="p-3 whitespace-nowrap">${agent.assigned_tunnel_name || '<i>None</i>'}</td>
         <td class="p-3">${migrationHtml}${migrationStatus && (migrationStatus.has_conflicts || migrationStatus.has_orphaned) ? `<button class="btn btn-xs btn-info ml-2 btn-migration-assistant" data-agent-id="${agentId}" title="Open Migration Assistant">Resolve</button>` : ''}</td>
         <td class="p-3 whitespace-nowrap">${cloudflaredVersion}</td>
         <td class="p-3">${getTunnelStatusBadge(agent.tunnel_status)}</td>
         <td class="p-3 text-center">
-          <button class="btn btn-xs btn-primary btn-enroll" data-agent-id="${agentId}" ${agent.status === 'enrolled' && agent.assigned_tunnel_name ? 'disabled' : ''}>Enroll</button>
-          <button class="btn btn-xs btn-secondary btn-roll-key ml-1" data-agent-id="${agentId}" ${agent.status !== 'enrolled' ? 'disabled' : ''} title="Roll API Key">Roll Key</button>
-          <button class="btn btn-xs btn-info btn-trigger-migration ml-1" data-agent-id="${agentId}" ${!agent.assigned_tunnel_name ? 'disabled' : ''} title="Trigger Migration">Migration</button>
-          <button class="btn btn-xs btn-warning btn-redeploy-tunnel ml-1" data-agent-id="${agentId}" ${agent.status !== 'enrolled' ? 'disabled' : ''} title="Redeploy Tunnel Container">Redeploy</button>
-          <button class="btn btn-xs btn-ghost btn-rename-agent ml-1" data-agent-id="${agentId}" title="Rename Agent">Rename</button>
-          <button class="btn btn-xs btn-error btn-remove ml-1" data-agent-id="${agentId}">Remove</button>
+          <div class="dropdown dropdown-end">
+            <label tabindex="0" class="btn btn-ghost btn-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z" />
+              </svg>
+            </label>
+            <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+              <li ${agent.status === 'enrolled' && agent.assigned_tunnel_name ? 'class="disabled"' : ''}>
+                <a class="btn-enroll" data-agent-id="${agentId}">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 009.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+                  </svg>
+                  Enroll Agent
+                </a>
+              </li>
+              <li>
+                <a class="btn-rename-agent" data-agent-id="${agentId}">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                  </svg>
+                  Rename Agent
+                </a>
+              </li>
+              <div class="divider my-1"></div>
+              <li ${!agent.assigned_tunnel_name ? 'class="disabled"' : ''}>
+                <a class="btn-trigger-migration" data-agent-id="${agentId}">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                  </svg>
+                  Trigger Migration
+                </a>
+              </li>
+              <li ${agent.status !== 'enrolled' ? 'class="disabled"' : ''}>
+                <a class="btn-redeploy-tunnel" data-agent-id="${agentId}">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  </svg>
+                  Redeploy Tunnel
+                </a>
+              </li>
+              <li ${agent.status !== 'enrolled' ? 'class="disabled"' : ''}>
+                <a class="btn-roll-key" data-agent-id="${agentId}">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v-2.25L15.188 8.43c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+                  </svg>
+                  Roll API Key
+                </a>
+              </li>
+              <div class="divider my-1"></div>
+              <li>
+                <a class="btn-remove text-error" data-agent-id="${agentId}">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                  </svg>
+                  Remove Agent
+                </a>
+              </li>
+            </ul>
+          </div>
         </td>
       `;
 
@@ -343,7 +544,58 @@
     fetchData();
   };
 
+  const updateFuseBars = () => {
+    const fuseContainers = document.querySelectorAll('.fuse-container[data-last-seen]');
+    fuseContainers.forEach(container => {
+      const lastSeen = container.getAttribute('data-last-seen');
+      const agentId = container.getAttribute('data-agent-id');
+
+      if (!lastSeen) return;
+
+      const now = new Date();
+      const lastSeenTime = new Date(lastSeen);
+      const secondsSinceLastSeen = Math.floor((now - lastSeenTime) / 1000);
+      const maxAge = 30;
+
+      let fusePercentage = Math.max(0, Math.min(100, ((maxAge - secondsSinceLastSeen) / maxAge) * 100));
+
+      const fuseBar = container.querySelector('.fuse-bar');
+      const fuseFill = container.querySelector('.fuse-fill');
+      const fuseLabel = container.querySelector('.fuse-label');
+
+      let fuseClass = 'healthy';
+      let labelText = 'Active';
+      let labelClass = 'text-success';
+
+      if (fusePercentage < 30) {
+        fuseClass = 'critical';
+        labelText = 'Critical';
+        labelClass = 'text-error';
+      } else if (fusePercentage < 70) {
+        fuseClass = 'warning';
+        labelText = 'Warning';
+        labelClass = 'text-warning';
+      }
+
+      if (secondsSinceLastSeen > maxAge) {
+        fuseClass = 'expired';
+        labelText = 'Lost';
+        labelClass = 'text-error';
+        fusePercentage = 0;
+      }
+
+      // Update classes
+      fuseBar.className = `fuse-bar ${fuseClass}`;
+      fuseLabel.className = `fuse-label text-xs ${labelClass}`;
+      fuseLabel.textContent = labelText;
+
+      // Update fill width
+      fuseFill.style.width = `${fusePercentage}%`;
+    });
+  };
+
   setInterval(refreshData, 5000);
+  setInterval(updateFuseBars, 1000); // Update fuse bars every second
 
   const openRenameModal = (agentId) => {
     const data = window.lastFetchedData;
@@ -360,6 +612,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     fetchData();
+    updateFuseBars(); // Start fuse animations immediately
 
     document.getElementById('btn-generate-key').addEventListener('click', () => {
       document.getElementById('generated-key-container').classList.add('hidden');
@@ -397,8 +650,8 @@
     });
 
     agentsTableBody.addEventListener('click', async (e) => {
-      if (e.target.classList.contains('btn-enroll')) {
-        const agentId = e.target.getAttribute('data-agent-id');
+      if (e.target.closest('.btn-enroll')) {
+        const agentId = e.target.closest('.btn-enroll').getAttribute('data-agent-id');
         document.getElementById('enroll-agent-id').value = agentId;
         document.getElementById('form-enroll-agent').reset();
 
@@ -423,8 +676,8 @@
         }
 
         document.getElementById('modal-enroll-agent').showModal();
-      } else if (e.target.classList.contains('btn-remove')) {
-        const agentId = e.target.getAttribute('data-agent-id');
+      } else if (e.target.closest('.btn-remove')) {
+        const agentId = e.target.closest('.btn-remove').getAttribute('data-agent-id');
         if (confirm(`Are you sure you want to remove agent "${agentId}"? This will also delete the associated Cloudflare tunnel and all related resources.`)) {
           const success = await apiCall(`/api/v2/agents/${agentId}/remove`, 'POST');
           if (success) {
@@ -432,8 +685,8 @@
             fetchData();
           }
         }
-      } else if (e.target.classList.contains('btn-roll-key')) {
-        const agentId = e.target.getAttribute('data-agent-id');
+      } else if (e.target.closest('.btn-roll-key')) {
+        const agentId = e.target.closest('.btn-roll-key').getAttribute('data-agent-id');
         if (confirm(`Are you sure you want to roll the API key for agent "${agentId}"? The agent will need to be updated with the new key.`)) {
           const result = await apiCall(`/api/v2/agents/${agentId}/roll-key`, 'POST');
           if (result && result.new_key) {
@@ -441,8 +694,8 @@
             fetchData();
           }
         }
-      } else if (e.target.classList.contains('btn-trigger-migration')) {
-        const agentId = e.target.getAttribute('data-agent-id');
+      } else if (e.target.closest('.btn-trigger-migration')) {
+        const agentId = e.target.closest('.btn-trigger-migration').getAttribute('data-agent-id');
         if (confirm(`Trigger migration analysis for agent "${agentId}"? This will analyze the assigned tunnel for migration opportunities.`)) {
           const result = await apiCall(`/api/v2/agents/${agentId}/trigger-migration`, 'POST');
           if (result && result.status === 'success') {
@@ -450,8 +703,8 @@
             fetchData();
           }
         }
-      } else if (e.target.classList.contains('btn-redeploy-tunnel')) {
-        const agentId = e.target.getAttribute('data-agent-id');
+      } else if (e.target.closest('.btn-redeploy-tunnel')) {
+        const agentId = e.target.closest('.btn-redeploy-tunnel').getAttribute('data-agent-id');
         if (confirm(`Redeploy tunnel container for agent "${agentId}"? This will restart the cloudflared tunnel container.`)) {
           const result = await apiCall(`/api/v2/agents/${agentId}/redeploy-tunnel`, 'POST');
           if (result && result.status === 'success') {
@@ -459,8 +712,8 @@
             fetchData();
           }
         }
-      } else if (e.target.classList.contains('btn-rename-agent')) {
-        const agentId = e.target.getAttribute('data-agent-id');
+      } else if (e.target.closest('.btn-rename-agent')) {
+        const agentId = e.target.closest('.btn-rename-agent').getAttribute('data-agent-id');
         openRenameModal(agentId);
       }
     });
