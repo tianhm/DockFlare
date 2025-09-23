@@ -1338,6 +1338,43 @@ def trigger_agent_migration(agent_id):
         logging.error(f"Failed to trigger migration for agent {agent_id}: {e}", exc_info=True)
         return jsonify({"status": "error", "message": f"Failed to trigger migration: {str(e)}"}), 500
 
+@api_v2_bp.route('/agents/<agent_id>/redeploy-tunnel', methods=['POST'])
+def redeploy_agent_tunnel(agent_id):
+    try:
+        from app.core.state_manager import get_agent, queue_agent_command
+
+        agent_record = get_agent(agent_id)
+        if not agent_record:
+            return jsonify({"status": "error", "message": "Agent not found."}), 404
+
+        if agent_record.get("status") != "enrolled":
+            return jsonify({"status": "error", "message": "Agent not enrolled."}), 400
+
+        tunnel_name = agent_record.get("assigned_tunnel_name")
+        tunnel_id = agent_record.get("assigned_tunnel_id")
+        tunnel_token = agent_record.get("tunnel_token")
+
+        if not all([tunnel_name, tunnel_id, tunnel_token]):
+            return jsonify({"status": "error", "message": "Agent missing tunnel configuration."}), 400
+
+        command = {
+            "action": "restart_tunnel",
+            "tunnel_name": tunnel_name,
+            "tunnel_id": tunnel_id,
+            "tunnel_token": tunnel_token
+        }
+
+        queue_agent_command(agent_id, command)
+
+        return jsonify({
+            "status": "success",
+            "message": "Tunnel redeploy command queued successfully."
+        }), 200
+
+    except Exception as e:
+        logging.error(f"Failed to queue redeploy command for agent {agent_id}: {e}", exc_info=True)
+        return jsonify({"status": "error", "message": f"Failed to queue redeploy command: {str(e)}"}), 500
+
 @api_v2_bp.route('/agent/start', methods=['POST'])
 def agent_start():
     if config.USE_EXTERNAL_CLOUDFLARED:
