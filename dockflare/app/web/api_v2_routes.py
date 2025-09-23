@@ -1047,8 +1047,15 @@ def agents_post_events(agent_id):
     elif event_type == "status_report":
         
         logging.info(f"AGENTS_EVENTS: Processing status_report from agent {agent_id}")
-        
+
         containers = payload.get("containers") or (payload.get("container", {}) or {}).get("containers") or []
+
+        # Store container data in agent record for migration analysis
+        try:
+            from app.core.state_manager import update_agent
+            update_agent(agent_id, {"last_containers": containers})
+        except Exception as e:
+            logging.error(f"Failed to store container data for agent {agent_id}: {e}")
         try:
             reported_ids = set()
             for c in containers:
@@ -1098,9 +1105,13 @@ def agents_post_events(agent_id):
             from app.core.migration_service import TunnelMigrationService
 
             agent_record = get_agent(agent_id)
+            logging.info(f"MIGRATION: Agent record for {agent_id}: {agent_record}")
+
             if agent_record:
                 assigned_tunnel_id = agent_record.get("assigned_tunnel_id")
                 migration_status = agent_record.get("migration_status")
+
+                logging.info(f"MIGRATION: Agent {agent_id} - tunnel_id: {assigned_tunnel_id}, containers: {len(containers)}, migration_status: {migration_status}")
 
                 # Only trigger migration analysis if:
                 # 1. Agent is assigned to a tunnel
@@ -1110,6 +1121,8 @@ def agents_post_events(agent_id):
                     containers and
                     (not migration_status or not migration_status.get("completed_at"))):
 
+                    logging.info(f"MIGRATION: Triggering migration analysis for agent {agent_id}")
+
                     def run_migration_analysis():
                         try:
                             result = TunnelMigrationService.trigger_migration_analysis(
@@ -1117,10 +1130,13 @@ def agents_post_events(agent_id):
                             )
                             if result["success"] and result["imported_count"] > 0:
                                 logging.info(f"MIGRATION: Auto-imported {result['imported_count']} rules for agent {agent_id}")
+                            logging.info(f"MIGRATION: Analysis result for agent {agent_id}: {result}")
                         except Exception as e:
                             logging.error(f"MIGRATION: Error during migration analysis for agent {agent_id}: {e}")
 
                     _threading.Thread(target=run_migration_analysis, name=f"MigrationAnalysis-{agent_id}", daemon=True).start()
+                else:
+                    logging.info(f"MIGRATION: Skipping migration analysis for agent {agent_id} - conditions not met")
 
         except Exception as _mig_exc:
             logging.error(f"AGENTS_EVENTS: Failed to trigger migration analysis for agent {agent_id}: {_mig_exc}", exc_info=True)
@@ -1304,6 +1320,39 @@ def agents_remove(agent_id):
         }), 200
     else:
         return jsonify({"status": "error", "message": "Failed to remove agent from state."}), 500
+
+@api_v2_bp.route('/agents/<agent_id>/trigger-migration', methods=['POST'])
+def trigger_agent_migration(agent_id):
+    try:
+        from app.core.migration_service import TunnelMigrationService
+        from app.core.state_manager import get_agent
+
+        agent_record = get_agent(agent_id)
+        if not agent_record:
+            return jsonify({"status": "error", "message": "Agent not found."}), 404
+
+        assigned_tunnel_id = agent_record.get("assigned_tunnel_id")
+        if not assigned_tunnel_id:
+            return jsonify({"status": "error", "message": "Agent not assigned to a tunnel."}), 400
+
+        # Use containers from last status report
+        containers = agent_record.get("last_containers", [])
+        if not containers:
+            return jsonify({"status": "error", "message": "No container data available for agent."}), 400
+
+        result = TunnelMigrationService.trigger_migration_analysis(
+            agent_id, assigned_tunnel_id, containers
+        )
+
+        return jsonify({
+            "status": "success",
+            "message": "Migration analysis triggered successfully.",
+            "result": result
+        }), 200
+
+    except Exception as e:
+        logging.error(f"Failed to trigger migration for agent {agent_id}: {e}", exc_info=True)
+        return jsonify({"status": "error", "message": f"Failed to trigger migration: {str(e)}"}), 500
 
 @api_v2_bp.route('/agent/start', methods=['POST'])
 def agent_start():

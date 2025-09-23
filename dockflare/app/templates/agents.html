@@ -273,6 +273,7 @@
         <td class="p-3 text-center">
           <button class="btn btn-xs btn-primary btn-enroll" data-agent-id="${agentId}" ${agent.status === 'enrolled' && agent.assigned_tunnel_name ? 'disabled' : ''}>Enroll</button>
           <button class="btn btn-xs btn-secondary btn-roll-key ml-1" data-agent-id="${agentId}" ${agent.status !== 'enrolled' ? 'disabled' : ''} title="Roll API Key">🔄</button>
+          <button class="btn btn-xs btn-info btn-trigger-migration ml-1" data-agent-id="${agentId}" ${!agent.assigned_tunnel_name ? 'disabled' : ''} title="Trigger Migration">🔄📦</button>
           <button class="btn btn-xs btn-error btn-remove ml-1" data-agent-id="${agentId}">Remove</button>
         </td>
       `;
@@ -463,6 +464,20 @@
     // TODO: Implement actual orphaned rule removal API call
   };
 
+  // Manual migration trigger function
+  async function triggerMigrationAnalysis(agentId) {
+    try {
+      const result = await apiCall(`/api/v2/agents/${agentId}/trigger-migration`, 'POST');
+      if (result && result.status === 'success') {
+        alert(`Migration analysis completed successfully!\n\nImported: ${result.result.imported_count} rules\nConflicts: ${result.result.conflicts.length}\nOrphaned: ${result.result.orphaned.length}`);
+        fetchData(); // Refresh the agents table
+      }
+    } catch (error) {
+      console.error('Migration trigger failed:', error);
+      alert('Failed to trigger migration analysis. Please check the logs.');
+    }
+  }
+
   // Main data fetch function
   async function fetchData() {
     // Use overview endpoint which provides agents, agent_keys and account tunnels.
@@ -545,6 +560,11 @@
       } else if (e.target.classList.contains('btn-migration-assistant')) {
         const agentId = e.target.getAttribute('data-agent-id');
         openMigrationAssistant(agentId);
+      } else if (e.target.classList.contains('btn-trigger-migration')) {
+        const agentId = e.target.getAttribute('data-agent-id');
+        if (confirm(`Trigger migration analysis for agent "${agentId}"? This will analyze the assigned tunnel for migration opportunities.`)) {
+          triggerMigrationAnalysis(agentId);
+        }
       }
     });
 
