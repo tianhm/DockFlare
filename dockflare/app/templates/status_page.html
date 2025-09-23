@@ -69,6 +69,54 @@
             {% endif %}
 
             {% if rules and rules.items() %}
+                <div class="mb-4 flex flex-wrap gap-4 items-center">
+                    <div class="flex items-center gap-2">
+                        <label class="label-text font-medium">Source:</label>
+                        <select id="source-filter" class="select select-bordered select-sm">
+                            <option value="all">All Sources</option>
+                            <option value="docker">Local Docker</option>
+                            <option value="manual">Manual Rules</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <label class="label-text font-medium">Status:</label>
+                        <select id="status-filter" class="select select-bordered select-sm">
+                            <option value="all">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="pending">Pending</option>
+                            <option value="failed">Failed</option>
+                            <option value="pending_deletion">Pending Deletion</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <label class="label-text font-medium">Tunnel:</label>
+                        <select id="tunnel-filter" class="select select-bordered select-sm">
+                            <option value="all">All Tunnels</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <label class="label-text font-medium">Sort:</label>
+                        <select id="sort-select" class="select select-bordered select-sm">
+                            <option value="hostname">Hostname A-Z</option>
+                            <option value="hostname-desc">Hostname Z-A</option>
+                            <option value="status">Status</option>
+                            <option value="source">Source</option>
+                            <option value="tunnel">Tunnel</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="search-input" placeholder="Search hostname..." class="input input-bordered input-sm" />
+                    </div>
+
+                    <div class="ml-auto">
+                        <span id="filter-stats" class="text-sm opacity-75"></span>
+                    </div>
+                </div>
+
                 <div class="overflow-x-auto -mx-6 sm:-mx-8 pb-24">
                     <table class="table table-zebra table-sm w-full">
                         <thead>
@@ -98,10 +146,13 @@
                                             </span>
                                         {% endif %}
                                     </td>
-                                    <td class="p-3 whitespace-nowrap align-top">
+                                    <td class="p-3 whitespace-nowrap align-top" data-role="tunnel-name" data-tunnel-name="{{ details.tunnel_name or '' }}">
                                         <div class="flex flex-col">
                                             <span class="text-sm opacity-90">{{ details.tunnel_name or 'N/A' }}</span>
                                             <span class="text-xs opacity-60 mt-1">Zone: {{ details.zone_name or 'Unknown' }}</span>
+                                            {% if details.source == 'agent' and details.agent_id %}
+                                                <span class="text-xs opacity-60 mt-1" data-role="agent-name">Agent: {{ details.agent_id[:8] }}</span>
+                                            {% endif %}
                                         </div>
                                     </td>
                                     <td class="p-3 whitespace-nowrap">
@@ -573,4 +624,164 @@
         </div>
         <form method="dialog" class="modal-backdrop"><button>close</button></form>
     </dialog>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sourceFilter = document.getElementById('source-filter');
+    const statusFilter = document.getElementById('status-filter');
+    const tunnelFilter = document.getElementById('tunnel-filter');
+    const sortSelect = document.getElementById('sort-select');
+    const searchInput = document.getElementById('search-input');
+    const filterStats = document.getElementById('filter-stats');
+    const tableBody = document.querySelector('tbody');
+
+    let allRows = [];
+    let filteredRows = [];
+
+    function initializeFilters() {
+        if (!tableBody) return;
+
+        allRows = Array.from(tableBody.querySelectorAll('tr'));
+
+        const tunnels = new Set();
+        const agents = new Set();
+
+        allRows.forEach(row => {
+            const tunnelCell = row.querySelector('[data-role="tunnel-name"]');
+            if (tunnelCell) {
+                const tunnelName = tunnelCell.dataset.tunnelName;
+                if (tunnelName && tunnelName.trim()) {
+                    tunnels.add(tunnelName.trim());
+                }
+            }
+
+            const source = row.dataset.ruleSource;
+            if (source === 'agent') {
+                const agentCell = row.querySelector('[data-role="agent-name"]');
+                if (agentCell && agentCell.textContent.trim()) {
+                    agents.add(agentCell.textContent.trim());
+                }
+            }
+        });
+
+        tunnels.forEach(tunnel => {
+            const option = document.createElement('option');
+            option.value = tunnel;
+            option.textContent = tunnel;
+            tunnelFilter.appendChild(option);
+        });
+
+        agents.forEach(agent => {
+            const option = document.createElement('option');
+            option.value = `agent:${agent}`;
+            option.textContent = `Agent: ${agent}`;
+            sourceFilter.appendChild(option);
+        });
+
+        applyFilters();
+    }
+
+    function applyFilters() {
+        if (!tableBody) return;
+
+        const sourceValue = sourceFilter.value;
+        const statusValue = statusFilter.value;
+        const tunnelValue = tunnelFilter.value;
+        const searchValue = searchInput.value.toLowerCase();
+
+        filteredRows = allRows.filter(row => {
+            const source = row.dataset.ruleSource;
+            const status = row.dataset.ruleStatus;
+
+            const hostnameCell = row.querySelector('td:nth-child(3)');
+            const hostname = hostnameCell ? hostnameCell.textContent.toLowerCase() : '';
+
+            const tunnelCell = row.querySelector('[data-role="tunnel-name"]');
+            const tunnel = tunnelCell ? (tunnelCell.dataset.tunnelName || '').trim() : '';
+
+            let sourceMatch = true;
+            if (sourceValue !== 'all') {
+                if (sourceValue === 'docker') {
+                    sourceMatch = source === 'docker';
+                } else if (sourceValue === 'manual') {
+                    sourceMatch = source === 'manual';
+                } else if (sourceValue.startsWith('agent:')) {
+                    const agentName = sourceValue.substring(6);
+                    const agentCell = row.querySelector('[data-role="agent-name"]');
+                    sourceMatch = source === 'agent' && agentCell && agentCell.textContent.trim() === agentName;
+                }
+            }
+
+            const statusMatch = statusValue === 'all' || status === statusValue;
+            const tunnelMatch = tunnelValue === 'all' || tunnel === tunnelValue;
+            const searchMatch = searchValue === '' || hostname.includes(searchValue);
+
+            return sourceMatch && statusMatch && tunnelMatch && searchMatch;
+        });
+
+        applySorting();
+        updateDisplay();
+        updateStats();
+    }
+
+    function applySorting() {
+        const sortValue = sortSelect.value;
+
+        filteredRows.sort((a, b) => {
+            let aVal, bVal;
+
+            switch (sortValue) {
+                case 'hostname':
+                    aVal = a.querySelector('td:nth-child(3)')?.textContent || '';
+                    bVal = b.querySelector('td:nth-child(3)')?.textContent || '';
+                    return aVal.localeCompare(bVal);
+
+                case 'hostname-desc':
+                    aVal = a.querySelector('td:nth-child(3)')?.textContent || '';
+                    bVal = b.querySelector('td:nth-child(3)')?.textContent || '';
+                    return bVal.localeCompare(aVal);
+
+                case 'status':
+                    aVal = a.dataset.ruleStatus || '';
+                    bVal = b.dataset.ruleStatus || '';
+                    return aVal.localeCompare(bVal);
+
+                case 'source':
+                    aVal = a.dataset.ruleSource || '';
+                    bVal = b.dataset.ruleSource || '';
+                    return aVal.localeCompare(bVal);
+
+                case 'tunnel':
+                    aVal = a.querySelector('[data-role="tunnel-name"]')?.dataset?.tunnelName || '';
+                    bVal = b.querySelector('[data-role="tunnel-name"]')?.dataset?.tunnelName || '';
+                    return aVal.localeCompare(bVal);
+
+                default:
+                    return 0;
+            }
+        });
+    }
+
+    function updateDisplay() {
+        allRows.forEach(row => row.style.display = 'none');
+        filteredRows.forEach(row => row.style.display = '');
+    }
+
+    function updateStats() {
+        const total = allRows.length;
+        const visible = filteredRows.length;
+        filterStats.textContent = `Showing ${visible} of ${total} rules`;
+    }
+
+    sourceFilter.addEventListener('change', applyFilters);
+    statusFilter.addEventListener('change', applyFilters);
+    tunnelFilter.addEventListener('change', applyFilters);
+    sortSelect.addEventListener('change', applyFilters);
+    searchInput.addEventListener('input', applyFilters);
+
+    initializeFilters();
+});
+</script>
 {% endblock %}
