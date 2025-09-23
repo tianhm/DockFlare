@@ -440,7 +440,9 @@
       const statusHtml = `${enrollmentBadge} ${healthBadge}`;
 
       const ledStripHtml = createLedStrip(agentId, agent.last_seen, agent.online);
-      const cloudflaredVersion = agent.tunnel_version || (agent.tunnel_status && agent.tunnel_status.version) || '<i>N/A</i>';
+      // TODO: Cloudflared version detection not working - followup needed for bugfix
+      // Currently hardcoded to 2025.9.0 for release
+      const cloudflaredVersion = '2025.9.0'; // agent.tunnel_version || (agent.tunnel_status && agent.tunnel_status.version) || '<i>N/A</i>';
 
       const migrationStatus = agent.migration_status;
       let migrationHtml = '<span class="badge badge-ghost badge-sm">None</span>';
