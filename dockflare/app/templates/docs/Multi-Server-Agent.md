@@ -73,7 +73,7 @@ services:
     image: tecnativa/docker-socket-proxy:v0.4.1
     container_name: docker-socket-proxy
     restart: unless-stopped
-     environment:
+    environment:
       - DOCKER_HOST=unix:///var/run/docker.sock
       - CONTAINERS=1
       - EVENTS=1
@@ -81,11 +81,12 @@ services:
       - IMAGES=1
       - POST=1
       - PING=1
-      - INFO=1
       - EXEC=1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-
+    networks:
+      - dockflare-internal
+      
   dockflare-agent:
     image: alplat/dockflare-agent:latest
     container_name: dockflare-agent
@@ -102,6 +103,7 @@ services:
       - docker-socket-proxy
     networks:
       - cloudflare-net
+      - dockflare-internal
 
 volumes:
   agent_data:
@@ -110,6 +112,8 @@ networks:
   cloudflare-net:
     name: cloudflare-net
     external: true
+  dockflare-internal:
+    name: dockflare-internal
 ```
 
 - Run `docker network create cloudflare-net` once to provision the shared network used by the master and agents.
