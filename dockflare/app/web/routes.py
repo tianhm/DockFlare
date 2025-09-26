@@ -34,7 +34,7 @@ from flask import (
 from flask_login import current_user, login_required, login_user, logout_user
 from app.core.user import User
 
-from app import config, docker_client, tunnel_state, cloudflared_agent_state, log_queue, state_update_queue, publish_state_event
+from app import config, docker_client, tunnel_state, cloudflared_agent_state, log_queue, state_update_queue, publish_state_event, limiter
 from app.core.cache import CACHE_ENABLED
 from app.core.state_manager import managed_rules, access_groups, state_lock, save_state, load_state
 from app.core.tunnel_manager import (
@@ -808,11 +808,10 @@ def tunnel_dns_records(tunnel_id):
 
 @bp.route('/ping')
 def ping():
-    return jsonify({ "status": "ok", "timestamp": int(time.time()), "version": config.APP_VERSION, 
+    return jsonify({ "status": "ok", "timestamp": int(time.time()), 
                      "protocol": request.environ.get('wsgi.url_scheme', 'unknown')})
 
 @bp.route('/version/check')
-@login_required
 def version_check():
     """
     Check whether the running DockFlare image matches the remote tag (digest comparison).
@@ -1765,22 +1764,6 @@ def delete_access_group(group_id):
     flash(f"Success: Access Group '{display_name}' has been deleted.", "success")
     return redirect(url_for('web.access_policies_page'))
 
-@bp.route('/cloudflare-ping')
-def cloudflare_ping_route(): 
-    try:
-        cf_headers = {k: v for k, v in request.headers.items() if k.lower().startswith('cf-')}
-        visitor_data = json.loads(request.headers.get('Cf-Visitor', '{}'))
-        return jsonify({
-            "status": "ok", "timestamp": int(time.time()),
-            "cloudflare": { "connecting_ip": request.headers.get('Cf-Connecting-Ip') or request.remote_addr,
-                            "visitor": visitor_data, "ray": request.headers.get('Cf-Ray') },
-             "request": { "host": request.host, "path": request.path, "scheme": request.scheme },
-             "server": { "wsgi_url_scheme": request.environ.get('wsgi.url_scheme') }
-        })
-    except Exception as e_cfping:
-        logging.error(f"Error in /cloudflare-ping route: {e_cfping}", exc_info=True)
-        return jsonify({ "error": "An internal error occurred.", "status": "error", "timestamp": int(time.time()) }), 500
-
 @bp.route('/backup/download')
 def download_state_backup():
     try:
@@ -1834,6 +1817,7 @@ def restore_state_backup():
     return redirect(url_for('web.settings_page'))
 
 @bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("6 per minute", methods=['POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('web.status_page'))

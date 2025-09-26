@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Resolved multiple issues with the new OAuth feature, including `redirect_uri_mismatch` errors, a broken "Edit" button, and several backend bugs.
 
+### Security
+- **Login Rate Limiting:** Implemented rate limiting on the password login form (6 attempts per minute) to protect against brute-force attacks.
+
 ---
 ## [v3.0.0] - 2025-09-25
 

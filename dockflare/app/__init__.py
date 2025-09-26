@@ -25,6 +25,9 @@ from flask import Flask
 from flask_wtf.csrf import CSRFProtect
 from flask_login import LoginManager
 from authlib.integrations.flask_client import OAuth
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
 from .core.user import User
 import docker
 from docker.errors import APIError
@@ -39,6 +42,12 @@ state_update_queue = queue.Queue(maxsize=50)
 log_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s', datefmt='%H:%M:%S')
 
 oauth = None
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=[],
+    storage_uri="memory://"
+)
 
 class QueueLogHandler(logging.Handler):
     def __init__(self, log_queue_instance):
@@ -116,6 +125,8 @@ def create_app():
     global oauth
     oauth = OAuth()
     oauth.init_app(app_instance)
+
+    limiter.init_app(app_instance)
 
     @login_manager.unauthorized_handler
     def unauthorized():

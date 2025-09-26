@@ -46,6 +46,7 @@
                     <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[51] p-2 shadow bg-base-100 rounded-box w-52">
                         <li><a href="{{ url_for('web.status_page') }}" class="{{ 'active' if request.endpoint == 'web.status_page' else '' }}">Dashboard</a></li>
                         <li><a href="{{ url_for('web.access_policies_page') }}" class="{{ 'active' if request.endpoint == 'web.access_policies_page' else '' }}">Access Policies</a></li>
+                        <li><a href="{{ url_for('web.agents_page') }}" class="{{ 'active' if request.endpoint == 'web.agents_page' else '' }}">Agents</a></li>
                         <li><a href="{{ url_for('web.settings_page') }}" class="{{ 'active' if request.endpoint == 'web.settings_page' else '' }}">Settings</a></li>
                         <li><a href="{{ url_for('help.help_page') }}" class="{{ 'active' if request.endpoint.startswith('help.') else '' }}">Help</a></li>
                     </ul>
