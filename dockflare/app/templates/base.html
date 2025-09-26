@@ -46,6 +46,7 @@
                     <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[51] p-2 shadow bg-base-100 rounded-box w-52">
                         <li><a href="{{ url_for('web.status_page') }}" class="{{ 'active' if request.endpoint == 'web.status_page' else '' }}">Dashboard</a></li>
                         <li><a href="{{ url_for('web.access_policies_page') }}" class="{{ 'active' if request.endpoint == 'web.access_policies_page' else '' }}">Access Policies</a></li>
+                        <li><a href="{{ url_for('web.agents_page') }}" class="{{ 'active' if request.endpoint == 'web.agents_page' else '' }}">Agents</a></li>
                         <li><a href="{{ url_for('web.settings_page') }}" class="{{ 'active' if request.endpoint == 'web.settings_page' else '' }}">Settings</a></li>
                         <li><a href="{{ url_for('help.help_page') }}" class="{{ 'active' if request.endpoint.startswith('help.') else '' }}">Help</a></li>
                     </ul>
@@ -81,7 +82,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </a>
 
-                <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost btn-circle" title="Logout">
+                <a href="{{ url_for('web.logout') }}" class="btn btn-ghost btn-circle" title="Logout">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
                     </svg>

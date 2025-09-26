@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [v3.0.1] - 2025-09-26
+
+### Added
+- **OAuth/OIDC Login Support:** Added support for external authentication providers like Google and Authentik via a new, generic OpenID Connect system.
+- **OAuth Documentation:** Created a new help document for setting up OAuth providers.
+
+### Changed
+- **Redesigned Login Page:** The login page has been updated with a modern design, provider logos, and a unified flow for both password and OAuth logins.
+- **Improved Usability:** The settings page now displays the required Callback URL for OAuth providers, and DockFlare can discover its public hostname from Docker labels.
+- 
+### Security
+- **Login Rate Limiting:** Implemented rate limiting on the password login form (6 attempts per minute) to protect against brute-force attacks.
+
+---
 ## [v3.0.0] - 2025-09-25
 
 ### Fixed (Hotfixes)

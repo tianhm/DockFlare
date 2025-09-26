@@ -19,6 +19,7 @@ This documentation provides comprehensive information for DockFlare. Whether you
     *   [State-Persistence](State-Persistence.md)
 *   **Configuration**
     *   [Container Labels](Container-Labels.md)
+    *   [OAuth Provider Setup](OAuth-Provider-Setup.md)
 *   **Usage Guide**
     *   [Basic Usage (Single Domain)](Basic-Usage-Single-Domain.md)
     *   [Using Multiple Domains (Indexed Labels)](Using-Multiple-Domains-Indexed-Labels.md)
