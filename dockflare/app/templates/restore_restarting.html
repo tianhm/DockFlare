@@ -23,7 +23,7 @@
 <script>
   (function() {
     const seconds = {{ countdown_seconds }};
-    const redirectUrl = "{{ url_for('auth.login') }}";
+    const redirectUrl = "{{ url_for('web.login') }}";
     const pingUrl = "{{ url_for('web.ping') }}";
     const countdownEl = document.getElementById('countdown');
     const progressEl = document.getElementById('progress');
