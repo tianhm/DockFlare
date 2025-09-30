@@ -19,7 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **API Key Revocation Display Bug:** Fixed issue where revoked API keys remained visible in the frontend as if they were active, even though backend authentication correctly rejected them.
-- **Key Management UX:** Improved the "recycle bin" experience allowing users to verify correct keys were revoked before permanent cleanup.
 
 ---
 
