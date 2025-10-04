@@ -25,13 +25,13 @@ These labels control the fundamental routing and service definition for a contai
 
 These labels allow you to dynamically create and manage Cloudflare Access applications to secure your services.
 
-**Note:** It is highly recommended to use **Access Groups** (`dockflare.access.group`) for managing policies. Using individual labels is best for one-off, unique configurations. If `dockflare.access.group` or `dockflare.access.groups` is used, all other `dockflare.access.*` labels are ignored.
+**Note:** It is highly recommended to use **Access Groups** (`dockflare.access.group`) for managing policies. DockFlare 3.0.3 synchronises every Access Group to a named reusable Cloudflare Access Policy, giving you one-to-many reuse and bi-directional edits. Using individual labels is best for one-off, unique configurations. If `dockflare.access.group` or `dockflare.access.groups` is used, all other `dockflare.access.*` labels are ignored.
 
 | Label | Description | Example |
 | :--- | :--- | :--- |
 | `dockflare.access.group` | The ID of a single, pre-configured Access Group to apply to this service. The ID can be found on the "Access Policies" page in the DockFlare UI. | `dockflare.access.group=internal-tools-policy` |
 | `dockflare.access.groups` | A comma-separated list of Access Group IDs to apply. This allows you to layer multiple policies onto a single service. | `dockflare.access.groups=allow-team-a,allow-admins` |
-| `dockflare.access.policy` | The primary policy type. Can be `bypass` (public), `authenticate` (requires login), or `default_tld` (inherits from a `*.domain.com` policy). If unset, the service will be public. | `dockflare.access.policy=authenticate` |
+| `dockflare.access.policy` | The primary policy type. Can be `bypass` (public), `authenticate` (requires login), or `default_tld` (inherits from a `*.domain.com` policy). If unset, the service will be public. Prefer Access Groups for reusable policies; these labels are for specialised overrides. | `dockflare.access.policy=authenticate` |
 | `dockflare.access.name` | A custom name for the Cloudflare Access Application. Defaults to `DockFlare-{hostname}`. | `dockflare.access.name=My Web App Access` |
 | `dockflare.access.session_duration` | The session duration for authenticated users (e.g., `24h`, `30m`). Defaults to `24h`. | `dockflare.access.session_duration=1h` |
 | `dockflare.access.app_launcher_visible` | If `true`, makes the application visible in the Cloudflare Access App Launcher. | `dockflare.access.app_launcher_visible=true` |

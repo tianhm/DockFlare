@@ -11,7 +11,7 @@ The first page you see after logging in is the main dashboard. This is your cent
     *   **Service:** The internal destination URL.
     *   **Source:** Indicates if the rule is from `Docker` or was created `Manually` in the UI.
     *   **Status:** Shows if the rule is `active`, `pending_deletion`, or has a `UI Override`.
-    *   **Access:** Displays the Access Policy applied to the rule (e.g., `Public`, `Authenticate`, or the name of an Access Group).
+    *   **Access:** Displays the applied Access Group and mode badge. Expect to see `Public` or `Authenticated` labels, cascaded group names, and quick links to the Cloudflare dashboard when reusable policies sync.
     *   **Manage Rule:** This button allows you to edit any rule.
 *   **Real-time Logs:** Below the table, you'll find a real-time log viewer that streams logs from the DockFlare backend, which is invaluable for debugging.
 
@@ -26,9 +26,10 @@ The UI gives you full control over your ingress rules.
 ## Access Policies Page
 
 This page is the central location for managing your reusable **Access Groups**. From here, you can:
-*   **Create** new Access Groups with complex rules (e.g., based on email, IP, or country).
-*   **Edit** existing Access Groups.
-*   **Delete** Access Groups that are no longer in use.
+*   **Create** new Access Groups using the two-tab modal (Authenticated vs Public). Guidance banners update per tab so you understand when DockFlare will emit a Cloudflare `allow` or `bypass` decision.
+*   **Edit** existing Access Groups. The modal enforces mode-specific validation (emails required for Authenticated) and keeps Geo/IP settings visible for both modes.
+*   **Delete** Access Groups that are no longer in use. DockFlare keeps track of the linked reusable Cloudflare policy and removes it when you drop the group.
+*   Use the action menu beside each entry to open the matching policy directly in the Cloudflare dashboard via the Cloudflare icon shortcut.
 
 For more details, see the [Access Policy Best Practices & Examples](Access-Policy-Best-Practices.md) guide.
 

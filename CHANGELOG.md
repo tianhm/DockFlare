@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v3.0.3] - 2025-10-03
+
+### Added
+- Introduced dual-mode Access Group builder with Public (`bypass`) and Authenticated (`allow`) tabs, tailored helper text, and mode-specific validation.
+- Surfaced contextual colour-coded alerts and consistent dropdown menus across Access Policies and the main dashboard for quicker policy reviews.
+
+### Changed
+- Each Access Group now syncs to a reusable Cloudflare Access Policy, enabling one-to-many reuse, bi-directional edits, and automatic migration of legacy inline policies (including `block` → `deny` conversion).
+- Access Policies UI and dashboard now share the same three-dot action menus and Cloudflare dashboard shortcuts for a uniform workflow.
+
+### Fixed
+- Public Access Groups now issue Cloudflare `bypass` decisions as intended instead of incorrectly falling back to `allow`.
+- Simplified country filtering to remove redundant double-blocking logic when combining geo rules with public mode.
+- Reusable policy synchronisation now preserves all decision types (`bypass`, `allow`, `deny`) when pushing or importing definitions.
+
+---
+
 ## [v3.0.2] - 2025-09-30
 
 ### Added

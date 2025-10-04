@@ -9,13 +9,9 @@
 <p align="center">
   <em>Go from container to publicly-secured URL in seconds. No manual Cloudflare dashboard configuration required.</em>
 </p>
+
 <p align="center">
-  <a href="https://dockflare.app/podcast" target="_blank" rel="noopener noreferrer">
-    <img src="https://img.shields.io/badge/DockFlare-Podcast-20a6e2?style=for-the-badge&logo=soundcloud" alt="Listen to the DockFlare Podcast">
-  </a>
-</p>
-<p align="center">
-  <a href="https://github.com/ChrispyBacon-dev/DockFlare/releases/tag/v3.0.1"><img src="https://img.shields.io/badge/Release-v3.0.1-blue.svg?style=for-the-badge" alt="Release"></a>
+  <a href="https://github.com/ChrispyBacon-dev/DockFlare/releases/tag/v3.0.3"><img src="https://img.shields.io/badge/Release-v3.0.3-blue.svg?style=for-the-badge" alt="Release"></a>
   <a href="https://hub.docker.com/r/alplat/dockflare"><img src="https://img.shields.io/docker/pulls/alplat/dockflare?style=for-the-badge" alt="Docker Pulls"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Made%20with-Python-1f425f.svg?style=for-the-badge" alt="Python"></a>
   <a href="https://github.com/ChrispyBacon-dev/DockFlare/blob/main/LICENSE.MD"><img src="https://img.shields.io/badge/License-GPL--3.0-blue.svg?style=for-the-badge" alt="License"></a>
@@ -36,6 +32,15 @@
 DockFlare is a powerful, self-hosted ingress controller that simplifies Cloudflare Tunnel and Zero Trust management. It uses Docker labels for automated configuration while providing a robust web UI for manual service definitions and policy overrides.
 
 It enables secure, hassle-free public access to both Dockerized and non-Dockerized applications with minimal direct interaction with Cloudflare, making it the perfect tool for centralizing and streamlining your access management.
+
+### ✨ What's New in DockFlare 3.0.3: Access Modes & Reusable Policies
+
+DockFlare 3.0.3 makes it easier to design access control that matches real-world needs.
+
+- **Two access modes**: Access Groups now offer dedicated Public and Authenticated tabs. Pick `Public` for Cloudflare Access `bypass` (no login, optional geo blocks) or `Authenticated` for `allow` policies that require mail/domain logins.
+- **Reusable Cloudflare policies**: DockFlare syncs every Access Group to a reusable Access Policy, so you can reference the same rules across multiple applications, edit them centrally, and keep the Cloudflare dashboard tidy.
+- **Refined policy builder**: The modal dynamically validates required emails in Authenticated mode, hides irrelevant options for Public mode, and colour-codes the guidance copy to explain each decision.
+- **Migration-ready**: Legacy inline policies automatically convert to reusable policies during the next sync, and DockFlare harmonizes Cloudflare `block` decisions with the newer `deny` verb.
 
 ### ✨ What's New in DockFlare 3.0: Multi-Server & Agent Release
 
@@ -75,6 +80,12 @@ Before you begin, ensure you have the following:
 
 <details>
 <summary>🚀 Quick Start Docker Compose</summary>
+
+Before the first launch, provision the shared network once:
+
+```bash
+docker network create cloudflare-net
+```
 
 1.  **Create `docker-compose.yml`**:
     ```yaml
@@ -176,6 +187,13 @@ DockFlare's power comes from its flexible, layered approach to configuration.
 - **Individual Labels for One-Offs**: For services that don't fit a group, you can still use individual `dockflare.access.*` labels for initial configuration.
 - **UI for Dynamic Overrides**: The Web UI can override the access policy for any service, whether it was configured by a group or by individual labels. UI changes are persistent and stored in the encrypted `dockflare_config.dat` file.
 - **DNS Zone Auto-Detection**: Starting with v3.0, DockFlare automatically infers the correct Cloudflare zone from each hostname. You only need `dockflare.zonename` when intentionally sending a record to a different zone.
+
+#### Access Group Modes & Policy Reuse
+
+- **Pick the right decision instantly**: Each Access Group now has Public and Authenticated tabs. Public mode issues a Cloudflare `bypass` decision (ideal for blogs and marketing pages) while Authenticated mode creates an `allow` policy that enforces email/domain logins.
+- **Geo controls in both modes**: Apply country-based `exclude` rules no matter which mode you choose, keeping public destinations open while filtering risky regions.
+- **Reusable policies by default**: DockFlare syncs every Access Group to a named reusable policy (`DockFlare-AccessGroup-<id>`) so the same rule set can power multiple applications and stay editable from either DockFlare or the Cloudflare dashboard.
+- **Legacy-safe**: Existing inline policies are upgraded on the next reconciliation and continue to function even if you tweak them directly in Cloudflare.
 
 <details>
 <summary>📝 Labeling Your Containers (Examples)</summary>
