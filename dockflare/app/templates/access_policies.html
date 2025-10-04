@@ -382,23 +382,44 @@
         document.querySelectorAll('.delete-access-group-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
+
+                // Check if parent li has disabled class
+                if (btn.closest('li')?.classList.contains('disabled')) {
+                    return;
+                }
+
                 const groupId = e.currentTarget.dataset.groupId;
                 const groupName = e.currentTarget.dataset.groupName;
+
+                if (!groupId || !groupName) {
+                    console.error('Missing group ID or name', e.currentTarget.dataset);
+                    return;
+                }
 
                 if (!confirm(`Are you sure you want to delete the Access Group '${groupName}'? This cannot be undone.`)) {
                     return;
                 }
 
+                console.log('Deleting group:', groupId, 'Name:', groupName);
+
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = `/ui/access-groups/${groupId}/delete`;
-                form.classList.add('protocol-aware-form');
+                form.action = `/ui/access-groups/delete/${groupId}`;
 
-                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                console.log('Form action:', form.action);
+
+                // Get CSRF token from existing form on page
+                const existingCsrfInput = document.querySelector('input[name="csrf_token"]');
+                if (!existingCsrfInput) {
+                    console.error('CSRF token not found');
+                    return;
+                }
+
                 const csrfInput = document.createElement('input');
                 csrfInput.type = 'hidden';
                 csrfInput.name = 'csrf_token';
-                csrfInput.value = csrfToken;
+                csrfInput.value = existingCsrfInput.value;
                 form.appendChild(csrfInput);
 
                 document.body.appendChild(form);
