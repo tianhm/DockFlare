@@ -867,14 +867,16 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateStats() {
         const total = allRows.length;
         const visible = filteredRows.length;
-        filterStats.textContent = `Showing ${visible} of ${total} rules`;
+        if (filterStats) {
+            filterStats.textContent = `Showing ${visible} of ${total} rules`;
+        }
     }
 
-    sourceFilter.addEventListener('change', applyFilters);
-    statusFilter.addEventListener('change', applyFilters);
-    tunnelFilter.addEventListener('change', applyFilters);
-    sortSelect.addEventListener('change', applyFilters);
-    searchInput.addEventListener('input', applyFilters);
+    if (sourceFilter) sourceFilter.addEventListener('change', applyFilters);
+    if (statusFilter) statusFilter.addEventListener('change', applyFilters);
+    if (tunnelFilter) tunnelFilter.addEventListener('change', applyFilters);
+    if (sortSelect) sortSelect.addEventListener('change', applyFilters);
+    if (searchInput) searchInput.addEventListener('input', applyFilters);
 
     initializeFilters();
 

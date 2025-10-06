@@ -76,7 +76,21 @@ def check_for_tld_access_policy(zone_name):
     logging.info(f"Checking for existing Access Policy for wildcard TLD: {tld_hostname}")
 
     try:
-        existing_app = find_cloudflare_access_application_by_hostname(tld_hostname)
+        # Optimized TLD check: only do domain-specific query, skip expensive full list scan
+        account_id = current_app.config.get('CF_ACCOUNT_ID')
+        endpoint = f"/accounts/{account_id}/access/apps"
+        from app.core import cloudflare_api
+
+        response_data = cloudflare_api.cf_api_request("GET", endpoint, params={"domain": tld_hostname})
+        apps = response_data.get("result", [])
+
+        existing_app = None
+        if apps and isinstance(apps, list):
+            for app in apps:
+                if app.get("domain") == tld_hostname:
+                    existing_app = app
+                    break
+
         if existing_app and existing_app.get("id"):
             logging.info(f"Found existing Access Application ID '{existing_app.get('id')}' for TLD '{tld_hostname}'.")
             result = True
