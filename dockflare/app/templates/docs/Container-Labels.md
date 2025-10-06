@@ -31,10 +31,19 @@ These labels allow you to dynamically create and manage Cloudflare Access applic
 
 #### System Default Bypass Policy
 
-Starting in v3.0.3, when you use `dockflare.access.policy=bypass`, your service will reference the system-managed `public-default-bypass` reusable policy instead of creating an inline policy. This keeps your Cloudflare dashboard clean.
+Starting in v3.0.3, when you use `dockflare.access.policy=bypass` or `dockflare.access.group=bypass`, your service will reference the system-managed `public-default-bypass` reusable policy instead of creating an inline policy. This keeps your Cloudflare dashboard clean.
 
 - **Before v3.0.3:** Each bypass rule created a separate inline policy
 - **v3.0.3+:** All bypass rules share one canonical `public-default-bypass` policy
+
+#### Legacy Label Migration
+
+DockFlare automatically migrates legacy bypass labels to use the centralized system policy:
+
+- `dockflare.access.policy=bypass` → Uses `public-default-bypass` system policy
+- `dockflare.access.group=bypass` → Uses `public-default-bypass` system policy
+
+The migration happens transparently during container processing and reconciliation. Your containers will continue to work without any changes required.
 
 #### Simplified Access Configuration
 

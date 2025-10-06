@@ -389,14 +389,21 @@ def handle_access_policy_from_labels(hostname_config_item, current_rule_in_state
         
         if not cf_access_policies_or_ids:
             if policy_source_type == "bypass":
-                logging.warning(f"Bypass policy requested for {hostname}. This is insecure and deprecated. Converting to 'allow'.")
-                policy_source_type = "authenticate"
-                cf_access_policies_or_ids = [{"name": "Label Default Authenticated Access", "decision": "allow", "include": [{"everyone": {}}]}]
+                logging.warning(f"ACCESS_MANAGER: Unexpected 'bypass' policy type reached access_manager for {hostname}. This should have been migrated to access.group=bypass. Skipping access policy creation.")
+                if current_access_app_id_from_state:
+                    logging.info(f"Deleting existing Access App {current_access_app_id_from_state} for {hostname} since bypass should not have an access app.")
+                    if delete_cloudflare_access_application(current_access_app_id_from_state):
+                        current_rule_in_state.update({"access_app_id": None, "access_policy_type": None, "access_app_config_hash": None, "access_group_id": None})
+                        local_state_changed_by_access_policy = True
+                return local_state_changed_by_access_policy
             elif policy_source_type == "authenticate":
-                include_rules = [{"everyone": {}}]
-                if desired_allowed_idps_str:
-                    include_rules = [{"login_method": {"id": idp.strip()}} for idp in desired_allowed_idps_str.split(',') if idp.strip()]
-                cf_access_policies_or_ids = [{"name": "Label Default Authenticated Access", "decision": "allow", "include": include_rules}]
+                logging.warning(f"ACCESS_MANAGER: Unexpected 'authenticate' policy type reached access_manager for {hostname}. This should have been migrated to access.group=authenticated-default. Skipping access policy creation.")
+                if current_access_app_id_from_state:
+                    logging.info(f"Deleting existing Access App {current_access_app_id_from_state} for {hostname} since it should use authenticated-default group.")
+                    if delete_cloudflare_access_application(current_access_app_id_from_state):
+                        current_rule_in_state.update({"access_app_id": None, "access_policy_type": None, "access_app_config_hash": None, "access_group_id": None})
+                        local_state_changed_by_access_policy = True
+                return local_state_changed_by_access_policy
 
         new_config_hash = generate_access_app_config_hash(
             policy_source_type, desired_session_duration, desired_app_launcher_visible,

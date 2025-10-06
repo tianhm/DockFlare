@@ -33,14 +33,17 @@ DockFlare is a powerful, self-hosted ingress controller that simplifies Cloudfla
 
 It enables secure, hassle-free public access to both Dockerized and non-Dockerized applications with minimal direct interaction with Cloudflare, making it the perfect tool for centralizing and streamlining your access management.
 
-### ✨ What's New in DockFlare 3.0.3: Access Modes, Reusable Policies & Zone Security
+### ✨ What's New in DockFlare 3.0.3: Identity Providers, Access Modes & Zone Security
 
-DockFlare 3.0.3 makes it easier to design access control that matches real-world needs, with cleaner policy management and enhanced zone-level security.
+DockFlare 3.0.3 introduces complete Identity Provider management, cleaner access control design, and enhanced zone-level security.
 
-- **Two access modes**: Access Groups now offer dedicated Public and Authenticated tabs. Pick `Public` for Cloudflare Access `bypass` (no login, optional geo blocks) or `Authenticated` for `allow` policies that require mail/domain logins.
+- **Identity Provider (IdP) Management**: Full OAuth/OIDC identity provider support directly in DockFlare. Manage Google, Azure AD, GitHub, Okta, and generic OpenID Connect providers with friendly names, one-click Cloudflare sync, and built-in testing. IdPs integrate seamlessly with Access Groups and require email restrictions for security.
+- **Two access modes**: Access Groups now offer dedicated Public and Authenticated tabs. Pick `Public` for Cloudflare Access `bypass` (no login, optional geo blocks) or `Authenticated` for `allow` policies that require email/domain logins with optional IdP authentication.
 - **Reusable Cloudflare policies**: DockFlare syncs every Access Group to a reusable Access Policy, so you can reference the same rules across multiple applications, edit them centrally, and keep the Cloudflare dashboard tidy.
 - **System-managed default bypass policy**: A single, non-deletable `public-default-bypass` policy is automatically created and reused across all public services, eliminating duplicate bypass policies.
+- **Legacy label migration**: DockFlare automatically migrates legacy `dockflare.access.policy=bypass` and `dockflare.access.group=bypass` labels to use the centralized system policy. Migration happens transparently during container processing and reconciliation—no manual changes required.
 - **Zone Default Policies (*.tld wildcards)**: New section on the Access Policies page shows which DNS zones have wildcard protection. Create `*.yourdomain.com` policies with one click to ensure all subdomains are protected by default—even ones you forget to configure explicitly.
+- **Performance optimizations**: Access Policies page now lazy-loads zone policies via AJAX for instant page rendering, eliminating the 8+ second wait caused by synchronous API calls.
 - **Simplified UI**: Removed confusing quick-create options ("Email Auth", "Default *.tld") from manual rule creation. Complex policies should be designed on the Access Policies page and then applied to services.
 - **Migration-ready**: Legacy inline policies automatically convert to reusable policies during the next sync, and DockFlare harmonizes Cloudflare `block` decisions with the newer `deny` verb.
 
@@ -75,6 +78,8 @@ Before you begin, ensure you have the following:
     - `Account:Cloudflare Tunnel:Edit`
     - `Account:Account Settings:Read`
     - `Account:Access: Apps and Policies:Edit`
+    - `Account:Access: Organizations, Identity Providers, and Groups:Edit`
+    - `Account:Access:Read`
     - `Zone:Zone:Read`
     - `Zone:DNS:Edit`
 
@@ -232,8 +237,10 @@ services:
 
       # Optional individual labels for a one-off policy
       - "dockflare.access.policy=authenticate"
-      - "dockflare.access.allowed_idps=YOUR_IDP_UUID_HERE"
+      - "dockflare.access.email=user@example.com,@domain.com"
 ```
+
+**Note**: For Identity Provider authentication, create an Access Group in the UI instead of using individual labels. This ensures proper IdP configuration with required email restrictions.
 
 </details>
 

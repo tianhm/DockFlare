@@ -59,6 +59,6 @@ The Settings page contains various administrative and configuration options:
 *   **Backup & Restore:** Download a full DockFlare backup archive (`.zip`) containing encrypted config, agent keys, and state, or upload a previously exported archive to restore the instance.
 *   **Security:**
     *   **Change Password:** Change your password for the Web UI.
-    *   **Disable Password Login:** For advanced use cases where you place DockFlare behind another authentication proxy.
+    *   **Disable Password Login:** For advanced use cases where you place DockFlare behind another authentication proxy. **⚠️ Warning:** This creates a security risk due to Docker network exposure - any container on the same Docker network can bypass external authentication and access DockFlare's API directly. We strongly recommend using OAuth/OIDC providers instead for single sign-on convenience without sacrificing security. See [Accessing the Web UI](Accessing-the-Web-UI.md#disabling-password-login) for full security implications.
 *   **Cloudflare Credentials:** Allows you to update your Cloudflare Account ID and API Token after the initial setup.
 *   **Core Configuration:** Lets you change settings like the Tunnel Name and Rule Grace Period.

@@ -48,6 +48,15 @@ services:
 You can also apply multiple groups by using `dockflare.access.groups` with a comma-separated list of IDs:
 `dockflare.access.groups=admin-users,home-network`
 
+#### System-Managed Policies
+
+DockFlare provides two built-in system policies that are automatically available:
+
+- **`public-default-bypass`** - Public access with bypass decision (use for truly public services)
+- **`authenticated-default`** - Default authentication with one-time PIN + email restriction
+
+These system policies are non-deletable and serve as the foundation for zone protection and legacy label migration.
+
 #### B) Via the Web UI (For Manual Rules or Overrides)
 
 You can also apply an Access Group to any rule directly from the dashboard:

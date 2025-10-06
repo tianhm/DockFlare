@@ -183,7 +183,12 @@ def sync_access_group_to_reusable_policy(group_id, group_definition):
         logging.warning(f"Access group '{group_id}' has no policies to sync")
         return None
 
-    policy_name = f"DockFlare-AccessGroup-{group_id}"
+    is_system_policy = group_definition.get("system_policy", False)
+    if is_system_policy and group_definition.get("policies"):
+        policy_name = group_definition["policies"][0].get("name", f"DockFlare-AccessGroup-{group_id}")
+    else:
+        policy_name = f"DockFlare-AccessGroup-{group_id}"
+
     existing_policy_id = group_definition.get("cloudflare_policy_id")
 
     policies = group_definition.get("policies", [])

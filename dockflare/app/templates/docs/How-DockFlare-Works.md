@@ -59,13 +59,32 @@ This architecture eliminates policy duplication and allows you to manage policie
 
 ### System-Managed Policies
 
-DockFlare automatically manages certain policies for consistency:
+DockFlare automatically manages two core policies for consistency:
 
-- **`public-default-bypass`**: Created on startup, used by all bypass rules
+- **`public-default-bypass`**: Public access bypass policy
   - Non-deletable system policy
-  - Synced to Cloudflare on first Access Policies page visit
-  - Referenced by all services using "Bypass" access
+  - Created automatically during initialization
+  - Cloudflare name: `DockFlare-Default-Public-Access-Bypass`
+  - Decision: `bypass` with `everyone` include rule
+  - Used by all services requiring public access with zone protection bypass
   - Prevents duplicate bypass policies in your Cloudflare dashboard
+
+- **`authenticated-default`**: Default authentication policy
+  - Non-deletable system policy
+  - Created automatically during initialization
+  - Cloudflare name: `DockFlare-Default-Authenticated-Access`
+  - Decision: `allow` with one-time PIN + email restriction
+  - Used for basic authenticated access scenarios
+
+### Legacy Label Migration
+
+DockFlare automatically migrates legacy labels to use system policies:
+
+- `dockflare.access.policy=bypass` → Uses `public-default-bypass`
+- `dockflare.access.group=bypass` → Uses `public-default-bypass`
+- `dockflare.access.policy=authenticate` → Uses `authenticated-default`
+
+Migration happens transparently during container processing and reconciliation. No manual intervention required.
 
 ### Zone Default Policies
 

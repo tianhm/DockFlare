@@ -154,14 +154,21 @@ def create_app():
     @login_manager.request_loader
     def load_user_from_request(request):
         """Load user from request - bypass session auth for designated API endpoints."""
-        
+
         if request.path.startswith('/api/v2/auth/'):
             return None
 
         elif request.endpoint and request.endpoint.startswith('api_v2.'):
+            # Check if endpoint is UI-only (should use session auth via @login_required)
+            from app.web.api_v2_routes import _UI_ENDPOINT_ALLOWLIST
+            if request.endpoint in _UI_ENDPOINT_ALLOWLIST:
+                # UI endpoints must use session-based auth, don't auto-authenticate
+                return None
+
+            # API endpoints (not in UI allowlist) can use MASTER_API_KEY
             from app.core.user import User
             return User('api_user')
-            
+
         return None
 
     @login_manager.user_loader

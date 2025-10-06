@@ -118,12 +118,34 @@ def process_container_start(container_obj):
 
             default_access_groups = get_label(labels, "access.groups")
             default_access_group = get_label(labels, "access.group") if not default_access_groups else None
+            default_access_policy_type_label = get_label(labels, "access.policy")
+
+            if default_access_policy_type_label == "bypass" and not default_access_group and not default_access_groups:
+                logging.info(f"DOCKER_HANDLER: Legacy label 'dockflare.access.policy=bypass' detected for {container_name_val}. Migrating to 'dockflare.access.group=public-default-bypass'.")
+                default_access_group = ["public-default-bypass"]
+                default_access_policy_type_label = None
+            elif default_access_group and not default_access_groups:
+                if isinstance(default_access_group, str) and default_access_group == "bypass":
+                    logging.info(f"DOCKER_HANDLER: Legacy group 'bypass' detected for {container_name_val}. Migrating to 'public-default-bypass'.")
+                    default_access_group = "public-default-bypass"
+                elif isinstance(default_access_group, list) and "bypass" in default_access_group:
+                    logging.info(f"DOCKER_HANDLER: Legacy group 'bypass' detected in list for {container_name_val}. Migrating to 'public-default-bypass'.")
+                    default_access_group = ["public-default-bypass" if g == "bypass" else g for g in default_access_group]
+            elif default_access_policy_type_label == "authenticate" and not default_access_group and not default_access_groups:
+                from app.core.cloudflare_api import get_cloudflare_account_email
+                account_email = get_cloudflare_account_email()
+                if account_email:
+                    logging.info(f"DOCKER_HANDLER: Legacy label 'dockflare.access.policy=authenticate' detected for {container_name_val}. Migrating to 'dockflare.access.group=authenticated-default' (restricted to {account_email}).")
+                    default_access_group = ["authenticated-default"]
+                    default_access_policy_type_label = None
+                else:
+                    logging.warning(f"DOCKER_HANDLER: Cannot migrate 'dockflare.access.policy=authenticate' for {container_name_val}. Cloudflare account email not available. Skipping access policy creation. Use 'dockflare.access.group=<group>' instead.")
+                    default_access_policy_type_label = None
+
             if default_access_groups:
                 default_access_group = [gid.strip() for gid in default_access_groups.split(',')]
             elif default_access_group:
-                default_access_group = [default_access_group.strip()]
-
-            default_access_policy_type_label = get_label(labels, "access.policy")
+                default_access_group = [default_access_group.strip()] if isinstance(default_access_group, str) else default_access_group
             default_access_app_name_label = get_label(labels, "access.name")
             default_access_session_duration_label = get_label(labels, "access.session_duration", "24h")
             default_access_app_launcher_visible_label = get_label(labels, "access.app_launcher_visible", "false").lower() in ["true", "1", "t", "yes"]
@@ -175,14 +197,32 @@ def process_container_start(container_obj):
 
                 access_groups_indexed = get_label(labels, f"{index}.access.groups")
                 access_group_indexed = get_label(labels, f"{index}.access.group") if not access_groups_indexed else None
+                access_policy_type_indexed = get_label(labels, f"{index}.access.policy", default_access_policy_type_label)
+
+                if access_policy_type_indexed == "bypass" and not access_group_indexed and not access_groups_indexed:
+                    logging.info(f"DOCKER_HANDLER: Legacy label 'dockflare.{index}.access.policy=bypass' detected for {container_name_val}. Migrating to 'dockflare.{index}.access.group=public-default-bypass'.")
+                    access_group_indexed = ["public-default-bypass"]
+                    access_policy_type_indexed = None
+                elif access_group_indexed and "bypass" in access_group_indexed and not access_groups_indexed:
+                    logging.info(f"DOCKER_HANDLER: Legacy group 'bypass' detected in index {index} for {container_name_val}. Migrating to 'public-default-bypass'.")
+                    access_group_indexed = ["public-default-bypass" if g == "bypass" else g for g in access_group_indexed]
+                elif access_policy_type_indexed == "authenticate" and not access_group_indexed and not access_groups_indexed:
+                    from app.core.cloudflare_api import get_cloudflare_account_email
+                    account_email = get_cloudflare_account_email()
+                    if account_email:
+                        logging.info(f"DOCKER_HANDLER: Legacy label 'dockflare.{index}.access.policy=authenticate' detected for {container_name_val}. Migrating to 'dockflare.{index}.access.group=authenticated-default' (restricted to {account_email}).")
+                        access_group_indexed = ["authenticated-default"]
+                        access_policy_type_indexed = None
+                    else:
+                        logging.warning(f"DOCKER_HANDLER: Cannot migrate 'dockflare.{index}.access.policy=authenticate' for {container_name_val}. Cloudflare account email not available. Skipping access policy creation. Use 'dockflare.{index}.access.group=<group>' instead.")
+                        access_policy_type_indexed = None
+
                 if access_groups_indexed:
                     access_group_indexed = [gid.strip() for gid in access_groups_indexed.split(',')]
                 elif access_group_indexed:
-                    access_group_indexed = [access_group_indexed.strip()]
+                    access_group_indexed = [access_group_indexed.strip()] if isinstance(access_group_indexed, str) else access_group_indexed
                 else:
                     access_group_indexed = default_access_group
-
-                access_policy_type_indexed = get_label(labels, f"{index}.access.policy", default_access_policy_type_label)
                 access_app_name_indexed = get_label(labels, f"{index}.access.name", default_access_app_name_label)
                 access_session_duration_indexed = get_label(labels, f"{index}.access.session_duration", default_access_session_duration_label)
                 acc_launcher_val_idx = get_label(labels, f"{index}.access.app_launcher_visible", str(default_access_app_launcher_visible_label).lower())

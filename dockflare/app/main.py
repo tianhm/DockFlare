@@ -15,9 +15,10 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 # dockflare/app/main.py
-import logging 
+import logging
 import threading
 import time
+import datetime
 import sys
 import os
 import json
@@ -26,7 +27,7 @@ from cryptography.fernet import Fernet
 
 from app import app, docker_client, tunnel_state, cloudflared_agent_state, config
 
-from app.core.state_manager import load_state, ensure_default_bypass_policy
+from app.core.state_manager import load_state, ensure_default_bypass_policy, ensure_authenticated_default_policy
 from app.core.tunnel_manager import (
     initialize_tunnel,
     update_cloudflared_container_status, 
@@ -114,8 +115,36 @@ def start_core_services():
         logging.error("Docker client unavailable. Critical functionalities will be affected.")
         return
 
-    initialize_tunnel() 
+    initialize_tunnel()
     logging.info(f"Tunnel initialization attempt complete. Status: {tunnel_state.get('status_message')}, Error: {tunnel_state.get('error')}")
+
+    ensure_default_bypass_policy(flask_app=app)
+    logging.info("Bypass policy post-setup initialization complete.")
+
+    from app.core import idp_manager
+    from app.core.state_manager import identity_providers, save_state, state_lock
+    logging.info("Syncing identity providers after setup...")
+    try:
+        idps = idp_manager.list_identity_providers()
+        if idps:
+            with state_lock:
+                for idp in idps:
+                    idp_id = idp.get("id")
+                    if idp_id:
+                        identity_providers[idp_id] = {
+                            "cloudflare_id": idp_id,
+                            "name": idp.get("name", "Unknown"),
+                            "type": idp.get("type", "unknown"),
+                            "last_synced": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                            "system_managed": idp_manager.is_system_managed_idp(idp.get("type"))
+                        }
+                save_state()
+            logging.info(f"Synced {len(idps)} identity providers from Cloudflare")
+    except Exception as e:
+        logging.error(f"Error syncing identity providers: {e}", exc_info=True)
+
+    ensure_authenticated_default_policy(flask_app=app)
+    logging.info("Authenticated policy post-setup initialization complete.")
 
     initial_scan_needed_and_possible = True
     if config.USE_EXTERNAL_CLOUDFLARED:
@@ -305,6 +334,9 @@ def main_application_entrypoint():
     
     ensure_default_bypass_policy(flask_app=app)
     logging.info("Default bypass policy initialization complete.")
+
+    ensure_authenticated_default_policy(flask_app=app)
+    logging.info("Default authenticated policy initialization complete.")
 
     if docker_client:
         try:

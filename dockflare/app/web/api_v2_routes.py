@@ -29,7 +29,8 @@ from app import config, docker_client, tunnel_state, cloudflared_agent_state, pu
 from app.core.state_manager import (
     managed_rules, access_groups, state_lock, save_state,
     add_agent, get_agent, update_agent, list_agents, remove_agent, add_agent_key, revoke_agent_key, find_agent_id_by_key, list_agent_keys, get_agent_key_info,
-    get_services_snapshot, cleanup_expired_revoked_keys, get_revoked_keys_summary
+    get_services_snapshot, cleanup_expired_revoked_keys, get_revoked_keys_summary,
+    save_identity_provider, get_identity_provider, delete_identity_provider, list_identity_providers, get_idp_by_cloudflare_id, get_idp_id_by_name
 )
 from app.core import agent_key_store
 from app.core.tunnel_manager import (
@@ -61,21 +62,31 @@ from app.core.access_manager import (
 from app.core.reconciler import reconcile_state_threaded
 from app.core.docker_handler import is_valid_hostname, is_valid_service
 from app.core.utils import get_rule_key, get_label
-
+#----------------------------------------------------------!
+# UI endpoints are protected by session auth               !
+#----------------------------------------------------------!
 api_v2_bp = Blueprint('api_v2', __name__, url_prefix='/api/v2')
-
+# Nicht vergessen - This is important when adding a new agent endpoint don't forget to update in order to allow as by default all agent endpoints are protected by master api key auth
 _AGENT_ENDPOINT_ALLOWLIST = {
     'api_v2.agents_register',
     'api_v2.agents_get_commands',
     'api_v2.agents_post_events',
 }
-
+# Nicht vergessenn - This is important when adding a new UI endpoint don't forget to update in order to allow as by default all UI endpoints are protected by session auth
 _UI_ENDPOINT_ALLOWLIST = {
     'api_v2.manage_auth_settings',
     'api_v2.manage_auth_providers',
     'api_v2.manage_auth_provider',
     'api_v2.manage_auth_users',
     'api_v2.manage_auth_user',
+    'api_v2.api_get_idp_types',
+    'api_v2.api_list_idps',
+    'api_v2.api_sync_idps',
+    'api_v2.api_create_idp',
+    'api_v2.api_get_idp',
+    'api_v2.api_update_idp',
+    'api_v2.api_delete_idp',
+    'api_v2.get_zone_policies_api',
 }
 
 
@@ -89,8 +100,7 @@ def _enforce_master_api_key():
 
     if endpoint in _AGENT_ENDPOINT_ALLOWLIST:
         return
-
-    # For UI endpoints, rely on Flask-Login's session auth
+    
     if endpoint in _UI_ENDPOINT_ALLOWLIST:
         return
 
@@ -152,7 +162,6 @@ def _ensure_agent_api_key(agent_id, agent_record, token):
 
 def get_effective_tunnel_id():
     return tunnel_state.get("id") if not config.USE_EXTERNAL_CLOUDFLARED else config.EXTERNAL_TUNNEL_ID
-
 
 @api_v2_bp.route('/services', methods=['GET'])
 def list_services():
@@ -350,6 +359,27 @@ def list_zones_api():
     force_refresh = request.args.get('refresh') == '1'
     zones = list_account_zones(force_refresh=force_refresh)
     return jsonify(zones)
+
+@api_v2_bp.route('/zone-policies', methods=['GET'])
+@login_required
+def get_zone_policies_api():
+    from app.core.access_manager import check_for_tld_access_policy
+    zone_policies = []
+    try:
+        zones = list_account_zones()
+        for zone in zones or []:
+            zone_name = zone.get('name')
+            if zone_name:
+                has_policy = check_for_tld_access_policy(zone_name)
+                zone_policies.append({
+                    'zone_name': zone_name,
+                    'zone_id': zone.get('id'),
+                    'has_default_policy': has_policy
+                })
+    except Exception as e:
+        logging.error(f"Error fetching zone default policies: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+    return jsonify({"success": True, "zone_policies": zone_policies})
 
 def _auto_detect_zone_match(hostname, zones):
     if not hostname or not zones:
@@ -718,12 +748,34 @@ def process_agent_container_start(payload, agent_id):
 
             default_access_groups = get_label(labels, "access.groups")
             default_access_group = get_label(labels, "access.group") if not default_access_groups else None
+            default_access_policy_type_label = get_label(labels, "access.policy")
+
+            if default_access_policy_type_label == "bypass" and not default_access_group and not default_access_groups:
+                logging.info(f"AGENT_PROCESS: Legacy label 'dockflare.access.policy=bypass' detected for {container_name}. Migrating to 'dockflare.access.group=public-default-bypass'.")
+                default_access_group = ["public-default-bypass"]
+                default_access_policy_type_label = None
+            elif default_access_group and not default_access_groups:
+                if isinstance(default_access_group, str) and default_access_group == "bypass":
+                    logging.info(f"AGENT_PROCESS: Legacy group 'bypass' detected for {container_name}. Migrating to 'public-default-bypass'.")
+                    default_access_group = "public-default-bypass"
+                elif isinstance(default_access_group, list) and "bypass" in default_access_group:
+                    logging.info(f"AGENT_PROCESS: Legacy group 'bypass' detected in list for {container_name}. Migrating to 'public-default-bypass'.")
+                    default_access_group = ["public-default-bypass" if g == "bypass" else g for g in default_access_group]
+            elif default_access_policy_type_label == "authenticate" and not default_access_group and not default_access_groups:
+                from app.core.cloudflare_api import get_cloudflare_account_email
+                account_email = get_cloudflare_account_email()
+                if account_email:
+                    logging.info(f"AGENT_PROCESS: Legacy label 'dockflare.access.policy=authenticate' detected for {container_name}. Migrating to 'dockflare.access.group=authenticated-default' (restricted to {account_email}).")
+                    default_access_group = ["authenticated-default"]
+                    default_access_policy_type_label = None
+                else:
+                    logging.warning(f"AGENT_PROCESS: Cannot migrate 'dockflare.access.policy=authenticate' for {container_name}. Cloudflare account email not available. Skipping access policy creation. Use 'dockflare.access.group=<group>' instead.")
+                    default_access_policy_type_label = None
+
             if default_access_groups:
                 default_access_group = [gid.strip() for gid in default_access_groups.split(',')]
             elif default_access_group:
-                default_access_group = [default_access_group.strip()]
-
-            default_access_policy_type_label = get_label(labels, "access.policy")
+                default_access_group = [default_access_group.strip()] if isinstance(default_access_group, str) else default_access_group
             default_access_app_name_label = get_label(labels, "access.name")
             default_access_session_duration_label = get_label(labels, "access.session_duration", "24h")
             default_access_app_launcher_visible_label = get_label(labels, "access.app_launcher_visible", "false").lower() in ["true", "1", "t", "yes"]
@@ -777,14 +829,32 @@ def process_agent_container_start(payload, agent_id):
 
                 access_groups_indexed = get_label(labels, f"{index}.access.groups")
                 access_group_indexed = get_label(labels, f"{index}.access.group") if not access_groups_indexed else None
+                access_policy_type_indexed = get_label(labels, f"{index}.access.policy", default_access_policy_type_label)
+
+                if access_policy_type_indexed == "bypass" and not access_group_indexed and not access_groups_indexed:
+                    logging.info(f"AGENT_PROCESS: Legacy label 'dockflare.{index}.access.policy=bypass' detected for {container_name}. Migrating to 'dockflare.{index}.access.group=public-default-bypass'.")
+                    access_group_indexed = ["public-default-bypass"]
+                    access_policy_type_indexed = None
+                elif access_group_indexed and "bypass" in access_group_indexed and not access_groups_indexed:
+                    logging.info(f"AGENT_PROCESS: Legacy group 'bypass' detected in index {index} for {container_name}. Migrating to 'public-default-bypass'.")
+                    access_group_indexed = ["public-default-bypass" if g == "bypass" else g for g in access_group_indexed]
+                elif access_policy_type_indexed == "authenticate" and not access_group_indexed and not access_groups_indexed:
+                    from app.core.cloudflare_api import get_cloudflare_account_email
+                    account_email = get_cloudflare_account_email()
+                    if account_email:
+                        logging.info(f"AGENT_PROCESS: Legacy label 'dockflare.{index}.access.policy=authenticate' detected for {container_name}. Migrating to 'dockflare.{index}.access.group=authenticated-default' (restricted to {account_email}).")
+                        access_group_indexed = ["authenticated-default"]
+                        access_policy_type_indexed = None
+                    else:
+                        logging.warning(f"AGENT_PROCESS: Cannot migrate 'dockflare.{index}.access.policy=authenticate' for {container_name}. Cloudflare account email not available. Skipping access policy creation. Use 'dockflare.{index}.access.group=<group>' instead.")
+                        access_policy_type_indexed = None
+
                 if access_groups_indexed:
                     access_group_indexed = [gid.strip() for gid in access_groups_indexed.split(',')]
                 elif access_group_indexed:
-                    access_group_indexed = [access_group_indexed.strip()]
+                    access_group_indexed = [access_group_indexed.strip()] if isinstance(access_group_indexed, str) else access_group_indexed
                 else:
                     access_group_indexed = default_access_group
-
-                access_policy_type_indexed = get_label(labels, f"{index}.access.policy", default_access_policy_type_label)
                 access_app_name_indexed = get_label(labels, f"{index}.access.name", default_access_app_name_label)
                 access_session_duration_indexed = get_label(labels, f"{index}.access.session_duration", default_access_session_duration_label)
                 acc_launcher_val_idx = get_label(labels, f"{index}.access.app_launcher_visible", str(default_access_app_launcher_visible_label).lower())
@@ -1325,8 +1395,7 @@ def agents_post_events(agent_id):
 
     now = datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()
     update_agent(agent_id, {"last_seen": now, "last_event": payload})
-
-    # Process the event
+    
     event_type = payload.get("type")
     if event_type == "container_start":
         logging.info(f"AGENTS_EVENTS: Processing container_start event for agent {agent_id}")
@@ -2386,3 +2455,213 @@ def manage_auth_user(user_email):
     ]
 
     return jsonify({"status": "success", "message": "User deleted successfully."})
+
+@api_v2_bp.route('/idp/types', methods=['GET'])
+@login_required
+def api_get_idp_types():
+    from app.core import idp_manager
+    try:
+        types = idp_manager.get_supported_idp_types()
+        return jsonify({"success": True, "types": types})
+    except Exception as e:
+        logging.error(f"Error getting IdP types: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@api_v2_bp.route('/idp/list', methods=['GET'])
+@login_required
+def api_list_idps():
+    try:
+        local_idps = list_identity_providers()
+        return jsonify({"success": True, "identity_providers": local_idps})
+    except Exception as e:
+        logging.error(f"Error listing IdPs: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@api_v2_bp.route('/idp/sync', methods=['POST'])
+@login_required
+def api_sync_idps():
+    from app.core import idp_manager
+    from datetime import datetime, timezone
+
+    try:
+        cloudflare_idps = idp_manager.list_identity_providers()
+        synced_count = 0
+
+        for cf_idp in cloudflare_idps:
+            cf_id = cf_idp.get('id')
+            idp_type = cf_idp.get('type')
+            idp_name = cf_idp.get('name', '').strip()
+
+            if not idp_name:
+                idp_name = idp_type.title()
+
+            friendly_name, existing_idp = get_idp_by_cloudflare_id(cf_id)
+
+            if not friendly_name:
+                friendly_name = idp_name.lower().replace(' ', '-')
+                counter = 1
+                base_name = friendly_name
+                while get_identity_provider(friendly_name):
+                    friendly_name = f"{base_name}-{counter}"
+                    counter += 1
+
+            idp_data = {
+                "cloudflare_id": cf_id,
+                "name": idp_name,
+                "type": idp_type,
+                "last_synced": datetime.now(timezone.utc).isoformat(),
+                "system_managed": idp_manager.is_system_managed_idp(idp_type)
+            }
+
+            config = cf_idp.get('config', {})
+            if 'client_id' in config:
+                idp_data['client_id_preview'] = config['client_id'][:20] + '...' if len(config['client_id']) > 20 else config['client_id']
+
+            save_identity_provider(friendly_name, idp_data)
+            synced_count += 1
+
+        logging.info(f"Synced {synced_count} Identity Providers from Cloudflare")
+        return jsonify({"success": True, "synced": synced_count})
+    except Exception as e:
+        logging.error(f"Error syncing IdPs: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@api_v2_bp.route('/idp/create', methods=['POST'])
+@login_required
+def api_create_idp():
+    from app.core import idp_manager
+    from datetime import datetime, timezone
+
+    try:
+        data = request.get_json()
+        friendly_name = data.get('friendly_name', '').strip()
+        name = data.get('name', '').strip()
+        idp_type = data.get('type', '').strip()
+        config = data.get('config', {})
+
+        if not friendly_name or not name or not idp_type:
+            return jsonify({"success": False, "error": "Missing required fields"}), 400
+
+        if get_identity_provider(friendly_name):
+            return jsonify({"success": False, "error": "Friendly name already exists"}), 400
+
+        cf_idp = idp_manager.create_identity_provider(name, idp_type, config)
+
+        if not cf_idp or not cf_idp.get('id'):
+            return jsonify({"success": False, "error": "Failed to create IdP in Cloudflare"}), 500
+
+        idp_data = {
+            "cloudflare_id": cf_idp['id'],
+            "name": name,
+            "type": idp_type,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "last_synced": datetime.now(timezone.utc).isoformat(),
+            "system_managed": False
+        }
+
+        if 'client_id' in config:
+            idp_data['client_id_preview'] = config['client_id'][:20] + '...' if len(config['client_id']) > 20 else config['client_id']
+
+        save_identity_provider(friendly_name, idp_data)
+
+        test_url = idp_manager.build_test_idp_url(cf_idp['id'])
+
+        return jsonify({
+            "success": True,
+            "identity_provider": idp_data,
+            "friendly_name": friendly_name,
+            "test_url": test_url
+        })
+    except Exception as e:
+        logging.error(f"Error creating IdP: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@api_v2_bp.route('/idp/<friendly_name>', methods=['GET'])
+@login_required
+def api_get_idp(friendly_name):
+    from app.core import idp_manager
+
+    try:
+        local_idp = get_identity_provider(friendly_name)
+        if not local_idp:
+            return jsonify({"success": False, "error": "IdP not found"}), 404
+
+        cf_id = local_idp.get('cloudflare_id')
+        test_url = idp_manager.build_test_idp_url(cf_id) if cf_id else None
+
+        return jsonify({
+            "success": True,
+            "identity_provider": local_idp,
+            "friendly_name": friendly_name,
+            "test_url": test_url
+        })
+    except Exception as e:
+        logging.error(f"Error getting IdP: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@api_v2_bp.route('/idp/<friendly_name>', methods=['PUT'])
+@login_required
+def api_update_idp(friendly_name):
+    from app.core import idp_manager
+    from datetime import datetime, timezone
+
+    try:
+        local_idp = get_identity_provider(friendly_name)
+        if not local_idp:
+            return jsonify({"success": False, "error": "IdP not found"}), 404
+
+        if local_idp.get('system_managed'):
+            return jsonify({"success": False, "error": "Cannot update system-managed IdP"}), 403
+
+        data = request.get_json()
+        cf_id = local_idp.get('cloudflare_id')
+        name = data.get('name')
+        config = data.get('config')
+
+        if not name and not config:
+            return jsonify({"success": False, "error": "Nothing to update"}), 400
+
+        cf_idp = idp_manager.update_identity_provider(cf_id, name=name, config=config)
+
+        if not cf_idp:
+            return jsonify({"success": False, "error": "Failed to update IdP in Cloudflare"}), 500
+
+        if name:
+            local_idp['name'] = name
+        if config and 'client_id' in config:
+            local_idp['client_id_preview'] = config['client_id'][:20] + '...' if len(config['client_id']) > 20 else config['client_id']
+
+        local_idp['last_synced'] = datetime.now(timezone.utc).isoformat()
+        save_identity_provider(friendly_name, local_idp)
+
+        return jsonify({"success": True, "identity_provider": local_idp})
+    except Exception as e:
+        logging.error(f"Error updating IdP: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@api_v2_bp.route('/idp/<friendly_name>', methods=['DELETE'])
+@login_required
+def api_delete_idp(friendly_name):
+    from app.core import idp_manager
+
+    try:
+        local_idp = get_identity_provider(friendly_name)
+        if not local_idp:
+            return jsonify({"success": False, "error": "IdP not found"}), 404
+
+        if local_idp.get('system_managed'):
+            return jsonify({"success": False, "error": "Cannot delete system-managed IdP"}), 403
+
+        cf_id = local_idp.get('cloudflare_id')
+
+        try:
+            idp_manager.delete_identity_provider(cf_id)
+        except Exception as e:
+            logging.warning(f"Failed to delete IdP from Cloudflare (may already be deleted): {e}")
+
+        delete_identity_provider(friendly_name)
+
+        return jsonify({"success": True})
+    except Exception as e:
+        logging.error(f"Error deleting IdP: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500

@@ -98,6 +98,20 @@ A `*.domain.com` Access Application already exists. This could be:
 Check policy priority:
 1. Verify service has specific hostname policy
 2. Confirm zone wildcard exists and is configured correctly
+3. If service should be public despite zone protection, add `dockflare.access.group=public-default-bypass` label
+
+### Bypassing Zone Protection for Public Services
+
+If you have a zone-level authentication policy but need specific services to remain public:
+
+1. Add the bypass label to the container:
+   ```yaml
+   labels:
+     - "dockflare.access.group=public-default-bypass"
+   ```
+2. This creates an exact hostname Access Application with bypass decision
+3. Exact hostname policies override wildcard policies
+4. Service becomes publicly accessible while zone stays protected
 3. Check Cloudflare Access logs for policy evaluation order
 4. Ensure DNS record points to correct tunnel
 

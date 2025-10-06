@@ -49,13 +49,22 @@
 
             <div>
                 <h4 class="text-md font-semibold mb-2">Policy Rules</h4>
-                
+
+                <div class="form-control" id="idp-field-container">
+                    <label class="label" for="group_identity_providers">
+                        <span class="label-text">Identity Providers</span>
+                    </label>
+                    <select id="group_identity_providers" name="identity_providers" multiple="multiple" class="w-full border-0">
+                    </select>
+                    <div class="label"><span class="label-text-alt">Select OAuth/OIDC providers for authentication. <strong class="text-warning">Emails are required when using IdPs.</strong></span></div>
+                </div>
+
                 <div class="form-control" id="email-field-container">
                     <label class="label" for="group_emails">
-                        <span class="label-text">Allowed Emails or Domains <span class="text-error">*</span></span>
+                        <span class="label-text">Allowed Emails or Domains (Required with IdPs)</span>
                     </label>
                     <textarea id="group_emails" name="emails" class="textarea textarea-bordered h-12 resize-y" placeholder="me@example.com, myfriend@example.com, @mycompany.com"></textarea>
-                    <div class="label"><span class="label-text-alt">Comma-separated. To allow anyone from a domain, use <code class="text-xs">@domain.com</code>. <strong>Required for authenticated access.</strong></span></div>
+                    <div class="label"><span class="label-text-alt">Comma-separated. To allow anyone from a domain, use <code class="text-xs">@domain.com</code>. <strong>When using IdPs, you must specify allowed emails to prevent unauthorized access.</strong></span></div>
                 </div>
                 <div class="form-control">
                     <label class="label" for="group_ip_ranges"><span class="label-text">Allowed IP Ranges</span></label>

@@ -450,7 +450,7 @@ def access_policies_page():
         if not cf_policy_id or cf_policy_id == default_bypass_id:
             try:
                 cf_policy = reusable_policies.create_reusable_policy(
-                    name=policy.get("display_name", "Default Public Access (Bypass)"),
+                    name="DockFlare-Default-Public-Access-Bypass",
                     decision="bypass",
                     include_rules=[{"everyone": {}}]
                 )
@@ -484,7 +484,11 @@ def access_policies_page():
                     if group_id_val not in group_usage:
                         group_usage[group_id_val] = []
                     group_usage[group_id_val].append(hostname)
-        groups_for_template = copy.deepcopy(access_groups)
+        groups_for_template_raw = copy.deepcopy(access_groups)
+        groups_for_template = {
+            gid: group for gid, group in groups_for_template_raw.items()
+            if not group.get("hide_from_ui", False)
+        }
 
     try:
         with open(os.path.join(current_app.static_folder, 'json', 'countries.json')) as f:
@@ -495,30 +499,12 @@ def access_policies_page():
 
     cf_account_id = current_app.config.get('CF_ACCOUNT_ID', '')
 
-    
-    zone_policies = []
-    try:
-        zones = list_account_zones()
-        for zone in zones or []:
-            zone_name = zone.get('name')
-            if zone_name:
-                has_policy = check_for_tld_access_policy(zone_name)
-                zone_policies.append({
-                    'zone_name': zone_name,
-                    'zone_id': zone.get('id'),
-                    'has_default_policy': has_policy
-                })
-    except Exception as e:
-        logging.error(f"Error fetching zone default policies: {e}", exc_info=True)
-        zone_policies = []
-
     return render_template(
         'access_policies.html',
         access_groups=groups_for_template,
         used_group_ids=used_group_ids,
         group_usage=group_usage,
         countries=countries,
-        zone_policies=zone_policies,
         ACCOUNT_ID_FOR_DISPLAY=cf_account_id if cf_account_id else "Not Configured"
     )
 
@@ -1776,10 +1762,12 @@ def ui_delete_manual_rule_route(rule_key_from_url):
 
     return redirect(url_for('web.status_page'))
 
-def _parse_and_build_policy_from_form(email_str, ip_ranges_str=None, countries_list=None, public_mode=False):
+def _parse_and_build_policy_from_form(email_str, ip_ranges_str=None, countries_list=None, idp_list=None, public_mode=False):
+    from app.core.state_manager import get_idp_id_by_name
     policies = []
     email_rules = []
     ip_rules = []
+    idp_rules = []
 
     if email_str and email_str.strip():
         email_parts = [part.strip() for part in email_str.split(',') if part.strip()]
@@ -1788,6 +1776,18 @@ def _parse_and_build_policy_from_form(email_str, ip_ranges_str=None, countries_l
                 email_rules.append({"email_domain": {"domain": part[1:]}})
             else:
                 email_rules.append({"email": {"email": part}})
+
+    if idp_list:
+        for idp_friendly_name in idp_list:
+            if idp_friendly_name.strip():
+                idp_id = get_idp_id_by_name(idp_friendly_name)
+                if idp_id:
+                    idp_rules.append({"login_method": {"id": idp_id}})
+                else:
+                    logging.warning(f"IdP friendly name '{idp_friendly_name}' not found in state, skipping")
+
+    if idp_rules and not email_rules and not public_mode:
+        raise ValueError("When using Identity Providers, you must specify allowed email addresses to prevent unauthorized access.")
 
     if ip_ranges_str and ip_ranges_str.strip():
         ip_parts = [part.strip() for part in ip_ranges_str.split(',') if part.strip()]
@@ -1815,12 +1815,12 @@ def _parse_and_build_policy_from_form(email_str, ip_ranges_str=None, countries_l
                 "include": [{"everyone": {}}]
             })
     else:
-        # AUTHENTICATED MODE: Require email authentication
-        if email_rules:
+        include_rules = email_rules + idp_rules
+        if include_rules:
             policy = {
                 "name": "Allow defined users",
                 "decision": "allow",
-                "include": email_rules
+                "include": include_rules
             }
 
             if countries_list:
@@ -1830,7 +1830,6 @@ def _parse_and_build_policy_from_form(email_str, ip_ranges_str=None, countries_l
             policies.append(policy)
             policies.append({"name": "Default Deny", "decision": "deny", "include": [{"everyone": {}}]})
         else:
-            # No emails provided in authenticated mode - error condition
             policies.append({"name": "Default Deny (No rules defined)", "decision": "deny", "include": [{"everyone": {}}]})
 
     return policies
@@ -1849,8 +1848,20 @@ def create_access_group():
         if group_id in access_groups:
             flash(f"Error: Access Group with ID '{group_id}' already exists.", "error")
             return redirect(url_for('web.access_policies_page'))
-        
+
         public_mode = form.get('public_mode', 'false').lower() == 'true'
+
+        try:
+            policies = _parse_and_build_policy_from_form(
+                form.get('emails', ''),
+                form.get('ip_ranges', ''),
+                request.form.getlist('countries'),
+                request.form.getlist('identity_providers'),
+                public_mode=public_mode
+            )
+        except ValueError as e:
+            flash(f"Error: {str(e)}", "error")
+            return redirect(url_for('web.access_policies_page'))
 
         new_group = {
             "id": group_id,
@@ -1859,12 +1870,7 @@ def create_access_group():
             "app_launcher_visible": form.get('app_launcher_visible') == 'on',
             "auto_redirect_to_identity": form.get('auto_redirect') == 'on',
             "public_mode": public_mode,
-            "policies": _parse_and_build_policy_from_form(
-                form.get('emails', ''),
-                form.get('ip_ranges', ''),
-                request.form.getlist('countries'),
-                public_mode=public_mode
-            )
+            "policies": policies
         }
         access_groups[group_id] = new_group
         save_state()
@@ -1900,6 +1906,18 @@ def edit_access_group(group_id):
     with state_lock:
         public_mode = form.get('public_mode', 'false').lower() == 'true'
 
+        try:
+            policies = _parse_and_build_policy_from_form(
+                form.get('emails', ''),
+                form.get('ip_ranges', ''),
+                request.form.getlist('countries'),
+                request.form.getlist('identity_providers'),
+                public_mode=public_mode
+            )
+        except ValueError as e:
+            flash(f"Error: {str(e)}", "error")
+            return redirect(url_for('web.access_policies_page'))
+
         updated_group = {
             "id": group_id,
             "display_name": display_name,
@@ -1907,12 +1925,7 @@ def edit_access_group(group_id):
             "app_launcher_visible": form.get('app_launcher_visible') == 'on',
             "auto_redirect_to_identity": form.get('auto_redirect') == 'on',
             "public_mode": public_mode,
-            "policies": _parse_and_build_policy_from_form(
-                form.get('emails', ''),
-                form.get('ip_ranges', ''),
-                request.form.getlist('countries'),
-                public_mode=public_mode
-            )
+            "policies": policies
         }
         access_groups[group_id] = updated_group
         save_state()
