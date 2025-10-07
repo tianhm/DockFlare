@@ -38,20 +38,20 @@ services:
     restart: unless-stopped
     ports:
       - "5000:5000"
-    #labels:
+    labels:
       # -- Cloudflare Tunnel Configuration (via DockFlare) OPTIONAL --
       # Main DockFlare interface with access policy
       #- dockflare.enable=true
-      #- dockflare.hostname=dockflare.example.com
+      #- dockflare.hostname=dockflare.master.tld
       #- dockflare.service=http://dockflare:5000
-      #- dockflare.access.group=team  # your custom access policy
+      #- dockflare.access.group=YOUR-ACCESS-GROUP-ID  # your custom access policy
 
       # -- OAuth Callback Path (Bypass Access Policy) OPTIONAL --
       # Required if using OAuth authentication with access policies on main interface
-      # - dockflare.0.hostname=dockflare.example.com
-      # - dockflare.0.path=/auth/google/callback
-      # - dockflare.0.service=http://dockflare:5000
-      # - dockflare.0.access.policy=bypass
+      #- dockflare.0.hostname=dockflare.example.tld
+      #- dockflare.0.path=/auth/google/callback
+      #- dockflare.0.service=http://dockflare:5000
+      #- dockflare.0.access.group=public-default-bypass
 
       # Add additional callback paths for other OAuth providers as needed
       # - dockflare.1.hostname=dockflare.example.com

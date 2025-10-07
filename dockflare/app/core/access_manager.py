@@ -24,17 +24,18 @@ import copy
 from flask import current_app
 from app.core import cloudflare_api
 from app.core.state_manager import access_groups, managed_rules, state_lock
+from app.core.utils import normalize_path_value
 
 _ACCOUNT_EMAIL_CACHE_TTL = 3600
 _cached_account_email = None
 _cached_account_email_timestamp = 0
 
-def _build_access_app_payload(hostname, name, session_duration, app_launcher_visible, self_hosted_domains, access_policies_or_ids, allowed_idps=None, auto_redirect_to_identity=False, use_reusable=False):
+def _build_access_app_payload(application_domain, name, session_duration, app_launcher_visible, self_hosted_domains, access_policies_or_ids, allowed_idps=None, auto_redirect_to_identity=False, use_reusable=False):
     from app import config
 
     payload = {
         "name": name,
-        "domain": hostname,
+        "domain": application_domain,
         "type": "self_hosted",
         "session_duration": session_duration,
         "app_launcher_visible": app_launcher_visible,
@@ -76,7 +77,7 @@ def check_for_tld_access_policy(zone_name):
     logging.info(f"Checking for existing Access Policy for wildcard TLD: {tld_hostname}")
 
     try:
-        # Optimized TLD check: only do domain-specific query, skip expensive full list scan
+        
         account_id = current_app.config.get('CF_ACCOUNT_ID')
         endpoint = f"/accounts/{account_id}/access/apps"
         from app.core import cloudflare_api
@@ -141,49 +142,49 @@ def get_cloudflare_account_email():
         logging.error(f"Unexpected error fetching Cloudflare account email: {e}", exc_info=True)
         return None
 
-def find_cloudflare_access_application_by_hostname(hostname):
+def find_cloudflare_access_application_by_domain(application_domain):
     account_id = current_app.config.get('CF_ACCOUNT_ID')
-    logging.info(f"Finding Cloudflare Access Application for hostname '{hostname}' on account {account_id}")
+    logging.info(f"Finding Cloudflare Access Application for domain '{application_domain}' on account {account_id}")
     endpoint = f"/accounts/{account_id}/access/apps"
     try:
-        response_data_direct = cloudflare_api.cf_api_request("GET", endpoint, params={"domain": hostname})
+        response_data_direct = cloudflare_api.cf_api_request("GET", endpoint, params={"domain": application_domain})
         apps_direct = response_data_direct.get("result", [])
         if apps_direct and isinstance(apps_direct, list):
             for app in apps_direct:
-                if app.get("domain") == hostname:
-                    logging.info(f"Found Access Application ID '{app.get('id')}' for hostname '{hostname}' via direct domain query.")
+                if app.get("domain") == application_domain:
+                    logging.info(f"Found Access Application ID '{app.get('id')}' for domain '{application_domain}' via direct domain query.")
                     return app
 
-        logging.info(f"No exact match for '{hostname}' via domain query. Falling back to listing all Access Applications.")
+        logging.info(f"No exact match for '{application_domain}' via domain query. Falling back to listing all Access Applications.")
 
         all_apps_response = cloudflare_api.cf_api_request("GET", endpoint, params={"per_page": 100})
         all_apps = all_apps_response.get("result", [])
         if all_apps and isinstance(all_apps, list):
             for app in all_apps:
-                if app.get("domain") == hostname:
-                    logging.info(f"Found Access Application ID '{app.get('id')}' for hostname '{hostname}' via full list scan (domain match).")
+                if app.get("domain") == application_domain:
+                    logging.info(f"Found Access Application ID '{app.get('id')}' for domain '{application_domain}' via full list scan (domain match).")
                     return app
-                if hostname in app.get("self_hosted_domains", []):
-                    logging.info(f"Found Access Application ID '{app.get('id')}' for hostname '{hostname}' (in self_hosted_domains) via full list scan.")
+                if application_domain in app.get("self_hosted_domains", []):
+                    logging.info(f"Found Access Application ID '{app.get('id')}' for domain '{application_domain}' (in self_hosted_domains) via full list scan.")
                     return app
 
-        logging.info(f"Access Application for hostname '{hostname}' not found after extensive search.")
+        logging.info(f"Access Application for domain '{application_domain}' not found after extensive search.")
         return None
     except requests.exceptions.RequestException as e:
-        logging.error(f"API error finding Cloudflare Access Application for '{hostname}': {e}")
+        logging.error(f"API error finding Cloudflare Access Application for '{application_domain}': {e}")
         return None
     except Exception as e:
-        logging.error(f"Unexpected error finding Cloudflare Access Application for '{hostname}': {e}", exc_info=True)
+        logging.error(f"Unexpected error finding Cloudflare Access Application for '{application_domain}': {e}", exc_info=True)
         return None
 
-def create_cloudflare_access_application(hostname, name, session_duration, app_launcher_visible, self_hosted_domains, access_policies, allowed_idps=None, auto_redirect_to_identity=False, use_reusable=False):
+def create_cloudflare_access_application(application_domain, name, session_duration, app_launcher_visible, self_hosted_domains, access_policies, allowed_idps=None, auto_redirect_to_identity=False, use_reusable=False):
     account_id = current_app.config.get('CF_ACCOUNT_ID')
-    logging.info(f"Creating Cloudflare Access Application for hostname '{hostname}' on account {account_id}")
+    logging.info(f"Creating Cloudflare Access Application for domain '{application_domain}' on account {account_id}")
     endpoint = f"/accounts/{account_id}/access/apps"
 
-    payload = _build_access_app_payload(hostname, name, session_duration, app_launcher_visible, self_hosted_domains, access_policies, allowed_idps, auto_redirect_to_identity, use_reusable)
+    payload = _build_access_app_payload(application_domain, name, session_duration, app_launcher_visible, self_hosted_domains, access_policies, allowed_idps, auto_redirect_to_identity, use_reusable)
 
-    logging.info(f"Access Application payload for '{hostname}': use_reusable={use_reusable}, has_policies={'policies' in payload}")
+    logging.info(f"Access Application payload for '{application_domain}': use_reusable={use_reusable}, has_policies={'policies' in payload}")
     if 'policies' in payload:
         if use_reusable:
             logging.info(f"Reusable policy IDs: {payload['policies']}")
@@ -194,16 +195,16 @@ def create_cloudflare_access_application(hostname, name, session_duration, app_l
         app_data = response_data.get("result")
         if app_data and app_data.get("id"):
             app_id = app_data.get('id')
-            logging.info(f"Successfully created Access Application '{app_id}' for '{hostname}'")
+            logging.info(f"Successfully created Access Application '{app_id}' for '{application_domain}'")
             return app_data
         else:
-            logging.error(f"Access Application creation for '{hostname}' API call successful but no ID in response: {app_data}")
+            logging.error(f"Access Application creation for '{application_domain}' API call successful but no ID in response: {app_data}")
             return None
     except requests.exceptions.RequestException as e:
-        logging.error(f"API error creating Access Application for '{hostname}': {e}")
+        logging.error(f"API error creating Access Application for '{application_domain}': {e}")
         return None
     except Exception as e:
-        logging.error(f"Unexpected error creating Access Application for '{hostname}': {e}", exc_info=True)
+        logging.error(f"Unexpected error creating Access Application for '{application_domain}': {e}", exc_info=True)
         return None
 
 def get_cloudflare_access_application(app_uuid):
@@ -233,14 +234,14 @@ def get_cloudflare_access_application(app_uuid):
         logging.error(f"Unexpected error getting Access Application '{app_uuid}': {e}", exc_info=True)
         return None
 
-def update_cloudflare_access_application(app_uuid, hostname, name, session_duration, app_launcher_visible, self_hosted_domains, access_policies, allowed_idps=None, auto_redirect_to_identity=False, use_reusable=False):
+def update_cloudflare_access_application(app_uuid, application_domain, name, session_duration, app_launcher_visible, self_hosted_domains, access_policies, allowed_idps=None, auto_redirect_to_identity=False, use_reusable=False):
     account_id = current_app.config.get('CF_ACCOUNT_ID')
-    logging.info(f"Updating Cloudflare Access Application ID '{app_uuid}' for hostname '{hostname}' on account {account_id}")
+    logging.info(f"Updating Cloudflare Access Application ID '{app_uuid}' for domain '{application_domain}' on account {account_id}")
     endpoint = f"/accounts/{account_id}/access/apps/{app_uuid}"
 
-    payload = _build_access_app_payload(hostname, name, session_duration, app_launcher_visible, self_hosted_domains, access_policies, allowed_idps, auto_redirect_to_identity, use_reusable)
+    payload = _build_access_app_payload(application_domain, name, session_duration, app_launcher_visible, self_hosted_domains, access_policies, allowed_idps, auto_redirect_to_identity, use_reusable)
 
-    logging.info(f"Access Application update payload for '{hostname}': use_reusable={use_reusable}, has_policies={'policies' in payload}")
+    logging.info(f"Access Application update payload for '{application_domain}': use_reusable={use_reusable}, has_policies={'policies' in payload}")
     if 'policies' in payload:
         if use_reusable:
             logging.info(f"Reusable policy IDs for update: {payload['policies']}")
@@ -251,7 +252,7 @@ def update_cloudflare_access_application(app_uuid, hostname, name, session_durat
         response_data = cloudflare_api.cf_api_request("PUT", endpoint, json_data=payload)
         app_data = response_data.get("result")
         if app_data and app_data.get("id"):
-            logging.info(f"Successfully updated Access Application '{app_data.get('id')}' for '{hostname}'")
+            logging.info(f"Successfully updated Access Application '{app_data.get('id')}' for '{application_domain}'")
             return app_data
         else:
             logging.error(f"Access Application update for '{app_uuid}' API call successful but no ID in response: {app_data}")
@@ -326,6 +327,14 @@ def handle_access_policy_from_labels(rule_key, hostname_config_item):
         rule_working = copy.deepcopy(rule_reference)
 
     hostname = hostname_config_item["hostname"]
+    normalized_path = normalize_path_value(hostname_config_item.get("path"))
+    is_path_rule = bool(normalized_path)
+    application_domain = hostname if not is_path_rule else f"{hostname}{normalized_path}"
+
+    path_identifier = ""
+    if is_path_rule:
+        path_identifier = normalized_path.lstrip('/') or "root"
+        path_identifier = path_identifier.replace('/', '-').replace(' ', '-')
     local_state_changed_by_access_policy = False
 
     current_access_app_id_from_state = rule_working.get("access_app_id")
@@ -333,6 +342,8 @@ def handle_access_policy_from_labels(rule_key, hostname_config_item):
     desired_access_group_ids = hostname_config_item.get("access_group")
 
     desired_app_name = f"DockFlare-{hostname}"
+    if path_identifier:
+        desired_app_name = f"{desired_app_name}-{path_identifier}"
     desired_session_duration = "24h"
     desired_app_launcher_visible = False
     desired_allowed_idps = None
@@ -343,7 +354,7 @@ def handle_access_policy_from_labels(rule_key, hostname_config_item):
     use_reusable = False
 
     if desired_access_group_ids and isinstance(desired_access_group_ids, list):
-        logging.info(f"Processing Access Groups {desired_access_group_ids} for {hostname}.")
+        logging.info(f"Processing Access Groups {desired_access_group_ids} for {application_domain}.")
         policy_source_type = "group"
 
         first_group_id = desired_access_group_ids[0]
@@ -367,7 +378,7 @@ def handle_access_policy_from_labels(rule_key, hostname_config_item):
                 if policy_id:
                     policy_ids.append(policy_id)
                 else:
-                    logging.warning(f"Failed to sync access group '{group_id}' to reusable policy for {hostname}")
+                    logging.warning(f"Failed to sync access group '{group_id}' to reusable policy for {application_domain}")
             cf_access_policies_or_ids = policy_ids
         else:
             aggregated_policies = []
@@ -405,7 +416,7 @@ def handle_access_policy_from_labels(rule_key, hostname_config_item):
         policy_source_type = hostname_config_item.get("access_policy_type")
         if not policy_source_type:
             if current_access_app_id_from_state:
-                logging.info(f"No access policy label for {hostname}, but found managed Access App {current_access_app_id_from_state}. Deleting it.")
+                logging.info(f"No access policy label for {application_domain}, but found managed Access App {current_access_app_id_from_state}. Deleting it.")
                 if delete_cloudflare_access_application(current_access_app_id_from_state):
                     rule_working.update({"access_app_id": None, "access_policy_type": None, "access_app_config_hash": None, "access_group_id": None})
                     local_state_changed_by_access_policy = True
@@ -449,13 +460,13 @@ def handle_access_policy_from_labels(rule_key, hostname_config_item):
             try:
                 cf_access_policies_or_ids = json.loads(desired_custom_rules_str)
             except json.JSONDecodeError:
-                logging.error(f"Error parsing 'custom_rules' JSON for {hostname}")
+                logging.error(f"Error parsing 'custom_rules' JSON for {application_domain}")
 
         if not cf_access_policies_or_ids:
             if policy_source_type == "bypass":
-                logging.warning(f"ACCESS_MANAGER: Unexpected 'bypass' policy type reached access_manager for {hostname}. This should have been migrated to access.group=bypass. Skipping access policy creation.")
+                logging.warning(f"ACCESS_MANAGER: Unexpected 'bypass' policy type reached access_manager for {application_domain}. This should have been migrated to access.group=bypass. Skipping access policy creation.")
                 if current_access_app_id_from_state:
-                    logging.info(f"Deleting existing Access App {current_access_app_id_from_state} for {hostname} since bypass should not have an access app.")
+                    logging.info(f"Deleting existing Access App {current_access_app_id_from_state} for {application_domain} since bypass should not have an access app.")
                     if delete_cloudflare_access_application(current_access_app_id_from_state):
                         rule_working.update({"access_app_id": None, "access_policy_type": None, "access_app_config_hash": None, "access_group_id": None})
                         local_state_changed_by_access_policy = True
@@ -466,9 +477,9 @@ def handle_access_policy_from_labels(rule_key, hostname_config_item):
                             current_rule.update({"access_app_id": rule_working.get("access_app_id"), "access_policy_type": rule_working.get("access_policy_type"), "access_app_config_hash": rule_working.get("access_app_config_hash"), "access_group_id": rule_working.get("access_group_id")})
                 return local_state_changed_by_access_policy
             elif policy_source_type == "authenticate":
-                logging.warning(f"ACCESS_MANAGER: Unexpected 'authenticate' policy type reached access_manager for {hostname}. This should have been migrated to access.group=authenticated-default. Skipping access policy creation.")
+                logging.warning(f"ACCESS_MANAGER: Unexpected 'authenticate' policy type reached access_manager for {application_domain}. This should have been migrated to access.group=authenticated-default. Skipping access policy creation.")
                 if current_access_app_id_from_state:
-                    logging.info(f"Deleting existing Access App {current_access_app_id_from_state} for {hostname} since it should use authenticated-default group.")
+                    logging.info(f"Deleting existing Access App {current_access_app_id_from_state} for {application_domain} since it should use authenticated-default group.")
                     if delete_cloudflare_access_application(current_access_app_id_from_state):
                         rule_working.update({"access_app_id": None, "access_policy_type": None, "access_app_config_hash": None, "access_group_id": None})
                         local_state_changed_by_access_policy = True
@@ -489,26 +500,26 @@ def handle_access_policy_from_labels(rule_key, hostname_config_item):
     if needs_api_action:
         effective_app_id = rule_working.get("access_app_id")
         if not effective_app_id:
-            existing_cf_app = find_cloudflare_access_application_by_hostname(hostname)
+            existing_cf_app = find_cloudflare_access_application_by_domain(application_domain)
             if existing_cf_app and existing_cf_app.get("id"):
                 effective_app_id = existing_cf_app.get("id")
-                logging.info(f"Found existing Access App ID '{effective_app_id}' on Cloudflare for {hostname}. Will update.")
+                logging.info(f"Found existing Access App ID '{effective_app_id}' on Cloudflare for {application_domain}. Will update.")
                 rule_working["access_app_id"] = effective_app_id
                 local_state_changed_by_access_policy = True
 
         app_result = None
         if effective_app_id:
-            logging.info(f"Updating Access App {effective_app_id} for {hostname}.")
+            logging.info(f"Updating Access App {effective_app_id} for {application_domain}.")
             app_result = update_cloudflare_access_application(
-                effective_app_id, hostname, desired_app_name, desired_session_duration,
-                desired_app_launcher_visible, [hostname], cf_access_policies_or_ids,
+                effective_app_id, application_domain, desired_app_name, desired_session_duration,
+                desired_app_launcher_visible, [application_domain], cf_access_policies_or_ids,
                 desired_allowed_idps, desired_auto_redirect, use_reusable
             )
         else:
-            logging.info(f"Creating new Access App for {hostname}.")
+            logging.info(f"Creating new Access App for {application_domain}.")
             app_result = create_cloudflare_access_application(
-                hostname, desired_app_name, desired_session_duration,
-                desired_app_launcher_visible, [hostname], cf_access_policies_or_ids,
+                application_domain, desired_app_name, desired_session_duration,
+                desired_app_launcher_visible, [application_domain], cf_access_policies_or_ids,
                 desired_allowed_idps, desired_auto_redirect, use_reusable
             )
 
