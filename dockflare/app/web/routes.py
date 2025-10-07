@@ -1390,7 +1390,7 @@ def ui_add_manual_rule_route():
                     except Exception as update_error:
                         error_text = str(update_error)
                         if "access.api.error.unknown_application" in error_text or "404" in error_text:
-                            logging.warning(f"Manual rule edit: Access App {existing_app['id']} missing in Cloudflare, will recreate.")
+                            logging.info(f"Manual rule edit: existing Access App {existing_app['id']} not found in Cloudflare; recreating.")
                             app_update_failed = True
                         else:
                             logging.error(f"Error updating access app during manual edit: {update_error}", exc_info=True)
@@ -1447,7 +1447,7 @@ def ui_add_manual_rule_route():
                         except Exception as update_error:
                             error_text = str(update_error)
                             if "access.api.error.unknown_application" in error_text or "404" in error_text:
-                                logging.warning(f"Manual rule edit (bypass): Access App {existing_app['id']} missing in Cloudflare, will recreate.")
+                                logging.info(f"Manual rule edit (bypass): existing Access App {existing_app['id']} not found; recreating.")
                                 app_update_failed = True
                             else:
                                 logging.error(f"Error updating access app during manual edit (bypass): {update_error}", exc_info=True)
