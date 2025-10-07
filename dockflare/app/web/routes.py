@@ -61,11 +61,11 @@ from app.core.access_manager import (
     create_cloudflare_access_application,
     update_cloudflare_access_application,
     generate_access_app_config_hash,
-    find_cloudflare_access_application_by_hostname
+    find_cloudflare_access_application_by_domain
 )
 from app.core.reconciler import reconcile_state_threaded
 from app.core.docker_handler import is_valid_hostname, is_valid_service
-from app.core.utils import get_rule_key
+from app.core.utils import get_rule_key, normalize_path_value
 from app.core import backup_manager
 from app.web import config_loader
 from cryptography.fernet import Fernet
@@ -469,21 +469,26 @@ def access_policies_page():
 
     with state_lock:
         for rule in managed_rules.values():
-            
-            if rule.get('source') in ['docker', 'agent']:
-                hostname = rule.get('hostname', 'Unknown')
-                group_id_val = rule.get('access_group_id')
-                if isinstance(group_id_val, list):
-                    for gid in group_id_val:
-                        used_group_ids.add(gid)
-                        if gid not in group_usage:
-                            group_usage[gid] = []
-                        group_usage[gid].append(hostname)
-                elif group_id_val:
-                    used_group_ids.add(group_id_val)
-                    if group_id_val not in group_usage:
-                        group_usage[group_id_val] = []
-                    group_usage[group_id_val].append(hostname)
+            group_id_val = rule.get('access_group_id')
+            if not group_id_val:
+                continue
+
+            hostname = rule.get('hostname', 'Unknown')
+            path = rule.get('path')
+            display_name = hostname
+            if path:
+                path_str = str(path).strip()
+                if path_str and path_str != "None":
+                    normalized_path = path_str if path_str.startswith('/') else f"/{path_str}"
+                    display_name = f"{hostname}{normalized_path}"
+
+            group_ids = group_id_val if isinstance(group_id_val, list) else [group_id_val]
+            for gid in group_ids:
+                if not gid:
+                    continue
+                used_group_ids.add(gid)
+                group_usage.setdefault(gid, set()).add(display_name)
+
         groups_for_template_raw = copy.deepcopy(access_groups)
         groups_for_template = {
             gid: group for gid, group in groups_for_template_raw.items()
@@ -503,7 +508,7 @@ def access_policies_page():
         'access_policies.html',
         access_groups=groups_for_template,
         used_group_ids=used_group_ids,
-        group_usage=group_usage,
+        group_usage={gid: sorted(list(hosts)) for gid, hosts in group_usage.items()},
         countries=countries,
         ACCOUNT_ID_FOR_DISPLAY=cf_account_id if cf_account_id else "Not Configured"
     )
@@ -1250,6 +1255,19 @@ def ui_add_manual_rule_route():
         return redirect(url_for('web.status_page'))
     
     processed_path = f"/{path_input.lstrip('/')}" if path_input else None
+    normalized_path_for_app = normalize_path_value(processed_path)
+    application_domain = full_hostname if not normalized_path_for_app else f"{full_hostname}{normalized_path_for_app}"
+    path_identifier = ""
+    if normalized_path_for_app:
+        path_identifier = normalized_path_for_app.lstrip('/') or "root"
+        path_identifier = path_identifier.replace('/', '-').replace(' ', '-')
+    normalized_path_for_app = normalize_path_value(processed_path)
+    application_domain = full_hostname if not normalized_path_for_app else f"{full_hostname}{normalized_path_for_app}"
+    path_identifier = ""
+    if normalized_path_for_app:
+        path_identifier = normalized_path_for_app.lstrip('/') or "root"
+        path_identifier = path_identifier.replace('/', '-').replace(' ', '-')
+
     key_for_managed_rules = get_rule_key(full_hostname, processed_path)
     
     processed_service_for_cf = ""
@@ -1345,6 +1363,10 @@ def ui_add_manual_rule_route():
                 access_group_id = manual_access_group_ids
                 access_policy_type = "group"
                 desired_app_name = f"DockFlare-{full_hostname}"
+                if path_identifier:
+                    desired_app_name = f"{desired_app_name}-{path_identifier}"
+                if path_identifier:
+                    desired_app_name = f"{desired_app_name}-{path_identifier}"
 
                 access_app_config_hash = generate_access_app_config_hash(
                     policy_type="group", session_duration=desired_session_duration,
@@ -1355,17 +1377,17 @@ def ui_add_manual_rule_route():
                     group_id=','.join(access_group_id)
                 )
 
-                existing_app = find_cloudflare_access_application_by_hostname(full_hostname)
+                existing_app = find_cloudflare_access_application_by_domain(application_domain)
                 if existing_app:
                     app_result = update_cloudflare_access_application(
-                        existing_app['id'], full_hostname, desired_app_name, desired_session_duration,
-                        desired_app_launcher_visible, [full_hostname], cf_access_policies_or_ids,
+                        existing_app['id'], application_domain, desired_app_name, desired_session_duration,
+                        desired_app_launcher_visible, [application_domain], cf_access_policies_or_ids,
                         desired_allowed_idps, desired_auto_redirect, use_reusable
                     )
                 else:
                     app_result = create_cloudflare_access_application(
-                        full_hostname, desired_app_name, desired_session_duration,
-                        desired_app_launcher_visible, [full_hostname], cf_access_policies_or_ids,
+                        application_domain, desired_app_name, desired_session_duration,
+                        desired_app_launcher_visible, [application_domain], cf_access_policies_or_ids,
                         desired_allowed_idps, desired_auto_redirect, use_reusable
                     )
 
@@ -1385,6 +1407,8 @@ def ui_add_manual_rule_route():
                     access_group_id = [default_bypass_id]
                     access_policy_type = "group"
                     desired_app_name = f"DockFlare-{full_hostname}"
+                    if path_identifier:
+                        desired_app_name = f"{desired_app_name}-{path_identifier}"
 
                     access_app_config_hash = generate_access_app_config_hash(
                         policy_type="group", session_duration="24h",
@@ -1395,17 +1419,17 @@ def ui_add_manual_rule_route():
                         group_id=default_bypass_id
                     )
 
-                    existing_app = find_cloudflare_access_application_by_hostname(full_hostname)
+                    existing_app = find_cloudflare_access_application_by_domain(application_domain)
                     if existing_app:
                         app_result = update_cloudflare_access_application(
-                            existing_app['id'], full_hostname, desired_app_name, "24h",
-                            False, [full_hostname], [cf_policy_id],
+                            existing_app['id'], application_domain, desired_app_name, "24h",
+                            False, [application_domain], [cf_policy_id],
                             None, False, True
                         )
                     else:
                         app_result = create_cloudflare_access_application(
-                            full_hostname, desired_app_name, "24h",
-                            False, [full_hostname], [cf_policy_id],
+                            application_domain, desired_app_name, "24h",
+                            False, [application_domain], [cf_policy_id],
                             None, False, True
                         )
 
@@ -1628,17 +1652,17 @@ def ui_edit_manual_rule_route():
                     custom_access_rules_str=json.dumps(cf_access_policies_or_ids, sort_keys=True),
                     group_id=','.join(access_group_id)
                 )
-                existing_app = find_cloudflare_access_application_by_hostname(full_hostname)
+                existing_app = find_cloudflare_access_application_by_domain(application_domain)
                 if existing_app:
                     app_result = update_cloudflare_access_application(
-                        existing_app['id'], full_hostname, desired_app_name, desired_session_duration,
-                        desired_app_launcher_visible, [full_hostname], cf_access_policies_or_ids,
+                        existing_app['id'], application_domain, desired_app_name, desired_session_duration,
+                        desired_app_launcher_visible, [application_domain], cf_access_policies_or_ids,
                         desired_allowed_idps, desired_auto_redirect, use_reusable
                     )
                 else:
                     app_result = create_cloudflare_access_application(
-                        full_hostname, desired_app_name, desired_session_duration,
-                        desired_app_launcher_visible, [full_hostname], cf_access_policies_or_ids,
+                        application_domain, desired_app_name, desired_session_duration,
+                        desired_app_launcher_visible, [application_domain], cf_access_policies_or_ids,
                         desired_allowed_idps, desired_auto_redirect, use_reusable
                     )
                 if app_result:
@@ -1654,6 +1678,8 @@ def ui_edit_manual_rule_route():
                     access_group_id = [default_bypass_id]
                     access_policy_type = "group"
                     desired_app_name = f"DockFlare-{full_hostname}"
+                    if path_identifier:
+                        desired_app_name = f"{desired_app_name}-{path_identifier}"
 
                     access_app_config_hash = generate_access_app_config_hash(
                         policy_type="group", session_duration="24h",
@@ -1664,17 +1690,17 @@ def ui_edit_manual_rule_route():
                         group_id=default_bypass_id
                     )
 
-                    existing_app = find_cloudflare_access_application_by_hostname(full_hostname)
+                    existing_app = find_cloudflare_access_application_by_domain(application_domain)
                     if existing_app:
                         app_result = update_cloudflare_access_application(
-                            existing_app['id'], full_hostname, desired_app_name, "24h",
-                            False, [full_hostname], [cf_policy_id],
+                            existing_app['id'], application_domain, desired_app_name, "24h",
+                            False, [application_domain], [cf_policy_id],
                             None, False, True
                         )
                     else:
                         app_result = create_cloudflare_access_application(
-                            full_hostname, desired_app_name, "24h",
-                            False, [full_hostname], [cf_policy_id],
+                            application_domain, desired_app_name, "24h",
+                            False, [application_domain], [cf_policy_id],
                             None, False, True
                         )
 
@@ -2036,17 +2062,15 @@ def create_zone_default_policy():
     wildcard_hostname = f"*.{zone_name}"
 
     try:
-        # Check if it already exists
-        existing = find_cloudflare_access_application_by_hostname(wildcard_hostname)
+        
+        existing = find_cloudflare_access_application_by_domain(wildcard_hostname)
         if existing:
             flash(f"A wildcard policy for '{wildcard_hostname}' already exists.", "warning")
             return redirect(url_for('web.access_policies_page'))
-
-        # Get the Cloudflare policy ID
+        
         from app.core import reusable_policies
         cf_policy_id = group.get("cf_policy_id") or group.get("id")
-
-        # Sync to Cloudflare if needed
+        
         if not cf_policy_id or cf_policy_id == access_group_id:
             policy_id = reusable_policies.sync_access_group_to_reusable_policy(access_group_id)
             if policy_id:
@@ -2055,8 +2079,7 @@ def create_zone_default_policy():
                     access_groups[access_group_id]["cf_policy_id"] = policy_id
                     access_groups[access_group_id]["id"] = policy_id
                     save_state()
-
-        # Create the Access Application
+        
         app_name = f"Zone Default: {wildcard_hostname}"
         session_duration = group.get("session_duration", "24h")
         app_launcher_visible = group.get("app_launcher_visible", False)
@@ -2100,8 +2123,7 @@ def sync_access_groups_from_cloudflare():
 
     try:
         from app.core import reusable_policies
-
-        # Get sync_all parameter from form (defaults to false for backward compatibility)
+        
         sync_all = request.form.get('sync_all', 'false').lower() in ['true', '1', 't', 'yes']
 
         result = reusable_policies.import_cloudflare_reusable_policies(sync_all=sync_all)

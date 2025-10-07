@@ -56,23 +56,23 @@ from app.core.access_manager import (
     create_cloudflare_access_application,
     update_cloudflare_access_application,
     generate_access_app_config_hash,
-    find_cloudflare_access_application_by_hostname,
+    find_cloudflare_access_application_by_domain,
     handle_access_policy_from_labels
 )
 from app.core.reconciler import reconcile_state_threaded
 from app.core.docker_handler import is_valid_hostname, is_valid_service
-from app.core.utils import get_rule_key, get_label
+from app.core.utils import get_rule_key, get_label, normalize_access_group_value, normalize_path_value
 #----------------------------------------------------------!
-# UI endpoints are protected by session auth               !
+# UI endpoints are protected by session auth   nicht vergessen, immer checken bei änderungen.. don't waste time            !
 #----------------------------------------------------------!
 api_v2_bp = Blueprint('api_v2', __name__, url_prefix='/api/v2')
-# Nicht vergessen - This is important when adding a new agent endpoint don't forget to update in order to allow as by default all agent endpoints are protected by master api key auth
+
 _AGENT_ENDPOINT_ALLOWLIST = {
     'api_v2.agents_register',
     'api_v2.agents_get_commands',
     'api_v2.agents_post_events',
 }
-# Nicht vergessenn - This is important when adding a new UI endpoint don't forget to update in order to allow as by default all UI endpoints are protected by session auth
+
 _UI_ENDPOINT_ALLOWLIST = {
     'api_v2.manage_auth_settings',
     'api_v2.manage_auth_providers',
@@ -853,17 +853,14 @@ def process_agent_container_start(payload, agent_id):
                 http_host_header_indexed_val = get_label(labels, f"{index}.httpHostHeader", default_http_host_header_label)
 
                 access_groups_indexed = get_label(labels, f"{index}.access.groups")
-                access_group_indexed = get_label(labels, f"{index}.access.group") if not access_groups_indexed else None
+                raw_access_group_indexed = get_label(labels, f"{index}.access.group") if not access_groups_indexed else None
                 access_policy_type_indexed = get_label(labels, f"{index}.access.policy", default_access_policy_type_label)
 
-                if access_policy_type_indexed == "bypass" and not access_group_indexed and not access_groups_indexed:
+                if access_policy_type_indexed == "bypass" and not raw_access_group_indexed and not access_groups_indexed:
                     logging.info(f"AGENT_PROCESS: Legacy label 'dockflare.{index}.access.policy=bypass' detected for {container_name}. Migrating to 'dockflare.{index}.access.group=public-default-bypass'.")
                     access_group_indexed = ["public-default-bypass"]
                     access_policy_type_indexed = None
-                elif access_group_indexed and "bypass" in access_group_indexed and not access_groups_indexed:
-                    logging.info(f"AGENT_PROCESS: Legacy group 'bypass' detected in index {index} for {container_name}. Migrating to 'public-default-bypass'.")
-                    access_group_indexed = ["public-default-bypass" if g == "bypass" else g for g in access_group_indexed]
-                elif access_policy_type_indexed == "authenticate" and not access_group_indexed and not access_groups_indexed:
+                elif access_policy_type_indexed == "authenticate" and not raw_access_group_indexed and not access_groups_indexed:
                     from app.core.cloudflare_api import get_cloudflare_account_email
                     account_email = get_cloudflare_account_email()
                     if account_email:
@@ -873,13 +870,21 @@ def process_agent_container_start(payload, agent_id):
                     else:
                         logging.warning(f"AGENT_PROCESS: Cannot migrate 'dockflare.{index}.access.policy=authenticate' for {container_name}. Cloudflare account email not available. Skipping access policy creation. Use 'dockflare.{index}.access.group=<group>' instead.")
                         access_policy_type_indexed = None
-
-                if access_groups_indexed:
-                    access_group_indexed = [gid.strip() for gid in access_groups_indexed.split(',')]
-                elif access_group_indexed:
-                    access_group_indexed = [access_group_indexed.strip()] if isinstance(access_group_indexed, str) else access_group_indexed
+                        access_group_indexed = None
                 else:
-                    access_group_indexed = default_access_group
+                    if access_groups_indexed:
+                        parsed_groups = [gid.strip() for gid in access_groups_indexed.split(',') if gid and gid.strip()]
+                    else:
+                        parsed_groups = normalize_access_group_value(raw_access_group_indexed)
+                    if not parsed_groups:
+                        parsed_groups = list(default_access_group) if isinstance(default_access_group, list) else default_access_group
+                    if parsed_groups and any(g == "bypass" for g in parsed_groups):
+                        logging.info(f"AGENT_PROCESS: Legacy group 'bypass' detected in index {index} for {container_name}. Migrating to 'public-default-bypass'.")
+                        parsed_groups = ["public-default-bypass" if g == "bypass" else g for g in parsed_groups]
+                    access_group_indexed = parsed_groups
+
+                if access_group_indexed and not isinstance(access_group_indexed, list):
+                    access_group_indexed = normalize_access_group_value(access_group_indexed)
                 access_app_name_indexed = get_label(labels, f"{index}.access.name", default_access_app_name_label)
                 access_session_duration_indexed = get_label(labels, f"{index}.access.session_duration", default_access_session_duration_label)
                 acc_launcher_val_idx = get_label(labels, f"{index}.access.app_launcher_visible", str(default_access_app_launcher_visible_label).lower())
@@ -1193,21 +1198,20 @@ def delete_agent_key_permanently(key_id):
     if not key_id:
         return jsonify({"status": "error", "message": "Missing key ID"}), 400
 
-    # Get key info to validate it exists and is revoked
+    
     key_info = get_agent_key_info(key_id)
     if not key_info:
         return jsonify({"status": "error", "message": "Key not found"}), 404
 
-    # Security: Only allow deletion of revoked keys
+    
     if key_info.get("status") != "revoked":
         return jsonify({"status": "error", "message": "Can only permanently delete revoked keys"}), 400
 
-    # Audit logging before deletion
+    
     owner = key_info.get("owner", "unknown")
     revoked_at = key_info.get("revoked_at", "unknown")
     logging.info(f"ADMIN: Permanently deleting revoked key {key_id[:8]}... (owner: {owner}, revoked: {revoked_at})")
-
-    # Perform the permanent deletion
+    
     agent_key_store.remove_key(key_id)
 
     return jsonify({
@@ -1995,11 +1999,19 @@ def update_rule_access_policy(rule_key):
         if not current_rule:
             return jsonify({"status": "error", "message": f"Rule '{rule_key}' not found."}),
         
-        hostname_for_access_app = current_rule.get("hostname") 
+        hostname_for_access_app = current_rule.get("hostname")
         if not hostname_for_access_app:
             hostname_for_access_app = rule_key.split('|')[0]
             if not hostname_for_access_app:
                 return jsonify({"status": "error", "message": f"Cannot determine hostname for Access App for rule '{rule_key}'."}),
+
+        rule_path = normalize_path_value(current_rule.get("path"))
+        application_domain = hostname_for_access_app if not rule_path else f"{hostname_for_access_app}{rule_path}"
+
+        path_identifier = ""
+        if rule_path:
+            path_identifier = rule_path.lstrip('/') or "root"
+            path_identifier = path_identifier.replace('/', '-').replace(' ', '-')
 
         current_access_app_id = current_rule.get("access_app_id")
         session_duration = data.get('session_duration', current_rule.get("access_session_duration", "24h"))
@@ -2007,7 +2019,9 @@ def update_rule_access_policy(rule_key):
         allowed_idps_str = data.get('allowed_idps_str', current_rule.get("access_allowed_idps_str"))
         auto_redirect = data.get('auto_redirect', current_rule.get("access_auto_redirect", False))
 
-        desired_app_name = f"DockFlare-{hostname_for_access_app}" 
+        desired_app_name = f"DockFlare-{hostname_for_access_app}"
+        if path_identifier:
+            desired_app_name = f"{desired_app_name}-{path_identifier}"
         cf_access_policies = []
         final_policy_type_for_state = new_policy_type
         custom_rules_for_hash = None
@@ -2072,10 +2086,10 @@ def update_rule_access_policy(rule_key):
 
             effective_app_id_for_operation = current_access_app_id
             if not effective_app_id_for_operation: 
-                existing_cf_app = find_cloudflare_access_application_by_hostname(hostname_for_access_app)
+                existing_cf_app = find_cloudflare_access_application_by_domain(application_domain)
                 if existing_cf_app and existing_cf_app.get("id"):
                     effective_app_id_for_operation = existing_cf_app.get("id")
-                    logging.info(f"Found existing Access App ID '{effective_app_id_for_operation}' on Cloudflare for {hostname_for_access_app}. Will update.")
+                    logging.info(f"Found existing Access App ID '{effective_app_id_for_operation}' on Cloudflare for {application_domain}. Will update.")
                     current_rule["access_app_id"] = effective_app_id_for_operation 
                     state_changed_locally = True
             
@@ -2085,8 +2099,8 @@ def update_rule_access_policy(rule_key):
                    current_rule.get("access_app_id") != effective_app_id_for_operation: 
                     
                     updated_app = update_cloudflare_access_application(
-                        effective_app_id_for_operation, hostname_for_access_app, desired_app_name,
-                        session_duration, app_launcher_visible, [hostname_for_access_app],
+                        effective_app_id_for_operation, application_domain, desired_app_name,
+                        session_duration, app_launcher_visible, [application_domain],
                         cf_access_policies, allowed_idps_list_for_app, auto_redirect
                     )
                     if updated_app:
@@ -2107,8 +2121,8 @@ def update_rule_access_policy(rule_key):
                     action_status_message = "No change in policy needed."
             else:
                 created_app = create_cloudflare_access_application(
-                    hostname_for_access_app, desired_app_name,
-                    session_duration, app_launcher_visible, [hostname_for_access_app],
+                    application_domain, desired_app_name,
+                    session_duration, app_launcher_visible, [application_domain],
                     cf_access_policies, allowed_idps_list_for_app, auto_redirect
                 )
                 if created_app and created_app.get("id"):

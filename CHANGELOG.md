@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v3.0.3] - 2025-10-05
 
+### Hotfix
+- **Access Policy Path Regression:** Restored indexed label support for Cloudflare Access applications so path-specific rules (e.g., `dockflare.0.path=/auth/google/callback`) once again create distinct Access Apps linked to their reusable policies. Fixes broken policy sync introduced with the reusable policy migration in v3.0.3.
+- **Access Policy Usage Display:** Corrected the “Used by these services” list so manual rules assigned to an Access Group appear alongside Docker/Agent-managed services, with paths shown when applicable.
+
 ### Added
 - **Identity Provider (IdP) Management:** Complete OAuth/OIDC identity provider management system with support for Google, Google Workspace, Azure AD, Okta, GitHub, and generic OpenID Connect providers.
   - **IdP Configuration UI:** New dedicated section on Access Policies page for managing identity providers with sync, create, edit, test, and delete operations.

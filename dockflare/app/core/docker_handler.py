@@ -29,7 +29,7 @@ from app.core.state_manager import managed_rules, state_lock, save_state
 from app.core.tunnel_manager import update_cloudflare_config
 from app.core.cloudflare_api import create_cloudflare_dns_record, get_zone_id_from_name, list_account_zones
 from app.core.access_manager import handle_access_policy_from_labels
-from app.core.utils import get_rule_key, get_label
+from app.core.utils import get_rule_key, get_label, normalize_access_group_value
 
 def is_valid_hostname(hostname):
     if not hostname:
@@ -196,17 +196,14 @@ def process_container_start(container_obj):
                 http_host_header_indexed_val = get_label(labels, f"{index}.httpHostHeader", default_http_host_header_label)
 
                 access_groups_indexed = get_label(labels, f"{index}.access.groups")
-                access_group_indexed = get_label(labels, f"{index}.access.group") if not access_groups_indexed else None
+                raw_access_group_indexed = get_label(labels, f"{index}.access.group") if not access_groups_indexed else None
                 access_policy_type_indexed = get_label(labels, f"{index}.access.policy", default_access_policy_type_label)
 
-                if access_policy_type_indexed == "bypass" and not access_group_indexed and not access_groups_indexed:
+                if access_policy_type_indexed == "bypass" and not raw_access_group_indexed and not access_groups_indexed:
                     logging.info(f"DOCKER_HANDLER: Legacy label 'dockflare.{index}.access.policy=bypass' detected for {container_name_val}. Migrating to 'dockflare.{index}.access.group=public-default-bypass'.")
                     access_group_indexed = ["public-default-bypass"]
                     access_policy_type_indexed = None
-                elif access_group_indexed and "bypass" in access_group_indexed and not access_groups_indexed:
-                    logging.info(f"DOCKER_HANDLER: Legacy group 'bypass' detected in index {index} for {container_name_val}. Migrating to 'public-default-bypass'.")
-                    access_group_indexed = ["public-default-bypass" if g == "bypass" else g for g in access_group_indexed]
-                elif access_policy_type_indexed == "authenticate" and not access_group_indexed and not access_groups_indexed:
+                elif access_policy_type_indexed == "authenticate" and not raw_access_group_indexed and not access_groups_indexed:
                     from app.core.cloudflare_api import get_cloudflare_account_email
                     account_email = get_cloudflare_account_email()
                     if account_email:
@@ -216,13 +213,21 @@ def process_container_start(container_obj):
                     else:
                         logging.warning(f"DOCKER_HANDLER: Cannot migrate 'dockflare.{index}.access.policy=authenticate' for {container_name_val}. Cloudflare account email not available. Skipping access policy creation. Use 'dockflare.{index}.access.group=<group>' instead.")
                         access_policy_type_indexed = None
-
-                if access_groups_indexed:
-                    access_group_indexed = [gid.strip() for gid in access_groups_indexed.split(',')]
-                elif access_group_indexed:
-                    access_group_indexed = [access_group_indexed.strip()] if isinstance(access_group_indexed, str) else access_group_indexed
+                        access_group_indexed = None
                 else:
-                    access_group_indexed = default_access_group
+                    if access_groups_indexed:
+                        parsed_groups = [gid.strip() for gid in access_groups_indexed.split(',') if gid and gid.strip()]
+                    else:
+                        parsed_groups = normalize_access_group_value(raw_access_group_indexed)
+                    if not parsed_groups:
+                        parsed_groups = list(default_access_group) if isinstance(default_access_group, list) else default_access_group
+                    if parsed_groups and any(g == "bypass" for g in parsed_groups):
+                        logging.info(f"DOCKER_HANDLER: Legacy group 'bypass' detected in index {index} for {container_name_val}. Migrating to 'public-default-bypass'.")
+                        parsed_groups = ["public-default-bypass" if g == "bypass" else g for g in parsed_groups]
+                    access_group_indexed = parsed_groups
+
+                if access_group_indexed and not isinstance(access_group_indexed, list):
+                    access_group_indexed = normalize_access_group_value(access_group_indexed)
                 access_app_name_indexed = get_label(labels, f"{index}.access.name", default_access_app_name_label)
                 access_session_duration_indexed = get_label(labels, f"{index}.access.session_duration", default_access_session_duration_label)
                 acc_launcher_val_idx = get_label(labels, f"{index}.access.app_launcher_visible", str(default_access_app_launcher_visible_label).lower())

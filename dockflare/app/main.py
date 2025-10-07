@@ -125,7 +125,8 @@ def start_core_services():
     from app.core.state_manager import identity_providers, save_state, state_lock, save_identity_provider
     logging.info("Syncing identity providers after setup...")
     try:
-        idps = idp_manager.list_identity_providers()
+        with app.app_context():
+            idps = idp_manager.list_identity_providers()
         if idps:
             with state_lock:
                 for idp in idps:

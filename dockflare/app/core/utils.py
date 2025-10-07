@@ -16,13 +16,14 @@
 #
 # dockflare/app/core/utils.py
 from app import config
+
+
 def get_rule_key(hostname, path):
-    
     path_str = str(path or "").strip()
     return f"{hostname}|{path_str}"
 
+
 def get_label(labels, key_suffix, default=None):
-    
     if config.CUSTOM_LABEL_PREFIX:
         custom_key = f"{config.CUSTOM_LABEL_PREFIX.rstrip('.')}.{key_suffix}"
         if custom_key in labels:
@@ -37,3 +38,44 @@ def get_label(labels, key_suffix, default=None):
         return labels[legacy_key]
 
     return default
+
+
+def normalize_access_group_value(value):
+    if value is None:
+        return []
+
+    if isinstance(value, list):
+        result = []
+        for item in value:
+            if item is None:
+                continue
+            if isinstance(item, str):
+                stripped = item.strip()
+                if stripped:
+                    result.append(stripped)
+            else:
+                result.append(str(item))
+        return result
+
+    if isinstance(value, str):
+        stripped = value.strip()
+        return [stripped] if stripped else []
+
+    return [str(value)]
+
+
+def normalize_path_value(value):
+    if value is None:
+        return ""
+
+    path_str = str(value).strip()
+    if not path_str:
+        return ""
+
+    if not path_str.startswith('/'):
+        path_str = '/' + path_str
+
+    if len(path_str) > 1 and path_str.endswith('/'):
+        path_str = path_str.rstrip('/')
+
+    return path_str
