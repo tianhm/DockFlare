@@ -1747,6 +1747,16 @@ def ui_edit_manual_rule_route():
                 else:
                     cloudflared_agent_state["last_action_status"] = "Error: Default bypass policy not found."
                     return redirect(url_for('web.status_page'))
+        else:
+            # No access groups and policy set to "none" -- remove any existing Access App
+            if access_app_id:
+                if delete_cloudflare_access_application(access_app_id):
+                    access_app_id = None
+                else:
+                    logging.warning(f"Manual rule edit: Failed to delete Access App {access_app_id} when removing policy.")
+            access_policy_type = None
+            access_app_config_hash = None
+            access_group_id = None
     except Exception as e:
         logging.error(f"Error updating access app during manual edit: {e}", exc_info=True)
         cloudflared_agent_state["last_action_status"] = "Error: Failed to update access app."
