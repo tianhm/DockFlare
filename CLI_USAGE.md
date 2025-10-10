@@ -40,8 +40,10 @@ This will:
 1. **Fetches all reusable policies** from your Cloudflare account
 2. **Groups policies by name** to identify duplicates
 3. **Sorts by creation date** - keeps the oldest policy for each name
-4. **Deletes newer duplicates** (only when using `--apply`)
-5. **Updates state.json** - ensures all access groups reference the correct (kept) policy ID
+4. **Checks Access Applications** - identifies which applications are using duplicate policies
+5. **Updates Access Applications** - replaces duplicate policy IDs with the kept policy ID
+6. **Deletes newer duplicates** (only when using `--apply`)
+7. **Updates state.json** - ensures all access groups reference the correct (kept) policy ID
 
 ### Example Output
 
@@ -64,7 +66,10 @@ Step 3: Identifying duplicates...
 
 Total policies to delete: 4
 
-Step 4: Processing duplicates...
+Step 4: Checking Access Applications for policy usage...
+Found 12 Access Applications to check
+
+Step 5: Processing duplicates...
 
 Processing: 'DockFlare-Default-Public-Access-Bypass'
   ✓ Keeping: ID=abc123 (created: 2025-01-01T10:00:00Z)
@@ -73,10 +78,21 @@ Processing: 'DockFlare-Default-Public-Access-Bypass'
 
 Processing: 'DockFlare-AccessGroup-idp-blocker'
   ✓ Keeping: ID=jkl012 (created: 2025-01-01T09:00:00Z)
+  ⚠ Found 2 Access Application(s) using duplicate policies:
+    - App: 'DockFlare-app1.example.com' (domain: app1.example.com)
+      Using policy: mno345
+    - App: 'DockFlare-app2.example.com' (domain: app2.example.com)
+      Using policy: pqr678
   ✗ Would delete: ID=mno345 (created: 2025-01-02T10:00:00Z)
   ✗ Would delete: ID=pqr678 (created: 2025-01-03T11:00:00Z)
 
-Step 5: Updating state.json with correct policy IDs...
+Step 6: Updating Access Applications to use kept policy IDs...
+
+Updating applications for policy 'DockFlare-AccessGroup-idp-blocker' to use ID jkl012:
+  Would update app 'DockFlare-app1.example.com': mno345 → jkl012
+  Would update app 'DockFlare-app2.example.com': pqr678 → jkl012
+
+Step 7: Updating state.json with correct policy IDs...
 DRY RUN: Would update state.json with the following changes:
   Group 'public-default-bypass': def456 → abc123 (policy: DockFlare-Default-Public-Access-Bypass)
   Group 'idp-blocker': mno345 → jkl012 (policy: DockFlare-AccessGroup-idp-blocker)
@@ -95,6 +111,7 @@ Policies that would be kept: 2
 
 - **Dry run by default** - You must explicitly use `--apply` to make changes
 - **Keeps oldest policy** - Ensures you don't lose the original policy
+- **Access Application protection** - Automatically updates applications to use kept policy before deletion
 - **Updates state.json** - Automatically fixes references to deleted policies
 - **Detailed logging** - Shows exactly what will be (or was) done
 
@@ -109,5 +126,6 @@ Policies that would be kept: 2
 
 - The utility requires DockFlare to be configured with valid Cloudflare credentials
 - It operates on **all reusable policies** in your account, not just DockFlare-managed ones
+- **Automatically handles Access Applications** - The utility will update any applications using duplicate policies before deletion, ensuring no applications are left without access control
 - Always run with `--dry-run` first to preview changes
 - Deletion is permanent and cannot be undone (except by recreating policies manually)

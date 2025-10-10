@@ -1,20 +1,3 @@
-# DockFlare: Automates Cloudflare Tunnel ingress from Docker labels.
-# Copyright (C) 2025 ChrispyBacon-Dev <https://github.com/ChrispyBacon-dev/DockFlare>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
-# dockflare/app/cli.py
 """
 DockFlare CLI utilities for maintenance and troubleshooting.
 """
@@ -40,7 +23,7 @@ def cleanup_duplicate_policies(dry_run=True):
     from app.core import reusable_policies
     from app.core.state_manager import access_groups, save_state, state_lock
     from app.web import config_loader
-    
+
     config_data = config_loader.load_encrypted_config()
     if not config_data:
         logging.error("Failed to load DockFlare configuration. Ensure the application is configured.")
@@ -56,7 +39,6 @@ def cleanup_duplicate_policies(dry_run=True):
         logging.info(f"Mode: {'DRY RUN (no changes will be made)' if dry_run else 'APPLY (changes will be executed)'}")
         logging.info("")
 
-        # Step 1: List all reusable policies
         logging.info("Step 1: Fetching all reusable policies from Cloudflare...")
         policies = reusable_policies.list_reusable_policies()
 
@@ -67,14 +49,12 @@ def cleanup_duplicate_policies(dry_run=True):
         logging.info(f"Found {len(policies)} total policies")
         logging.info("")
 
-        # Step 2: Group policies by name
         logging.info("Step 2: Grouping policies by name...")
         policies_by_name = defaultdict(list)
         for policy in policies:
             policy_name = policy.get("name", "")
             policies_by_name[policy_name].append(policy)
 
-        # Step 3: Identify duplicates
         logging.info("Step 3: Identifying duplicates...")
         duplicates = {name: policies_list for name, policies_list in policies_by_name.items() if len(policies_list) > 1}
 
@@ -94,22 +74,36 @@ def cleanup_duplicate_policies(dry_run=True):
         logging.info(f"Total policies to delete: {total_to_delete}")
         logging.info("")
 
-        # Step 4: Process each duplicate group
-        logging.info("Step 4: Processing duplicates...")
+        logging.info("Step 4: Checking Access Applications for policy usage...")
+        from app.core import cloudflare_api
+        from flask import current_app
+
+        account_id = current_app.config.get('CF_ACCOUNT_ID')
+        endpoint = f"/accounts/{account_id}/access/apps"
+
+        try:
+            all_apps_response = cloudflare_api.cf_api_request("GET", endpoint, params={"per_page": 100})
+            all_apps = all_apps_response.get("result", [])
+            logging.info(f"Found {len(all_apps)} Access Applications to check")
+        except Exception as e:
+            logging.error(f"Failed to list Access Applications: {e}")
+            all_apps = []
+
+        logging.info("")
+
+        logging.info("Step 5: Processing duplicates...")
         logging.info("")
 
         deleted_count = 0
         kept_count = 0
         state_updates = {}
+        app_updates_needed = {}
 
         for name, dup_list in duplicates.items():
             logging.info(f"Processing: '{name}'")
 
-            # Sort by created_at (oldest first)
-            # Note: Cloudflare API returns created_at in ISO format
             sorted_policies = sorted(dup_list, key=lambda p: p.get("created_at", ""))
 
-            # Keep the oldest one
             policy_to_keep = sorted_policies[0]
             policies_to_delete = sorted_policies[1:]
 
@@ -119,7 +113,28 @@ def cleanup_duplicate_policies(dry_run=True):
             logging.info(f"  ✓ Keeping: ID={kept_id} (created: {kept_created})")
             kept_count += 1
 
-            # Delete the rest
+            policy_ids_to_delete = [p.get("id") for p in policies_to_delete]
+            apps_using_duplicates = []
+
+            for app in all_apps:
+                app_policies = app.get("policies", [])
+                for policy_id in policy_ids_to_delete:
+                    if policy_id in app_policies:
+                        apps_using_duplicates.append({
+                            "app_id": app.get("id"),
+                            "app_name": app.get("name"),
+                            "app_domain": app.get("domain"),
+                            "old_policy_id": policy_id,
+                            "all_policies": app_policies
+                        })
+                        break
+
+            if apps_using_duplicates:
+                logging.info(f"  ⚠ Found {len(apps_using_duplicates)} Access Application(s) using duplicate policies:")
+                for app_info in apps_using_duplicates:
+                    logging.info(f"    - App: '{app_info['app_name']}' (domain: {app_info['app_domain']})")
+                    logging.info(f"      Using policy: {app_info['old_policy_id']}")
+
             for policy in policies_to_delete:
                 policy_id = policy.get("id")
                 policy_created = policy.get("created_at", "N/A")
@@ -135,12 +150,67 @@ def cleanup_duplicate_policies(dry_run=True):
                     else:
                         logging.error(f"    → Failed to delete policy {policy_id}")
 
-            # Track which policy ID should be kept for this name
             state_updates[name] = kept_id
+            if apps_using_duplicates:
+                app_updates_needed[name] = {
+                    "kept_id": kept_id,
+                    "apps": apps_using_duplicates
+                }
+
             logging.info("")
 
-        # Step 5: Update state.json with correct policy IDs
-        logging.info("Step 5: Updating state.json with correct policy IDs...")
+        if app_updates_needed:
+            logging.info("Step 6: Updating Access Applications to use kept policy IDs...")
+            logging.info("")
+
+            for policy_name, update_info in app_updates_needed.items():
+                kept_id = update_info["kept_id"]
+                apps = update_info["apps"]
+
+                logging.info(f"Updating applications for policy '{policy_name}' to use ID {kept_id}:")
+
+                for app_info in apps:
+                    app_id = app_info["app_id"]
+                    app_name = app_info["app_name"]
+                    old_policy_id = app_info["old_policy_id"]
+                    all_policies = app_info["all_policies"]
+
+                    updated_policies = [kept_id if pid == old_policy_id else pid for pid in all_policies]
+
+                    if dry_run:
+                        logging.info(f"  Would update app '{app_name}': {old_policy_id} → {kept_id}")
+                    else:
+                        try:
+                            from app.core import access_manager
+                            app_details = access_manager.get_cloudflare_access_application(app_id)
+                            if app_details:
+                                success = access_manager.update_cloudflare_access_application(
+                                    app_id,
+                                    app_details.get("domain"),
+                                    app_details.get("name"),
+                                    app_details.get("session_duration", "24h"),
+                                    app_details.get("app_launcher_visible", False),
+                                    app_details.get("self_hosted_domains", []),
+                                    updated_policies,
+                                    app_details.get("allowed_idps"),
+                                    app_details.get("auto_redirect_to_identity", False),
+                                    use_reusable=True
+                                )
+                                if success:
+                                    logging.info(f"  ✓ Updated app '{app_name}': {old_policy_id} → {kept_id}")
+                                else:
+                                    logging.error(f"  ✗ Failed to update app '{app_name}'")
+                            else:
+                                logging.error(f"  ✗ Could not fetch details for app '{app_name}'")
+                        except Exception as e:
+                            logging.error(f"  ✗ Error updating app '{app_name}': {e}")
+
+                logging.info("")
+        else:
+            logging.info("Step 6: No Access Applications need updating")
+            logging.info("")
+
+        logging.info("Step 7: Updating state.json with correct policy IDs...")
 
         if dry_run:
             logging.info("DRY RUN: Would update state.json with the following changes:")
@@ -153,8 +223,6 @@ def cleanup_duplicate_policies(dry_run=True):
                 if not policy_id:
                     continue
 
-                # Check if this group references a policy that was deleted
-                # by finding the policy name and checking if we kept a different ID
                 current_policy_name = None
                 for name, policies_list in policies_by_name.items():
                     for policy in policies_list:
@@ -206,12 +274,11 @@ def cleanup_duplicate_policies(dry_run=True):
 
 def main():
     """CLI entry point"""
-    # Configure logging FIRST before anything else
     logging.basicConfig(
         level=logging.INFO,
         format='%(message)s',
         handlers=[logging.StreamHandler(sys.stdout)],
-        force=True  # Override any existing configuration
+        force=True
     )
 
     parser = argparse.ArgumentParser(
@@ -219,13 +286,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Preview what would be cleaned up (dry run)
   python3 -m app.cli cleanup-duplicate-policies --dry-run
-
-  # Actually perform the cleanup
   python3 -m app.cli cleanup-duplicate-policies --apply
-
-  # Run from Docker container
   docker exec dockflare python3 -m app.cli cleanup-duplicate-policies --dry-run
 """
     )
@@ -250,13 +312,11 @@ Examples:
 
     args = parser.parse_args()
 
-    # Determine mode
     if args.apply:
         dry_run = False
     else:
-        dry_run = True  # Default to dry run for safety
+        dry_run = True
 
-    # Execute command
     if args.command == "cleanup-duplicate-policies":
         try:
             logging.info("Starting cleanup utility...")
