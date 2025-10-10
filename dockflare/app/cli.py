@@ -206,6 +206,14 @@ def cleanup_duplicate_policies(dry_run=True):
 
 def main():
     """CLI entry point"""
+    # Configure logging FIRST before anything else
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(message)s',
+        handlers=[logging.StreamHandler(sys.stdout)],
+        force=True  # Override any existing configuration
+    )
+
     parser = argparse.ArgumentParser(
         description="DockFlare CLI utilities",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -242,13 +250,6 @@ Examples:
 
     args = parser.parse_args()
 
-    # Configure logging for CLI
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(message)s',
-        handlers=[logging.StreamHandler(sys.stdout)]
-    )
-
     # Determine mode
     if args.apply:
         dry_run = False
@@ -258,7 +259,12 @@ Examples:
     # Execute command
     if args.command == "cleanup-duplicate-policies":
         try:
+            logging.info("Starting cleanup utility...")
             result = cleanup_duplicate_policies(dry_run=dry_run)
+            if result and "error" in result:
+                logging.error(f"Cleanup failed: {result['error']}")
+                sys.exit(1)
+            logging.info("Cleanup utility completed successfully.")
             sys.exit(0)
         except Exception as e:
             logging.error(f"Error executing cleanup: {e}", exc_info=True)
