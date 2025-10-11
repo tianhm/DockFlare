@@ -857,3 +857,28 @@ def get_idp_id_by_name(friendly_name):
         if idp:
             return idp.get("cloudflare_id")
         return None
+
+def queue_agent_command(agent_id: str, command: dict) -> bool:
+    """
+    Queue a command for an agent to execute on next poll.
+
+    Args:
+        agent_id: The agent ID
+        command: Command dict with 'action' and other params
+
+    Returns:
+        True if queued successfully, False if agent not found
+    """
+    with state_lock:
+        agent = agents.get(agent_id)
+        if not agent:
+            logging.warning(f"Cannot queue command for agent {agent_id}: agent not found")
+            return False
+
+        if "commands" not in agent:
+            agent["commands"] = []
+
+        agent["commands"].append(command)
+        logging.info(f"Queued command '{command.get('action')}' for agent {agent_id}")
+        save_state()
+        return True

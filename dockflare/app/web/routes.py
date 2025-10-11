@@ -1913,6 +1913,13 @@ def _parse_and_build_policy_from_form(email_str, ip_ranges_str=None, countries_l
                 "include": [{"everyone": {}}]
             })
     else:
+                
+        if countries_list and not email_rules and not idp_rules:
+            raise ValueError(
+                "Invalid configuration: You've selected geo-restrictions but no authentication method (email or identity provider). "
+                "To create a public access rule with geo-restrictions, please switch to 'Public Access' mode."
+            )
+
         include_rules = email_rules + idp_rules
         if include_rules:
             policy = {
