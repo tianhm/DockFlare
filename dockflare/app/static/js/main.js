@@ -702,24 +702,64 @@ function updateCountdowns() {
         try {
             const targetDate = new Date(deleteAtISO);
             if (isNaN(targetDate.getTime())) throw new Error("Invalid date");
-            const options = {
+
+            const now = new Date();
+            const diffMs = targetDate - now;
+            const diffSeconds = Math.floor(diffMs / 1000);
+
+            // Smart hybrid display with color-coded urgency
+            if (diffMs < 0) {
+                // Expired - show in red
+                absoluteTimeSpan.textContent = "Expired";
+                countdownSpan.textContent = "";
+                absoluteTimeSpan.className = 'absolute-time-display text-error font-bold';
+            } else if (diffSeconds < 3600) {
+                // Less than 1 hour: show MM:SS format
+                const minutes = Math.floor(diffSeconds / 60);
+                const seconds = diffSeconds % 60;
+                const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                absoluteTimeSpan.textContent = `Expires in ${timeStr}`;
+                countdownSpan.textContent = "";
+
+                // Color-coded urgency
+                if (diffSeconds <= 10) {
+                    absoluteTimeSpan.className = 'absolute-time-display text-error font-bold animate-pulse';
+                } else if (diffSeconds <= 30) {
+                    absoluteTimeSpan.className = 'absolute-time-display text-error font-semibold';
+                } else if (diffSeconds <= 120) {
+                    absoluteTimeSpan.className = 'absolute-time-display text-warning font-semibold';
+                } else {
+                    absoluteTimeSpan.className = 'absolute-time-display text-success';
+                }
+            } else {
+                // More than 1 hour: show relative time format
+                const hours = Math.floor(diffSeconds / 3600);
+                const minutes = Math.floor((diffSeconds % 3600) / 60);
+
+                let timeStr = '';
+                if (hours > 0) {
+                    timeStr = minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+                } else {
+                    timeStr = `${minutes}m`;
+                }
+
+                absoluteTimeSpan.textContent = `Expires in ${timeStr}`;
+                countdownSpan.textContent = "";
+                absoluteTimeSpan.className = 'absolute-time-display text-base-content opacity-70';
+            }
+
+            // Tooltip with full timestamp on hover
+            const fullTimestamp = targetDate.toLocaleString(undefined, {
                 hour: '2-digit',
                 minute: '2-digit',
+                second: '2-digit',
                 day: '2-digit',
                 month: 'short',
                 year: 'numeric'
-            };
-            absoluteTimeSpan.textContent = targetDate.toLocaleString(undefined, options);
-            const now = new Date();
-            const diff = targetDate - now;
-            countdownSpan.textContent = `(${formatTimeDifference(diff)})`;
-            if (diff < 0) {
-                countdownSpan.classList.add('text-error');
-                absoluteTimeSpan.classList.add('text-error');
-            } else {
-                countdownSpan.classList.remove('text-error');
-                absoluteTimeSpan.classList.remove('text-error');
-            }
+            });
+            div.setAttribute('title', `Exact time: ${fullTimestamp}`);
+
         } catch (e) {
             absoluteTimeSpan.textContent = "(Invalid Date)";
             countdownSpan.textContent = "";
