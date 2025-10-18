@@ -32,9 +32,11 @@
             {% endwith %}
 
             {% if oauth_providers and password_login_enabled %}
-            <div class="flex flex-col md:flex-row items-stretch">
-                <!-- Password Login Section -->
-                <div class="w-full md:w-1/2 md:pr-6">
+            
+            <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-x-8 items-center">
+            
+                <!-- Column 1: Password Login -->
+                <div>
                     <h3 class="text-lg font-semibold mb-4 text-center md:text-left">Sign in with password</h3>
                     <form method="POST" action="{{ url_for('web.login') }}">
                         {% if form %}{{ form.hidden_tag() }}{% endif %}
@@ -66,11 +68,11 @@
                     </form>
                 </div>
 
-                
+                <!-- Column 2: Divider -->
                 <div class="divider md:divider-horizontal">OR</div>
 
-                <!-- OAuth Login Section -->
-                <div class="w-full md:w-1/2 md:pl-6 flex flex-col justify-center">
+                <!-- Column 3: OAuth Login -->
+                <div class="flex flex-col justify-center">
                     <h3 class="text-lg font-semibold mb-4 text-center md:text-left">Sign in with OAuth</h3>
                     {% set logos = {
                         'google': '<svg class="w-5 h-5" aria-hidden="true" focusable="false" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 111.8 512 0 400.2 0 261.8 0 123.8 111.8 14 244 14c77.3 0 143.3 31.4 191.1 82.1l-73.3 73.3c-24.5-23.2-58.3-37.2-97.8-37.2-80.3 0-146.1 65.7-146.1 146.1s65.8 146.1 146.1 146.1c92.8 0 131.3-74.4 136.8-109.9H244v-89.9h239.1c4.9 26.9 7.9 54.9 7.9 84.9z"></path></svg>',
@@ -111,7 +113,7 @@
                 {% endfor %}
             </div>
             {% elif password_login_enabled %}
-            
+            <!-- Password login only (no OAuth) -->
             <form method="POST" action="{{ url_for('web.login') }}">
                 {% if form %}{{ form.hidden_tag() }}{% endif %}
                 <div class="form-control">
