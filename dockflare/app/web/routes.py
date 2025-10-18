@@ -2327,7 +2327,25 @@ def auth_callback(provider_id):
     client = oauth.create_client(provider_id)
     try:
         token = client.authorize_access_token()
-        userinfo = client.userinfo()
+        
+        providers = current_app.config.get('OAUTH_PROVIDERS', [])
+        provider_config = next((p for p in providers if p['id'] == provider_id), None)
+        provider_type = provider_config.get('type') if provider_config else None
+
+        if provider_type == 'github':
+            resp = client.get('user')
+            userinfo = resp.json()
+
+            if not userinfo.get('email'):
+                email_resp = client.get('user/emails')
+                emails = email_resp.json()
+                primary_email = next((e['email'] for e in emails if e['primary']), None)
+                if primary_email:
+                    userinfo['email'] = primary_email
+        else:
+            # OIDC providers (Google, Authentik, etc.)
+            userinfo = client.userinfo()
+
     except Exception as e:
         logging.error(f"OAuth callback error for provider {provider_id}: {e}", exc_info=True)
         flash('Authentication failed.', 'error')
