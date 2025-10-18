@@ -268,55 +268,8 @@ def main_application_entrypoint():
             config_loader.apply_config_to_app(app, config_data)
 
             from app import oauth
-            def register_oauth_providers(flask_app, oauth_instance):
-                providers = flask_app.config.get('OAUTH_PROVIDERS', [])
-                for provider in providers:
-                    if not provider.get('enabled', True):
-                        continue
-
-                    try:
-                        client_id = fernet.decrypt(provider['client_id'].encode()).decode()
-                        client_secret = fernet.decrypt(provider['client_secret'].encode()).decode()
-                    except Exception:
-                        logging.error(f"Could not decrypt credentials for provider {provider['name']}. Skipping.")
-                        continue
-
-                    provider_type = provider.get('type')
-                    issuer_url = provider.get('issuer_url')
-
-                    if provider_type == 'github':
-                        oauth_instance.register(
-                            name=provider['id'],
-                            client_id=client_id,
-                            client_secret=client_secret,
-                            authorize_url='https://github.com/login/oauth/authorize',
-                            access_token_url='https://github.com/login/oauth/access_token',
-                            api_base_url='https://api.github.com/',
-                            client_kwargs={'scope': 'user:email'}
-                        )
-                        continue
-
-                    if not issuer_url:
-                        if provider_type == 'google':
-                            issuer_url = 'https://accounts.google.com'
-                        else:
-                            logging.warning(f"Provider 'provider.get('name')' is of type 'provider_type' but is missing an issuer_url. It will be skipped.")
-                            continue
-
-                    if not issuer_url.endswith('/'):
-                        issuer_url += '/'
-                    
-                    metadata_url = f"{issuer_url}.well-known/openid-configuration"
-
-                    oauth_instance.register(
-                        name=provider['id'],
-                        client_id=client_id,
-                        client_secret=client_secret,
-                        server_metadata_url=metadata_url,
-                        client_kwargs={'scope': 'openid email profile'}
-                    )
-
-            register_oauth_providers(app, oauth)
+            from app.core.oauth_manager import register_oauth_providers
+            register_oauth_providers(app, oauth, fernet)
             logging.info("DockFlare is configured and in Operational Mode.")
         except Exception as e:
             logging.error(f"Failed to load or decrypt configuration: {e}. Starting in Pre-Flight mode.", exc_info=True)
