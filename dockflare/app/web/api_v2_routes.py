@@ -2452,6 +2452,14 @@ def manage_auth_providers():
 
         from app.web import config_loader
         config_loader.apply_config_to_app(current_app, config_data)
+        
+        try:
+            from app import oauth
+            from app.core.oauth_manager import register_oauth_providers
+            registered_count = register_oauth_providers(current_app, oauth, fernet)
+            logging.info(f"OAuth providers re-registered: {registered_count} provider(s)")
+        except Exception as e:
+            logging.error(f"Failed to re-register OAuth providers: {e}", exc_info=True)
 
         return jsonify({"status": "success", "message": "Provider added successfully."})
 
@@ -2489,6 +2497,14 @@ def manage_auth_provider(provider_id):
 
         from app.web import config_loader
         config_loader.apply_config_to_app(current_app, config_data)
+        
+        try:
+            from app import oauth
+            from app.core.oauth_manager import register_oauth_providers
+            registered_count = register_oauth_providers(current_app, oauth, fernet)
+            logging.info(f"OAuth providers re-registered after update: {registered_count} provider(s)")
+        except Exception as e:
+            logging.error(f"Failed to re-register OAuth providers: {e}", exc_info=True)
 
         return jsonify({"status": "success", "message": "Provider updated successfully."})
 
@@ -2500,6 +2516,14 @@ def manage_auth_provider(provider_id):
 
         from app.web import config_loader
         config_loader.apply_config_to_app(current_app, config_data)
+        
+        try:
+            from app import oauth
+            from app.core.oauth_manager import register_oauth_providers
+            registered_count = register_oauth_providers(current_app, oauth, fernet)
+            logging.info(f"OAuth providers re-registered after deletion: {registered_count} provider(s)")
+        except Exception as e:
+            logging.error(f"Failed to re-register OAuth providers: {e}", exc_info=True)
 
         return jsonify({"status": "success", "message": "Provider deleted successfully."})
 
