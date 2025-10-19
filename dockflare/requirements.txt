@@ -24,7 +24,7 @@ flask-login==0.6.3
     # via -r dockflare/requirements.in
 flask-wtf==1.2.2
     # via -r dockflare/requirements.in
-Authlib==1.6.4
+Authlib==1.6.5
     # via OAuth2 integration
 idna==3.10
     # via requests
