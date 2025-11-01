@@ -616,8 +616,7 @@ def start_event_listeners(stop_event):
         thread_name = f"DockerEventListener-{prefix.strip('.')}"
         thread = threading.Thread(target=docker_event_listener, args=(stop_event, prefix), name=thread_name, daemon=True)
         threads.append(thread)
-        thread.start()
-        logging.info(f"Started event listener thread for prefix: {prefix}")
+        logging.info(f"Created event listener thread for prefix: {prefix}")
         
     return threads
 def _detect_zone_for_hostname(hostname):
