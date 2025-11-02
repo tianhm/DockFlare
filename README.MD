@@ -11,7 +11,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ChrispyBacon-dev/DockFlare/releases"><img src="https://img.shields.io/badge/Release-v3.0.5-blue.svg?style=for-the-badge" alt="Release"></a>
+<a href="https://github.com/ChrispyBacon-dev/DockFlare/stargazers">
+  <img src="https://img.shields.io/github/stars/ChrispyBacon-dev/DockFlare?style=for-the-badge" alt="Stars">
+</a>
+  <a href="https://github.com/ChrispyBacon-dev/DockFlare/releases"><img src="https://img.shields.io/badge/Release-v3.0.6-blue.svg?style=for-the-badge" alt="Release"></a>
   <a href="https://hub.docker.com/r/alplat/dockflare"><img src="https://img.shields.io/docker/pulls/alplat/dockflare?style=for-the-badge" alt="Docker Pulls"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Made%20with-Python-1f425f.svg?style=for-the-badge" alt="Python"></a>
   <a href="https://github.com/ChrispyBacon-dev/DockFlare/blob/main/LICENSE.MD"><img src="https://img.shields.io/badge/License-GPL--3.0-blue.svg?style=for-the-badge" alt="License"></a>
