@@ -227,7 +227,7 @@
                                                 {{ details.access_policy_type.replace('_', ' ') }}
                                             </span>
                                         {% elif details.get('status') == 'active' %} 
-                                            <span class="opacity-60 italic">None (Public)</span>
+                                            <span class="opacity-60 italic">No Policy Assigned</span>
                                         {% else %}
                                             <span class="text-xs opacity-50">N/A</span>
                                         {% endif %}
@@ -462,7 +462,7 @@
                                         <span class="label-text font-medium">2. Configure Manually</span>
                                     </label>
                                     <select name="manual_access_policy_type" id="manual_access_policy_type" class="select select-bordered w-full policy-type-select">
-                                        <option value="none" selected>None (Public - No App)</option>
+                                        <option value="none" selected>No Policy Assigned</option>
                                         <option value="bypass">Bypass (Public App)</option>
                                     </select>
                                 </div>
@@ -626,7 +626,7 @@
                                         <span class="label-text font-medium">2. Configure Manually</span>
                                     </label>
                                     <select name="edit_access_policy_type" id="edit_manual_access_policy_type" class="select select-bordered w-full policy-type-select">
-                                        <option value="none">None (Public - No App)</option>
+                                        <option value="none">No Policy Assigned</option>
                                         <option value="bypass">Bypass (Public App)</option>
                                     </select>
                                 </div>
