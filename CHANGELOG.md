@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Manual Rule SNI Control:** Added a dedicated **Match SNI to Host** toggle for manual ingress rules (create/edit), persisted in DockFlare state and synchronized to Cloudflare tunnel `originRequest.matchSNIToHost`.
 - **UI-Managed Ingress Field Preservation:** Added a new **General Settings** option, **Preserve Unmanaged Cloudflare Ingress Fields**, allowing DockFlare to retain Cloudflare-side route fields it does not explicitly manage during tunnel sync.
 - **Tunnel Name Helper Text:** Added inline helper text on Setup and Settings pages clarifying that DockFlare automatically normalizes the entered tunnel name when deriving the local cloudflared container name.
+- **Ingress Rule Grouping in Dashboard:** Added a new **Group by** control in `Managed Ingress Rules` with grouping by **Status**, **Tunnel**, or **Access Policy**, including per-group row counts for easier navigation on large rule sets.
 
 ### Fixed
 - **Cloudflare Dashboard Deep Links:** Updated Zero Trust links to match Cloudflare's latest navigation paths:

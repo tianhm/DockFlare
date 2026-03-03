@@ -126,6 +126,16 @@
                             </div>
 
                             <div class="form-control w-full sm:w-auto">
+                                <label for="group-select" class="label py-0 pb-1"><span class="label-text text-xs font-semibold opacity-70">Group by</span></label>
+                                <select id="group-select" class="select select-bordered select-sm w-full">
+                                    <option value="none">None</option>
+                                    <option value="status">Status</option>
+                                    <option value="tunnel">Tunnel</option>
+                                    <option value="access-policy">Access Policy</option>
+                                </select>
+                            </div>
+
+                            <div class="form-control w-full sm:w-auto">
                                  <label for="search-input" class="label py-0 pb-1"><span class="label-text text-xs font-semibold opacity-70">Search Hostname</span></label>
                                 <div class="relative">
                                     <span class="absolute inset-y-0 left-0 flex items-center pl-3">
@@ -719,6 +729,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusFilter = document.getElementById('status-filter');
     const tunnelFilter = document.getElementById('tunnel-filter');
     const sortSelect = document.getElementById('sort-select');
+    const groupSelect = document.getElementById('group-select');
     const searchInput = document.getElementById('search-input');
     const filterStats = document.getElementById('filter-stats');
     const tableBody = document.querySelector('tbody');
@@ -911,10 +922,68 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateDisplay() {
         tableBody.innerHTML = '';
+        const groupValue = groupSelect ? groupSelect.value : 'none';
+        if (groupValue === 'none') {
+            filteredRows.forEach(row => {
+                tableBody.appendChild(row);
+            });
+            return;
+        }
 
+        const groups = new Map();
         filteredRows.forEach(row => {
-            tableBody.appendChild(row);
+            const group = getGroupForRow(row, groupValue);
+            if (!groups.has(group.key)) {
+                groups.set(group.key, { label: group.label, rows: [] });
+            }
+            groups.get(group.key).rows.push(row);
         });
+
+        groups.forEach(group => {
+            const headerRow = document.createElement('tr');
+            headerRow.className = 'bg-base-200/70';
+            const headerCell = document.createElement('td');
+            headerCell.colSpan = 8;
+            headerCell.className = 'p-3 text-xs font-semibold uppercase tracking-wide opacity-80';
+            headerCell.textContent = `${group.label} (${group.rows.length})`;
+            headerRow.appendChild(headerCell);
+            tableBody.appendChild(headerRow);
+            group.rows.forEach(row => {
+                tableBody.appendChild(row);
+            });
+        });
+    }
+
+    function getStatusGroup(row) {
+        const status = (row.dataset.ruleStatus || '').trim();
+        if (!status) {
+            return { key: 'unknown', label: 'Status: Unknown' };
+        }
+        return { key: status.toLowerCase(), label: `Status: ${status.replace(/_/g, ' ')}` };
+    }
+
+    function getTunnelGroup(row) {
+        const tunnel = row.querySelector('[data-role="tunnel-name"]')?.dataset?.tunnelName?.trim() || '';
+        if (!tunnel) {
+            return { key: 'no-tunnel', label: 'Tunnel: N/A' };
+        }
+        return { key: tunnel.toLowerCase(), label: `Tunnel: ${tunnel}` };
+    }
+
+    function getAccessPolicyGroup(row) {
+        const accessPolicyRaw = row.querySelector('td:nth-child(6)')?.textContent || '';
+        const accessPolicy = accessPolicyRaw.replace(/\s+/g, ' ').trim();
+        if (!accessPolicy) {
+            return { key: 'no-policy', label: 'Access Policy: N/A' };
+        }
+        return { key: accessPolicy.toLowerCase(), label: `Access Policy: ${accessPolicy}` };
+    }
+
+    function getGroupForRow(row, groupValue) {
+        if (groupValue === 'status') return getStatusGroup(row);
+        if (groupValue === 'tunnel') return getTunnelGroup(row);
+        if (groupValue === 'access-policy') return getAccessPolicyGroup(row);
+        return { key: 'all', label: 'All Rules' };
     }
 
     function updateStats() {
@@ -929,6 +998,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (statusFilter) statusFilter.addEventListener('change', applyFilters);
     if (tunnelFilter) tunnelFilter.addEventListener('change', applyFilters);
     if (sortSelect) sortSelect.addEventListener('change', applyFilters);
+    if (groupSelect) groupSelect.addEventListener('change', applyFilters);
     if (searchInput) searchInput.addEventListener('input', applyFilters);
 
     initializeFilters();
