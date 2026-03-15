@@ -1,44 +1,44 @@
-# Willkomme bi de DockFlare-Doku!
+# Willkomme bi de DockFlare-Doku
 
-DockFlare isch en sälber-hostete ingress controller, wo der d’Verwaltig vo Cloudflare Tunnel u Zero Trust mega vereifacht. Du machsch s meischte über Docker-Labels, u wänn’s nötig isch chasch i dr Web UI manuell nachjustiere.
+DockFlare isch e sälber hosteti Ingress-Lösig, wo dir d Verwaltig vo Cloudflare Tunnel u Zero Trust vereifacht. S meischte machsch über Docker-Labels, u wänn s nötig isch, chasch i dr Web UI no manuell iigreife.
 
 ## Inhalt
 
 *   **[Start](Home.md)**
-*   **Los gah**
-    *   [Voraussetzige](Prerequisites.md)
-    *   [Quick Start (Docker Compose)](Quick-Start-Docker-Compose.md)
+*   **Los ga**
+    *   [Was du bruuchsch](Prerequisites.md)
+    *   [Schnällstart mit Docker Compose](Quick-Start-Docker-Compose.md)
     *   [Zuegang zur Web UI](Accessing-the-Web-UI.md)
-*   **Grundsach**
+*   **Grundlag**
     *   [Wie DockFlare funktioniert](How-DockFlare-Works.md)
     *   [DockFlare Agent u Multi-Server-Architektur](Multi-Server-Agent.md)
-    *   [Best Practices für Access Policies](Access-Policy-Best-Practices.md)
+    *   [Best Practices für Zuegriffsrichtlinie](Access-Policy-Best-Practices.md)
     *   [Zone Default Policies](Zone-Default-Policies.md)
-    *   [Internal vs External `cloudflared`](Internal-vs-External-cloudflared.md)
-    *   [State-Persistence](State-Persistence.md)
+    *   [Interner vs. Externer `cloudflared`](Internal-vs-External-cloudflared.md)
+    *   [Persistänte Status](State-Persistence.md)
 *   **Istellige**
-    *   [Container Labels](Container-Labels.md)
+    *   [Container-Labels](Container-Labels.md)
     *   [Identity Providers](Identity-Providers.md)
-    *   [OAuth Provider Setup](OAuth-Provider-Setup.md)
+    *   [OAuth-Provider iirichte](OAuth-Provider-Setup.md)
 *   **Bruuch**
-    *   [Basic Usage (Single Domain)](Basic-Usage-Single-Domain.md)
-    *   [Mehreri Domains (Indexed Labels)](Using-Multiple-Domains-Indexed-Labels.md)
-    *   [Wildcard-Domains](Using-Wildcard-Domains.md)
+    *   [Grundlag vom Bruuch mit ere einzelne Domain](Basic-Usage-Single-Domain.md)
+    *   [Mehreri Domains mit indexierte Labels](Using-Multiple-Domains-Indexed-Labels.md)
+    *   [Wildcard-Domains bruuche](Using-Wildcard-Domains.md)
     *   [DNS-Zone verwalte](Managing-DNS-Zones.md)
     *   [Graceful Deletion verstah](Understanding-Graceful-Deletion.md)
     *   [Web UI bruuche](Using-the-Web-UI.md)
     *   [Backup & Restore](Backup-and-Restore.md)
 *   **Fortgschritte**
-    *   [External `cloudflared` Mode](External-cloudflared-Mode.md)
-    *   [Zwüsche Modis wechsle](Switching-Between-Modes.md)
+    *   [Externe `cloudflared`-Modus](External-cloudflared-Mode.md)
+    *   [Zwüsche de Modis wächsle](Switching-Between-Modes.md)
     *   [Monitoring mit Prometheus & Grafana](Monitoring-with-Prometheus-&-Grafana.md)
     *   [Performance Tuning](Performance-Tuning.md)
     *   [Content Security Policy (CSP)](Content-Security-Policy.md)
-    *   [Security Architecture & Hardening](Security-Architecture.md)
-*   **Troubleshooting**
-    *   [Common Issues](Common-Issues.md)
+    *   [Sicherheitsarchitektur u Härtig](Security-Architecture.md)
+*   **Problem löse**
+    *   [Häufigi Problem](Common-Issues.md)
     *   [Debugging & Logs](Debugging-&-Logs.md)
     *   [Health Checks](Health-Checks.md)
-    *   [CLI Utilities](CLI-Utilities.md)
+    *   [CLI-Hilfsmittu](CLI-Utilities.md)
 *   **[Contributing](Contributing.md)**
 *   **[License](License.md)**

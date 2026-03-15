@@ -103,7 +103,7 @@ Spowoduje to uruchomienie proxy, przygotowanie wolumenów i start DockFlare raze
 Po uruchomieniu usług otwórz przeglądarkę na `http://<your-server-ip>:5000`.
 
 **Kreator Pre-Flight** przeprowadzi Cię przez:
-1. Tworzenie hasła do Web UI.
+1. Ustawienie hasła do panelu administracyjnego.
 2. Wprowadź dane uwierzytelniające Cloudflare (identyfikator konta, identyfikator strefy, token API).
 3. Konfigurowanie początkowego tunelu Cloudflare.
 4. *(Opcjonalnie)* Przywracanie z archiwum kopii zapasowych DockFlare. Jeśli masz już `dockflare_backup_*.zip`, wybierz **Przywróć z kopii zapasowej** przed Krokiem 1; kreator zaimportuje konfigurację i automatycznie zrestartuje kontener.

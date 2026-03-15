@@ -132,7 +132,7 @@ DockFlare rileverà il nuovo contenitore ed eseguirà automaticamente le seguent
 2. Crea un record CNAME per `nginx.example.com` nel tuo DNS Cloudflare, puntando al tunnel.
 
 Puoi verificarlo in alcuni modi:
-* **Web UI DockFlare**: il servizio `nginx.example.com` apparirà sulla dashboard.
+* **Interfaccia web di DockFlare**: il servizio `nginx.example.com` apparirà sulla dashboard.
 * **Dashboard di Cloudflare**: vedrai il nuovo record CNAME nelle tue impostazioni DNS e la nuova regola ingress nella configurazione del tunnel.
 
 Dopo alcuni istanti necessari per la propagazione del DNS, dovresti essere in grado di accedere a `https://nginx.example.com` nel tuo browser e visualizzare la pagina di benvenuto NGINX predefinita.

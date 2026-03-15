@@ -1,6 +1,6 @@
 # Benvenuti nella documentazione di DockFlare!
 
-DockFlare è un potente controller ingress self-hosted che semplifica la gestione di Cloudflare Tunnel e Zero Trust. Utilizza le etichette Docker per la configurazione automatica e offre una Web UI solida per definizioni manuali dei servizi e override delle policy.
+DockFlare è un controller ingress self-hosted che semplifica la gestione di Cloudflare Tunnel e Zero Trust. Utilizza le etichette Docker per la configurazione automatica e offre un'interfaccia web solida per definire manualmente i servizi e applicare override alle policy.
 
 Questa documentazione fornisce informazioni complete su DockFlare. Che tu sia un nuovo utente o un utente esperto, troverai tutto ciò che devi sapere per ottenere il massimo da DockFlare.
 
@@ -10,7 +10,7 @@ Questa documentazione fornisce informazioni complete su DockFlare. Che tu sia un
 * **Per iniziare**
     * [Prerequisiti](Prerequisites.md)
     * [Avvio rapido (Docker Compose)](Quick-Start-Docker-Compose.md)
-    * [Accesso alla Web UI](Accessing-the-Web-UI.md)
+    * [Accesso all'interfaccia web](Accessing-the-Web-UI.md)
 * **Concetti fondamentali**
     * [Come funziona DockFlare](How-DockFlare-Works.md)
     * [Agente DockFlare e architettura multi-server](Multi-Server-Agent.md)
@@ -28,7 +28,7 @@ Questa documentazione fornisce informazioni complete su DockFlare. Che tu sia un
     * [Utilizzo di domini wildcard](Using-Wildcard-Domains.md)
     * [Gestione delle zone DNS](Managing-DNS-Zones.md)
     * [Comprendere la Graceful Deletion](Understanding-Graceful-Deletion.md)
-    * [Uso della Web UI](Using-the-Web-UI.md)
+    * [Uso dell'interfaccia web](Using-the-Web-UI.md)
     * [Backup e ripristino](Backup-and-Restore.md)
 * **Argomenti avanzati**
     * [Modalità `cloudflared` esterna](External-cloudflared-Mode.md)

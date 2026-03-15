@@ -1,6 +1,6 @@
 # 快速入门（Docker Compose）
 
-本指南介绍了使用强化的 socket proxy 与 rootless Master 配置运行 DockFlare 的最快方式。
+本指南介绍如何使用强化的 socket proxy 与 rootless 主控端配置，以最快方式运行 DockFlare。
 
 ### 1. 创建 `docker-compose.yml` 文件
 
@@ -83,8 +83,8 @@ networks:
 ```
 
 **注意事项：**
-- Master 容器以 `dockflare` 用户（UID/GID 65532）运行。如果需要匹配不同的主机权限，请设置 `DOCKFLARE_UID`/`DOCKFLARE_GID` 并重建镜像，或调整 init job。
-- Socket proxy 是强制的。DockFlare 从不直接挂载 `/var/run/docker.sock`，以严格限制 Master 可访问的 Docker API 暴露面。
+- 主控端容器以 `dockflare` 用户（UID/GID 65532）运行。如果需要匹配不同的主机权限，请设置 `DOCKFLARE_UID`/`DOCKFLARE_GID` 并重建镜像，或调整初始化任务。
+- Socket proxy 是必需的。DockFlare 从不直接挂载 `/var/run/docker.sock`，以严格限制主控端可访问的 Docker API 暴露面。
 - 如果使用 bind mount 而不是 named volume，请确保目标目录可由 UID/GID 65532（或您覆盖后的值）写入。
 - 如果外部网络不存在，则创建一次：`docker network create cloudflare-net`。
 
@@ -103,7 +103,7 @@ docker compose up -d
 服务运行后，打开浏览器并访问 `http://<your-server-ip>:5000`。
 
 **初始设置向导**将引导您完成：
-1. 为 Web UI 创建密码。
+1. 为网页管理界面创建密码。
 2. 输入您的 Cloudflare 凭据（帐户 ID、区域 ID、API 令牌）。
 3. 配置您的初始 Cloudflare 隧道。
 4. *（可选）* 从 DockFlare 备份存档中恢复。如果您已有 `dockflare_backup_*.zip`，请在步骤 1 之前选择 `Restore from backup`（从备份恢复）；向导会导入配置并自动重启容器。

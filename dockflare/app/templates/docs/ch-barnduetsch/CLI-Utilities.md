@@ -1,50 +1,49 @@
-# DockFlare CLI-Dienstprogramme
+# DockFlare CLI-Hilfsmittu
 
 ## Bereinigung doppelter Richtlinien
 
-DockFlare enthält nun ein CLI-Dienstprogramm, um doppelte wiederverwendbare Richtlinien in dim Cloudflare-Konto zu erkennen u zu entfernen.
+DockFlare bringt es CLI-Wärchzüg mit, wo doppelte wiederverwendbari Richtlinie i dim Cloudflare-Konto findet u ufroumt.
 
 ### Problem
 
-Wänn du mehrere DockFlare-Instanzen ausführen (lokal + bereitgestellt) oder eine Abweichung der `state.json` zwischen Instanzen auftritt, chöi in Cloudflare doppelte Richtlinien mit demselben Namen entstehen. Das Dienstprogramm konsolidiert sie, indem es die älteste Richtlinie beibehält u neuere Duplikate entfernt.
+Wänn mehri DockFlare-Instanze laufe oder d `state.json` zwüsche Instanze usenand louft, chöi in Cloudflare mehri Richtlinie mit em glyche Name entstah. Das Tool bhaltet d ältesti Richtlinie u entfernt d neuere Dublette.
 
-### Verwendung
+### Bruuch
 
-#### Vorschau (Trockenlauf / Dry Run) - Empfohlener erster Schritt
+#### Vorschau (`--dry-run`) - dr empfohlni erscht Schritt
 
 ```bash
 docker exec dockflare python -m app.cli cleanup-duplicate-policies --dry-run
 ```
 
-Das wird:
-- Alle wiederverwendbaren Richtlinien in dim Cloudflare-Konto durchsuchen
-- Richtlinien mit doppelten Namen identifizieren
-- Zeigen, welche Richtlinien gelöscht würden (die neueren)
-- Zeigen, welche Richtlinien-ID beibehalten würde (die älteste)
-- Die Änderungen an der `state.json` vorab aufzeigen
-- **KEINE tatsächlichen Änderungen vornehmen**
+Das macht:
+- alli wiederverwendbare Richtlinie dürchsueche
+- Dublette finde
+- zeige, was glöscht würd
+- zeige, weli ID bhalte würd
+- d Änderige a dr `state.json` vorab azeige
+- **nüt würklech ändere**
 
-#### Bereinigung ausführen
+#### Bereinigung würklech usfüehre
 
 ```bash
 docker exec dockflare python -m app.cli cleanup-duplicate-policies --apply
 ```
 
-Das wird:
-- Alle doppelten Richtlinien dauerhaft löschen (die älteste bleibt bestehen)
-- Die `state.json` anhand der verbleibenden korrekten IDs aktualisieren
-- **Tatsächliche, destruktive Änderungen an dim Cloudflare-Konto vornehmen**
+Das macht:
+- alli Dublette definitiv lösche
+- d `state.json` uf d rächte Policy-ID aktualisiere
+- **würklechi Änderige im Cloudflare-Konto vornäh**
 
-### Was es macht
+### Was s Tool genau macht
 
-1. **Holt alle wiederverwendbaren Richtlinien** aus dim Cloudflare-Konto.
-2. **Gruppiert Richtlinien nach Namen**, um Duplikate zu identifizieren.
-3. **Sortiert nach Erstellungsdatum** - behält die älteste Richtlinie für jeden Namen.
-4. **Überprüft Access Applications** - stellt fest, welche Apps die Duplikate bruuche.
-5. **Aktualisiert & Löscht** - Für jedes Duplikat:
-   - Betroffene Anwendungen wärde aktualisiert, damit sie auf die beibehaltene ID verweisen.
-   - Die doppelte Richtlinie wird infolge gelöscht.
-6. **Aktualisiert die `state.json`** - um sicherzustellen, dass alle Referenzen lokal stimmen.
+1. Holt alli wiederverwendbare Richtlinie use
+2. Gruppiert si nach Name
+3. Bhalt pro Name d ältesti
+4. Prüeft, weli Access Apps no uf e Dublette zeige
+5. Aktualisiert d Apps uf d bhaltni ID
+6. Löscht d Dublette
+7. Schrybt d `state.json` mit de korrekte Referänze nach
 
 ### Beispielausgabe
 
@@ -105,23 +104,23 @@ Policies that would be kept: 2
 ============================================================
 ```
 
-### Sicherheitsmerkmale
+### Sicherheitsmerkmal
 
-- **Dry-Run als Standard** - du muesch explizit `--apply` bruuche, um Änderungen vorzunehmen.
-- **Älteste behalten** - Verhindert den Verlust dinere Original-Richtlinie.
-- **Schutz der Application** - Aktualisiert dini Apps vor dem Löschen der doppelten Policy-Referenz.
-- **Automatisiert die `state.json`** - Korrigiert tote Referenzen lokal ohne manuelles Eingreifen.
-- **Detailliertes Logging** - Transparenz darüber, was im Einzelnen geschieht.
+- **Dry-Run als Standard:** Für würklechi Änderige bruuchsch explizit `--apply`.
+- **Ältesti wird bhalte:** So verlürsch d Ursprungs-Richtlinie nid.
+- **Apps wärde vor em Lösche aktualisiert:** Es git kei tote Referänze.
+- **`state.json` wird grad mitkorrigiert**
+- **Detaillierts Logging**
 
-### Wann dies verwendet wärde sollte
+### Wänn du s bruuche söttsch
 
-- Nach Entdeckung doppelter Systemrichtlinien (DockFlare-Default-*).
-- Nach Betrieb in diversen Docker Instanzen / Node Umgebungen.
-- Vor grösseren Versions-Upgrades zum Bereinigen restlicher Policies in Cloudflare.
+- wänn du doppelti Systemrichtlinie gsehsch
+- wänn mehri Instanze gsi sy
+- vor grössere Upgrades zum Ufruume
 
-### Hinweise
+### Hinwys
 
-- Setzt gültige Cloudflare Anmeldeinformationen in DockFlare voraus.
-- Operiert über **alle** wiederverwendbaren Richtlinien im Account (nid nur DockFlare-eigene).
-- **Strikte Operationsreihenfolge** - Access Applications wärde aktualisiert, bevor Policies gelöscht wärde.
-- Der Aufruf erfolgt im Terminal auf dinere Docker-Host-Umgebung.
+- Es bruucht gültigi Cloudflare-Aamäldedate i DockFlare.
+- S Tool arbeitet über **alli** wiederverwendbare Richtlinie im Account.
+- Apps wärde immer vor em Lösche aktualisiert.
+- Dr Ufruef passiert im Terminal uf dim Docker-Host.

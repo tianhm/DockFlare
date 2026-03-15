@@ -1,26 +1,26 @@
-# Verwendung mehrerer Domains (Indexierte Labels)
+# Mehri Domains bruuche (indexierti Labels)
 
-DockFlare bietet eine leistungsstarke Funktion namens **indexierte Labels**, mit der du mehrere unabhängige Ingress-Regeln für einen einzigen Container definieren chöi. Das isch besonders nützlich, wenn du verschiedene Ports oder Pfade desselben Dienstes unter verschiedenen öffentlichen Hostnamen bereitstelle wotsch.
+Mit **indexierte Labels** chasch für e einzige Container mehri unabhängigi Ingress-Regle definieren. Das isch praktisch, wänn e Dienst mehri Ports oder Pfäd het, wo under verschidene Hostname söue laufe.
 
-## Wie es funktioniert
+## Wie s funktioniert
 
-Um mehrere Regeln zu erstellen, setz einfach eine Ganzzahl u einen Punkt als Präfix vor die standardmässigen DockFlare-Labels, beginnend bei `0`. zum Biispil `dockflare.0.hostname`, `dockflare.1.hostname` u so weiter.
+Für mehri Regle setzisch du vor d normale DockFlare-Labels e Zahl mit Punkt, aafangend bi `0`. Zum Bispil `dockflare.0.hostname`, `dockflare.1.hostname` usw.
 
-*   Jeder Index (z.B. `0`, `1`, `2`) repräsentiert eine separate Ingress-Regel.
-*   Ein indexierter Hostname (z.B. `dockflare.<index>.hostname`) isch immer nötig, um eine neue Regel zu initiieren.
-*   Andere Labels im gleichen Index (z.B. `dockflare.<index>.service`) gelten nur für diese spezifische Regel.
+* Jede Zahl (`0`, `1`, `2`) isch e eigeti Ingress-Regel.
+* E indexierte Hostname-Label isch immer dr Startpunkt für e neui Regel.
+* Alli andere Labels mit em glyche Index gälte nume für die Regel.
 
-## Der Fallback-Mechanismus
+## Dr Fallback-Mechanismus
 
-Ein Hauptmerkmal von indexierten Labels isch der Fallback-Mechanismus. Wänn du kei spezifisches indexiertes Label für eine Regel bereitstelle, greift diese auf den Wert des entsprechenden (nid indexierten) **Basis-Labels zurück**.
+Wänn für e indexierti Regel es Feld fählt, nimmt DockFlare dr Wert vom passende **Basis-Label** ohni Index.
 
-Das ermöglicht es dir, gemeinsame Istellige einmal auf Basis-Ebene zu definieren u nur die spezifischen Werte zu überschreiben, die sich für jede indexierte Regel ändern müesse.
+So chasch gemeinsame Istellige einisch definiere u nume pro Regel d Abwychige überschrybe.
 
-## Beispiel: Freigabe einer Web UI u einer API
+## Bispil: E Web UI u e API freigäh
 
-Näh mer aa, du hesch einen einzelnen Container, der sowohl eine Webanwendung auf Port `80` als auch eine separate API auf Port `3000` bereitstellt. Du wotsch diese unter `app.example.com` bzw. `api.example.com` zugänglich machen. Ausserdem wotsch du die API mit einer spezifischen Access Group sichern, während die Hauptanwendung öffentlich bleibt.
+Näh mer aa, e Container liefert e Webapp uf Port `80` u e API uf Port `3000`. D Webapp söll under `app.example.com` laufe, d API under `api.example.com`. D API söll mit ere Access Group gsichert sy, d Hauptapp aber öffentlich blybe.
 
-So chönnt das mit indexierte Labels usgseh:
+So cha das usgseh:
 
 ```yaml
 services:
@@ -49,16 +49,16 @@ services:
       - "dockflare.1.access.group=api-users-policy"
 ```
 
-### Analyse des Beispiels
+### Was da passiert
 
-*   **Regel 0 (`app.example.com`)**:
-    *   Definiert `dockflare.0.hostname`.
-    *   Definiert kei `dockflare.0.service`, greift also auf das Basis-Label `dockflare.service` zurück u verwendet `http://my-app:80`.
-    *   Es isch ein öffentlicher Dienst, da weder für diesen Index noch auf Basis-Ebene eine Zugriffsrichtlinie definiert isch.
+* **Regel 0 (`app.example.com`)**:
+  * het `dockflare.0.hostname`
+  * het kes eigets `dockflare.0.service`, drum gilt dr Basis-Wärt `http://my-app:80`
+  * isch öffentlich, wiu kei Access Group gsetzt isch
 
-*   **Regel 1 (`api.example.com`)**:
-    *   Definiert `dockflare.1.hostname`.
-    *   Es **überschreibt** den Dienst mit `dockflare.1.service`, der auf den API-Port `3000` verweist.
-    *   Wendet eine spezifische Sicherheitsrichtlinie mithilfe von `dockflare.1.access.group` an. Das Label betrifft nur diese Regel.
+* **Regel 1 (`api.example.com`)**:
+  * het `dockflare.1.hostname`
+  * überschrybt dr Dienst mit `dockflare.1.service=http://my-app:3000`
+  * bruucht mit `dockflare.1.access.group` e eigeti Sicherheitsrichtlinie
 
-Dieser Ansatz hält dini Label-Konfiguration sauber, vermeidet Wiederholungen u macht dini `docker-compose.yml`-Dateien leichter lesbar u wartbar.
+So blybt dini `docker-compose.yml` sauberer, klarer u besser wartbar.

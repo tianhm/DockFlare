@@ -1,20 +1,20 @@
 # Debugging & Logs
 
-Wänn du Probleme mit DockFlare beheben, si dini wichtigsten Werkzeuge die vom DockFlare-Container u seinem verwalteten `cloudflared`-Agenten generierten Protokolle (Logs).
+Wänn öppis mit DockFlare nid stimmt, si d Logs dis wichtigschte Wärchzüg. Am meischte bringsch use, wänn du d Logs vom DockFlare-Container u vom verwaltete `cloudflared`-Agent aaluegsch.
 
-## 1. Überprüfung der DockFlare Container-Logs
+## 1. Logs vom DockFlare-Container aluege
 
-Die wichtigste Informationsquelle isch die Protokollausgabe des DockFlare-Containers selbst. Diese Logs bieten einen detaillierten Echtzeit-Einblick in das, was DockFlare tut.
+D wichtigste Informationsquelle si d Logs vom DockFlare-Container sälber. Dört gsehsch i Echtzyt, was DockFlare grad macht.
 
-### Was du in den Logs finden:
-*   Erkennung von Start-/Stopp-Ereignissen der Docker-Container.
-*   Verarbeitung von `dockflare.*` Labels.
-*   Aufrufe der Cloudflare API.
-*   Erfolgsmeldungen oder detaillierte Fehlerantworten von der Cloudflare API.
-*   Der Status von Hintergrundaufgaben wie der Ressourcenbereinigung.
+### Was du det drin gsehsch
+* Start- u Stop-Ereignis vo Container
+* Verarbeitung vo `dockflare.*`-Labels
+* Cloudflare-API-Ufrüef
+* Erfolgs- u Fehlermäldige
+* Hintergrundjob wie Cleanup oder Abgliich
 
-### Wie man die Logs anzeigt:
-Bruuch den folgenden Docker-Befehl in dim Terminal, um die Protokolle anzuzeigen:
+### So luegsch d Logs aa
+Bruuch im Terminal die Docker-Befähl:
 ```bash
 # View the full log history
 docker logs dockflare
@@ -23,20 +23,20 @@ docker logs dockflare
 docker logs -f dockflare
 ```
 
-## 2. Nutzung der Web UI Echtzeit-Logs
+## 2. Echtzyt-Logs i dr Web UI
 
-Der Einfachheit halber enthält das DockFlare-Dashboard einen **Echtzeit-Log-Viewer** am Ende der Hauptseite.
+Im DockFlare-Dashboard git s unde uf dr Hauptsyte e **Echtzyt-Log-Viewer**.
 
-Dieser Viewer streamt genau dieselben Logs, die du mit `docker logs -f dockflare` sehen würden, bietet aber eine einfache Möglichkeit zu sehen, was gerade passiert, ohne dini Browser verlassen zu müesse. Das isch besonders nützlich, um die Aktionen zu beobachten, die DockFlare unmittelbar nach dem Starten oder Stoppen eines Containers ausführt.
+Dä Viewer zeigt dir die glyche Logs wie `docker logs -f dockflare`, aber direkt i dr UI. Das isch praktisch, wänn du schnell wotsch luege, was grad passiert, ohni zwüsche Browser u Terminal z wechsle.
 
-## 3. Überprüfung der Logs des `cloudflared`-Agenten
+## 3. Logs vom `cloudflared`-Agent aluege
 
-Wänn du vermuetisch, dass das Problem in der Verbindung zwischen dim Server u dem Cloudflare-Netzwerk liegt, chasch die Logs des `cloudflared`-Agenten-Containers direkt überprüfen.
+Wänn s Problem eher bi dr Verbindig zwüsche dim Server u Cloudflare ligt, luegsch am beschte d Logs vom `cloudflared`-Agent aa.
 
-### Wie man die Agenten-Logs anzeigt:
-Zuerst muesch den Namen des Agenten-Containers ermitteln. Standardmässig heisst er `cloudflared-agent-<tunnel-name>`, wobei `<tunnel-name>` der Name des in dini DockFlare-Istellige konfigurierten Tunnels isch.
+### So luegsch d Agenten-Logs aa
+Zerscht muesch dr Containername usefinde. Standardmässig heisst er `cloudflared-agent-<tunnel-name>`, wobe `<tunnel-name>` dr Tunnelname us dine DockFlare-Istellige isch.
 
-Du chasch den genauen Namen mit `docker ps` herausfinden.
+Mit `docker ps` gsehsch dr exakti Name.
 
 Sobald du de Name hesch, führ us:
 ```bash
@@ -44,16 +44,16 @@ Sobald du de Name hesch, führ us:
 docker logs cloudflared-agent-dockflare-tunnel
 ```
 
-Diese Logs si nützlich für die Diagnose von:
-*   Verbindungsfehlern zum Cloudflare-Edge.
-*   Authentifizierungsproblemen mit dim Tunnel-Token.
-*   Protokollfehlern für den weitergeleiteten Datenverkehr.
+Die Logs si bsunders nützlich für:
+* Verbindigsproblem zum Cloudflare-Edge
+* Authentifizierigsfehler mit em Tunnel-Token
+* Protokoll- oder Routing-Problem bim wytergleitete Traffic
 
-**Hinweis:** Das gilt nur, wenn du den standardmässigen **Internen Modus** bruuche. Wänn du den [Externen Modus](External-cloudflared-Mode.md) bruuche, muesch die Logs din eigenen `cloudflared`-Agenten-Prozesses überprüfen.
+**Hinwys:** Das gilt nume im standardmässige **Interne Modus**. Im [Externe Modus](External-cloudflared-Mode.md) muesch du d Logs vo dim eigete `cloudflared`-Prozess aa luege.
 
-## 4. Überprüfung des Cloudflare-Dashboards
+## 4. O s Cloudflare-Dashboard prüefe
 
-Vergiss schliesslich nid, das Cloudflare-Dashboard als Diagnosewerkzeug zu nutzen.
-*   **DNS-Seite:** Prüef, öb die CNAME-Einträge wie erwartet erstellt wurden.
-*   **Zero Trust Dashboard:** Gang zu **Access -> Tunnels**, um den Status din Tunnels u seiner Ingress-Regeln zu überprüfen.
-*   **Zero Trust Dashboard:** Gang zu **Access -> Applications**, um die Konfiguration u Integrität dinere Zero Trust-Richtlinien zu kontrollieren. Der "Last Seen" (Zuletzt gesehen)-Status bei Richtlinien cha sehr aufschlussreich sein.
+Vergiss am Schluss o s Cloudflare-Dashboard nid:
+* **DNS:** Prüef, öb d CNAME-Iiträg korrekt aagleit worde si.
+* **Zero Trust -> Tunnels:** Lueg dr Status vom Tunnel u vo de Ingress-Regle aa.
+* **Zero Trust -> Applications:** Prüef d Access-Apps u dä "Last Seen"-Status.

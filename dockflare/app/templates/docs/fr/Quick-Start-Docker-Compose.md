@@ -103,7 +103,7 @@ Cela fait apparaître le proxy, amorce le volume et lance DockFlare avec Redis.
 Une fois les services exécutés, ouvrez votre navigateur sur `http://<your-server-ip>:5000`.
 
 L'**assistant de configuration initiale** vous guide à travers :
-1. Création d'un mot de passe pour l'interface utilisateur Web.
+1. Création d'un mot de passe pour l'interface web.
 2. Saisie de vos informations d'identification Cloudflare (ID de compte, ID de zone, jeton API).
 3. Configuration de votre tunnel Cloudflare initial.
 4. *(Facultatif)* Restauration à partir d'une archive de sauvegarde DockFlare. Si vous disposez déjà d'un `dockflare_backup_*.zip`, choisissez **Restaurer à partir d'une sauvegarde** avant l'étape 1 ; l'assistant importe votre configuration et redémarre automatiquement le conteneur.

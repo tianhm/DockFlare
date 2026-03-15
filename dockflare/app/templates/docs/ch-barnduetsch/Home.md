@@ -1,5 +1,5 @@
-# Willkomme bi de DockFlare-Doku!
+# Willkomme bi de DockFlare-Doku
 
-DockFlare isch en sälber-hostete ingress controller, wo der d’Verwaltig vo Cloudflare Tunnel u Zero Trust mega vereifacht. Du konfigurierisch das meischte mit Docker-Labels, u wänn’s nötig isch chasch i dr Web UI manuell Sache aapasse u Overrides mache.
+DockFlare isch e sälber hosteti Ingress-Lösig, wo dir d Verwaltig vo Cloudflare Tunnel u Zero Trust spürbar vereifacht. S meischte machsch über Docker-Labels, u wänn s nötig isch, chasch i dr Web UI manuell no nachjustiere.
 
-I dere Doku findsch du alles Wichtige: vom schnelle Setup bis zu Debugging u Problem löse.
+I dere Doku findsch aues Wichtige: vom schnelle Start bis zu Debugging, Backup u Sicherheits-Themen.

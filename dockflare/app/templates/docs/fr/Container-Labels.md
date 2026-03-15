@@ -91,7 +91,7 @@ Pour utiliser des étiquettes indexées, préfixez l’étiquette avec un entier
 ### Exemple
 
 Cet exemple expose deux noms d'hôte à partir d'un seul conteneur :
-1. `app.example.com` achemine vers l'interface Web principale sur le port `80`.
+1. `app.example.com` achemine vers l'interface web principale sur le port `80`.
 2. `api.example.com` est acheminé vers l'API sur le port `3000` et est sécurisé avec un groupe d'accès spécifique.
 
 ```yaml

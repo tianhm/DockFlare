@@ -1,14 +1,14 @@
-# Überwachung mit Prometheus & Grafana
+# Monitoring mit Prometheus & Grafana
 
-Der von DockFlare verwaltete `cloudflared`-Agent cha eine Vielzahl von Leistungs- u Integritätsmetriken im Prometheus-Format bereitstelle. Durch das Sammeln u Visualisieren dieser Metriken chasch wertvolle Einblicke in den Datenverkehr, die Latenz u die Fehlerraten din Tunnels gewinnen.
+Dr vo DockFlare verwaltete `cloudflared`-Agent cha e ganzi Reihe Metrike im Prometheus-Format usgäh. Wänn du die sammelsch u visualisierisch, gsehsch meh über Traffic, Latenz u Fehlerrate vo dine Tunnel.
 
-Diese Aaleitig erklärt, wie du den Metrik-Endpunkt aktivieren u bietet eine schnelle Einrichtung für einen Monitoring-Stack mit Prometheus u Grafana.
+I däre Aaleitig gsehsch, wie du dr Metrik-Endpunkt aktiviersch u schnell e Monitoring-Stack mit Prometheus u Grafana iirichtsch.
 
-## Schritt 1: Aktivieren des Metrik-Endpunkts in DockFlare
+## Schritt 1: Metrik-Endpunkt i DockFlare aktiviere
 
-Der erste Schritt besteht darin, DockFlare anzuweisen, den Prometheus-Metrik-Endpunkt in seinem verwalteten `cloudflared`-Agenten zu aktivieren.
+Zerscht seisch DockFlare, dass dr Prometheus-Metrik-Endpunkt im verwaltete `cloudflared`-Agent söll aktiviert wärde.
 
-Du chasch dies tun, indem du die Umgebungsvariable `CLOUDFLARED_METRICS_PORT` für dini DockFlare-Container setzen.
+Das machsch über d Umgebigsvariable `CLOUDFLARED_METRICS_PORT`.
 
 **Beispiel `docker-compose.yml`:**
 ```yaml
@@ -20,25 +20,25 @@ services:
       # Enable the metrics endpoint on port 2000 inside the container
       - CLOUDFLARED_METRICS_PORT=2000
 ```
-Wänn du DockFlare mit dieser Variablen neu starten, wird der verwaltete `cloudflared`-Agent automatisch mit dem auf dem angegebenen Port aktivierten Metrik-Server neu erstellt.
+Wänn du DockFlare nachhär neu startisch, wird dr verwaltete `cloudflared`-Agent neu erstellt u dr Metrik-Server uf em aagäh Port aktiviert.
 
-**Hinweis:** Diese Funktion isch nur im standardmässigen **Internen Modus** verfügbar. Wänn du den [Externen Modus](External-cloudflared-Mode.md) bruuche, si du selbst dafür verantwortlich, den Metrik-Endpunkt in dim eigenen `cloudflared`-Agenten zu aktivieren.
+**Hinwys:** Das funktioniert nume im standardmässige **Interne Modus**. Im [Externe Modus](External-cloudflared-Mode.md) muesch du dä Endpunkt i dim eigete `cloudflared` sälber aktiviere.
 
-## Schritt 2: Einrichten eines Monitoring-Stacks
+## Schritt 2: Monitoring-Stack iirichte
 
-Wänn du no kei Monitoring-Stack hesch, chasch mit Docker Compose schnell eine iirichte. S'DockFlare-Repo het es Biispil-Setup im Verzeichnis `/examples`.
+Wänn du no kei Monitoring-Stack hesch, chasch mit Docker Compose schnäll eine iirichte. Im DockFlare-Repo git s es Bispil im Verzeichnis `/examples`.
 
-Für eine vollständige Aaleitig zum Kopieren u Einfügen zur Einrichtung von Prometheus u Grafana zur Überwachung von DockFlare läs bitte die Datei **[`grafana quick setup.md`](https://github.com/ChrispyBacon-dev/DockFlare/blob/main/examples/grafana%20quick%20setup.md)** im Repository.
+Für e vollständigi Copy-Paste-Aaleitig lueg i d Datei **[`grafana quick setup.md`](https://github.com/ChrispyBacon-dev/DockFlare/blob/main/examples/grafana%20quick%20setup.md)** im Repo.
 
-Diese Aaleitig führt du durch:
-1.  Die Erstellung der notwendigen Verzeichnisstruktur.
-2.  Das Hinzufügen der Prometheus- u Grafana-Dienste zu dinere `docker-compose.yml`.
-3.  Die Konfiguration von Prometheus zum Abrufen von Metriken aus dem `cloudflared`-Agenten.
-4.  Die automatische Bereitstellige von Grafana mit der Prometheus-Datenquelle.
+Die Aaleitig zeigt dir:
+1. wie du d nötigi Verzeichnisstruktur aaleisch
+2. wie du Prometheus u Grafana i dini `docker-compose.yml` iibausch
+3. wie Prometheus d Metrike vom `cloudflared`-Agent abholt
+4. wie Grafana mit dr passende Datenquelle parat gmacht wird
 
-## Schritt 3: Importieren des vorgefertigten Grafana-Dashboards
+## Schritt 3: S fertige Grafana-Dashboard importiere
 
-Um die Visualisierung einfach zu machen, bietet DockFlare ein vorgefertigtes Grafana-Dashboard, das perfekt auf die vom `cloudflared`-Agenten bereitgestellten Metriken abgestimmt isch.
+Damit s Visualisiere eifach geit, git s im Repo es fertigs Grafana-Dashboard, wo uf d Metrike vom `cloudflared`-Agent abgestimmt isch.
 
 1.  Das Dashboard isch als **[`dashboard.json`](https://github.com/ChrispyBacon-dev/DockFlare/blob/main/examples/dashboard.json)** im Verzeichnis `/examples` des Repositorys verfügbar.
 2.  Lad diese Datei herunter.
@@ -47,6 +47,6 @@ Um die Visualisierung einfach zu machen, bietet DockFlare ein vorgefertigtes Gra
 5.  Lad die Datei `dashboard.json` hoch.
 6.  Wähl dini Prometheus-Datenquelle aus u importier das Dashboard.
 
-Du hesch nun einen vollständigen Überblick über die Leistung din Cloudflare-Tunnels, einschliesslich Anfragezahlen, Fehlerraten, Verbindungslatenz u mehr.
+Nachhär hesch e guete Überblick über d Leistig vo dine Cloudflare-Tunnel, inklusive Aafrage, Fehlerrate u Verbindigslatenz.
 
 ![Grafana Dashboard Beispiel](../static/images/grafana_dashboard_example.png)

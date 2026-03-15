@@ -8,11 +8,11 @@ DockFlare は、**Internal**（デフォルト）と **External** `cloudflared` 
 
 ## 内部モードから外部モードへの切り替え
 
-この手順では、自分で `cloudflared` Agent を用意し、DockFlare にそれを使うよう指定します。
+この手順では、自分で `cloudflared` エージェントを用意し、DockFlare にそれを使うよう指定します。
 
 **ステップ 1: 外部 `cloudflared` エージェントをセットアップする**
 
-まず、自分で `cloudflared` Agent をセットアップして起動します。ホスト OS 上のプロセスでも、別の Docker コンテナでも構いません。
+まず、自分で `cloudflared` エージェントをセットアップして起動します。ホスト OS 上のプロセスでも、別の Docker コンテナでも構いません。
 
 * 特定の Cloudflare トンネルを使用するように設定されていることを確認してください。
 * **Tunnel ID**（UUID）を控えます。
@@ -42,7 +42,7 @@ services:
 更新後の DockFlare コンテナ起動時に、次が行われます。
 1. `USE_EXTERNAL_CLOUDFLARED` が `true` であることが検出されます。
 2. 管理対象の `cloudflared-agent` コンテナを **停止して削除**します。
-3. `EXTERNAL_TUNNEL_ID` で指定したトンネルへ、すべての ingress ルール設定を送るようになります。
+3. `EXTERNAL_TUNNEL_ID` で指定したトンネルへ、すべての入口ルール設定を送るようになります。
 
 これで、サービスは外部管理の `cloudflared` エージェントによって提供されるようになります。
 
@@ -74,8 +74,8 @@ services:
 更新後の DockFlare コンテナ起動時に、次が行われます。
 1. `USE_EXTERNAL_CLOUDFLARED` が `false` であることが検出されます。
 2. 内部 `cloudflared-agent` コンテナを自動的に **作成、構成、開始**します。
-3. この新しい Agent は、DockFlare 設定で定義されたトンネル名を使うように構成されます。
+3. この新しいエージェントは、DockFlare 設定で定義されたトンネル名を使うように構成されます。
 
 **ステップ 3: 外部エージェントを廃止する**
 
-新しい内部 Agent が正しく動作してトラフィックを処理していることを確認したら、外部で動かしていた `cloudflared` Agent は安全に停止・削除できます。
+新しい内部エージェントが正しく動作してトラフィックを処理していることを確認したら、外部で動かしていた `cloudflared` エージェントは安全に停止・削除できます。

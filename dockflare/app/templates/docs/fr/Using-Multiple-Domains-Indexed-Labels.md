@@ -16,9 +16,9 @@ Une caractéristique clé des étiquettes indexées est le mécanisme de secours
 
 Cela vous permet de définir des paramètres communs une fois au niveau de base et de remplacer uniquement les valeurs spécifiques qui doivent changer pour chaque règle indexée.
 
-## Exemple : Exposer une interface utilisateur Web et une API
+## Exemple : exposer une interface web et une API
 
-Supposons que vous disposiez d'un seul conteneur qui sert à la fois une application Web sur le port `80` et une API distincte sur le port `3000`. Vous souhaitez les exposer respectivement sur `app.example.com` et `api.example.com`. Vous souhaitez également sécuriser l'API avec un groupe d'accès spécifique, tandis que l'application principale reste publique.
+Supposons que vous disposiez d'un seul conteneur qui serve à la fois une application web sur le port `80` et une API distincte sur le port `3000`. Vous souhaitez les exposer respectivement sur `app.example.com` et `api.example.com`. Vous souhaitez également sécuriser l'API avec un groupe d'accès spécifique, tandis que l'application principale reste publique.
 
 Voici comment configurer cela à l’aide d’étiquettes indexées :
 
@@ -36,7 +36,7 @@ services:
       # This service is used by rule 0, as it's not specified there.
       - "dockflare.service=http://my-app:80" 
 
-      # --- Rule 0: The Web UI ---
+      # --- Rule 0: Main web interface ---
       - "dockflare.0.hostname=app.example.com"
       # No 'service' label here, so it falls back to the base one.
       # No 'access.group' label, so it's public.

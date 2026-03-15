@@ -23,7 +23,7 @@ docker logs dockflare
 docker logs -f dockflare
 ```
 
-## 2. Utilizzo dei registri in tempo reale della Web UI
+## 2. Utilizzo dei registri in tempo reale dell'interfaccia web
 
 Per comodità, la dashboard DockFlare include un **visualizzatore di log in tempo reale** nella parte inferiore della pagina principale.
 

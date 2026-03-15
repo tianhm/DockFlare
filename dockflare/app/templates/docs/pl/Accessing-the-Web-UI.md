@@ -1,10 +1,10 @@
-# Dostęp do Web UI
+# Dostęp do panelu administracyjnego
 
-Po pomyślnym uruchomieniu kontenera DockFlare możesz uzyskać dostęp do Web UI w celu zarządzania ustawieniami, przeglądania stanu tuneli i ręcznego konfigurowania reguł ingress.
+Po pomyślnym uruchomieniu kontenera DockFlare możesz otworzyć panel administracyjny, aby zarządzać ustawieniami, sprawdzać stan tuneli i ręcznie konfigurować reguły ingress.
 
 ## Domyślny adres URL
 
-Domyślnie Web UI DockFlare jest dostępny na porcie `5000`. Aby uzyskać do niego dostęp, otwórz przeglądarkę internetową i przejdź do następującego adresu URL:
+Domyślnie panel administracyjny DockFlare jest dostępny na porcie `5000`. Otwórz przeglądarkę i przejdź pod adres:
 
 ```
 http://<your-server-ip>:5000
@@ -14,16 +14,16 @@ Zastąp `<your-server-ip>` adresem IP serwera, na którym działa DockFlare.
 
 ## Pierwsza konfiguracja
 
-Przy pierwszym dostępie do Web UI zostaniesz poprowadzony przez **kreator konfiguracji początkowej**. Ten kreator pomoże Ci:
+Przy pierwszym wejściu do panelu administracyjnego uruchomi się **kreator konfiguracji początkowej**. Pomoże on:
 
 1. Przywróć dane z istniejącego archiwum kopii zapasowej DockFlare (`dockflare_backup_*.zip`). Jeśli wybierzesz tę opcję, system zaimportuje zaszyfrowane klucze konfiguracji, stanu i agenta, a następnie automatycznie zrestartuje kontener, aby je zastosować.
-2. Utwórz konto administratora i hasło do Web UI.
+2. Utworzyć konto administratora i hasło do panelu administracyjnego.
 3. Podaj swój identyfikator konta Cloudflare, identyfikator strefy (opcjonalnie) i token API.
 4. Potwierdź ustawienia tunelu i zakończ kroki wprowadzające.
 
 ## Logowanie
 
-Po wstępnej konfiguracji za każdym razem, gdy uzyskasz dostęp do Web UI, pojawi się ekran logowania. Aby się zalogować, użyj hasła utworzonego podczas procesu konfiguracji.
+Po zakończeniu konfiguracji przy każdym wejściu do panelu administracyjnego zobaczysz ekran logowania. Użyj hasła utworzonego podczas konfiguracji.
 
 ## Wyłączanie logowania za pomocą hasła
 

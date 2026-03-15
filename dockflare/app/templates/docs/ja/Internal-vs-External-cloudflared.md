@@ -1,16 +1,16 @@
 # 内部と外部 `cloudflared`
 
-DockFlare は `cloudflared` Agent を管理するために 2 つのモードで動作できます。`cloudflared` は、サーバーと Cloudflare ネットワークの間に永続接続を確立するソフトウェアです。2 つのモードの違いを理解することが、環境に合ったセットアップを選ぶポイントになります。
+DockFlare は `cloudflared` エージェントを管理するために 2 つのモードで動作できます。`cloudflared` は、サーバーと Cloudflare ネットワークの間に永続接続を確立するソフトウェアです。2 つのモードの違いを理解することが、環境に合ったセットアップを選ぶポイントになります。
 
 ## 内部モード (デフォルト)
 
-内部モードでは、DockFlare が `cloudflared` Agent の作成と運用をすべて引き受けます。
+内部モードでは、DockFlare が `cloudflared` エージェントの作成と運用をすべて引き受けます。
 
 ### 仕組み
 DockFlare が起動すると、次のことが自動的に行われます。
 1. `cloudflare/cloudflared` イメージを実行する専用の Docker コンテナを作成します。
-2. Cloudflare アカウントへ接続し、DockFlare 設定で指定されたトンネルを使うよう Agent コンテナを構成します。
-3. Agent が稼働していることを監視し、失敗した場合は再起動します。
+2. Cloudflare アカウントへ接続し、DockFlare 設定で指定されたトンネルを使うようエージェントコンテナを構成します。
+3. エージェントが稼働していることを監視し、失敗した場合は再起動します。
 4. Prometheus メトリクスエンドポイントの有効化など、関連設定を自動適用します。
 
 これは、ほとんどのユーザーにとって **デフォルトで推奨される** モードです。
@@ -21,13 +21,13 @@ DockFlare が起動すると、次のことが自動的に行われます。
 * **集中管理:** トンネルに関連するすべては DockFlare によって管理されます。
 
 ### 短所
-* **制御の制限:** `cloudflared` Agent の設定は、DockFlare が公開している範囲でのみ調整できます。
+* **制御の制限:** `cloudflared` エージェントの設定は、DockFlare が公開している範囲でのみ調整できます。
 
 ---
 
 ## 外部 `cloudflared` モード
 
-外部モードでは、`cloudflared` Agent を自分で起動・運用します。DockFlare は Agent を作成せず、既に稼働している `cloudflared` を前提に構成を送ります。
+外部モードでは、`cloudflared` エージェントを自分で起動・運用します。DockFlare はエージェントを作成せず、既に稼働している `cloudflared` を前提に構成を送ります。
 
 ### 仕組み
 DockFlare は `cloudflared` コンテナを**作成しません**。代わりに、使用できる場所で `cloudflared` エージェントが実行されていると想定します。これは次のようなものです。
@@ -52,4 +52,4 @@ DockFlare は `cloudflared` コンテナを**作成しません**。代わりに
 * `USE_EXTERNAL_CLOUDFLARED=true`: 外部モードを有効にします。
 * `EXTERNAL_TUNNEL_ID`: これは、外部 `cloudflared` エージェントが使用するように構成されているトンネルの UUID に設定する必要があります。
 
-これらの変数が設定されている場合、DockFlare は内部エージェント管理をスキップし、代わりにすべての ingress ルール設定を `EXTERNAL_TUNNEL_ID` で指定されたトンネルに送信します。
+これらの変数が設定されている場合、DockFlare は内部エージェント管理をスキップし、代わりにすべての入口ルール設定を `EXTERNAL_TUNNEL_ID` で指定されたトンネルに送信します。

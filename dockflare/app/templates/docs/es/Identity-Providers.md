@@ -1,6 +1,6 @@
 # Proveedores de identidad
 
-> **📌 Importante:** Esta guía sirve para configurar **proveedores de identidad para las políticas de acceso de Cloudflare** con el fin de proteger sus servicios y aplicaciones. Si desea configurar OAuth/OIDC para **iniciar sesión en la Web UI de DockFlare**, consulte [Configuración del proveedor OAuth](OAuth-Provider-Setup.md).
+> **📌 Importante:** Esta guía sirve para configurar **proveedores de identidad para las políticas de acceso de Cloudflare** con el fin de proteger sus servicios y aplicaciones. Si desea configurar OAuth/OIDC para **iniciar sesión en la interfaz web de DockFlare**, consulte [Configuración del proveedor OAuth](OAuth-Provider-Setup.md).
 
 Los proveedores de identidad (IdP) habilitan la autenticación OAuth/OIDC para sus aplicaciones protegidas con Cloudflare Zero Trust. DockFlare facilita la gestión de los IdP y su integración en las políticas de acceso.
 

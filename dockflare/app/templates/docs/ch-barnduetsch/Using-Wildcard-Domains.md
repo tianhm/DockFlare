@@ -1,38 +1,38 @@
-# Verwendung von Wildcard-Domains
+# Wildcard-Domains bruuche
 
-DockFlare unterstützt die Verwendung von Wildcard-Domains (z.B. `*.example.com`), um den Datenverkehr für mehrere Subdomains an einen einzigen Dienst weiterzuleiten. Das isch besonders nützlich für Anwendungen, die dynamische Subdomains verarbeiten, wie mandantenfähige Dienste oder persönliche Dashboards wie Heimdall.
+Mit DockFlare chasch o Wildcard-Domains wie `*.example.com` bruuche, zum mehri Subdomains a dä glychi Dienst wyterzleite. Das isch bsunders nützlich für Apps mit dynamische Subdomains.
 
-## Wie es funktioniert
+## Wie s funktioniert
 
-Wänn du einen Wildcard-Hostnamen bruuche, leitet der Cloudflare Tunnel jeglichen Datenverkehr für jede Subdomain, die kei spezifischeren DNS-Eintrag hat, an den von dir angegebenen Dienst weiter.
+Wänn du e Wildcard-Hostname definiersch, leitet dr Cloudflare-Tunnel dr Traffic vo aune passende Subdomains a dä Ziel-Dienst wyter, usser es git scho e spezifischere DNS-Iitrag.
 
-Wänn du beispielsweise `*.apps.example.com` konfigurieren, wird der Traffic für `service1.apps.example.com`, `service2.apps.example.com` u so weiter vollständig an denselben Zielcontainer geleitet.
+Zum Bispil: `*.apps.example.com` deckt `service1.apps.example.com`, `service2.apps.example.com` usw. ab.
 
-## Wichtige Überlegungen
+## Was wichtig isch
 
-Im Gegensatz zu normalen Hostnamen **cha DockFlare nid automatisch DNS-Einträge für Wildcard-Domains erstellen**. Du muesch den Wildcard-DNS-Eintrag manuell in dim Cloudflare-Dashboard anlegen.
+Im Gägesatz zu normale Hostname cha DockFlare **kei Wildcard-DNS-Iiträg automatisch aalege**. D Wildcard muesch du im Cloudflare-Dashboard sälber erstelle.
 
-DockFlare wird weiterhin die **Ingress-Regel** in dim Cloudflare-Tunnel verwalten, aber die anfängliche DNS-Einrichtung isch ein manueller Schritt.
+DockFlare verwaltet aber witerhin d **Ingress-Regel** im Tunnel. Nume dr DNS-Iitrag isch e manuelle Schritt.
 
-## Schritt-für-Schritt-Aaleitig
+## Schritt für Schritt
 
-Hier isch, wie du eine Wildcard-Domain mit DockFlare korrekt einrichten, am Beispiel von `*.plex.example.com`.
+So richtsch `*.plex.example.com` korrekt ii:
 
-### Schritt 1: Den Wildcard-DNS-Eintrag manuell erstellen
+### Schritt 1: Wildcard-DNS-Iitrag manuell aalege
 
 1.  Mäld di aa in dim **Cloudflare Dashboard** an.
 2.  Navigier zu den DNS-Istellige dinere Domain.
-3.  Klick auf **Add record** (Eintrag hinzufügen) u erstell einen CNAME-Eintrag mit folgenden Details:
+3.  Klick uf **Add record** (Eintrag hinzufügen) u erstell einen CNAME-Eintrag mit folgenden Details:
     *   **Type:** `CNAME`
     *   **Name:** `*.plex` (oder nur `*`, wenn dini Hauptdomain `plex.example.com` isch)
     *   **Target:** Der öffentliche Hostname din Tunnels. Du findscht diesen in dim Cloudflare Zero Trust Dashboard unter **Access -> Tunnels**. Er sieht in etwa aus wie `ihr-tunnel-uuid.cfargotunnel.com`.
     *   **Proxy status:** lueg dass er auf **Proxied** (orange Wolke) gesetzt isch.
 
-    Dieser manuelle DNS-Eintrag teilt Cloudflare mit, den gesamten Traffic für `*.plex.example.com` an dini Tunnel zu senden.
+    So weiss Cloudflare, dass dr ganz Traffic für `*.plex.example.com` zu dim Tunnel söll.
 
-### Schritt 2: dini Dienst mit einem Wildcard-Label konfigurieren
+### Schritt 2: Dienst mit em Wildcard-Label konfiguriere
 
-Konfigurier nun dini Dienst in dinere `docker-compose.yml`-Datei mit einem Wildcard-Hostnamen-Label.
+Trag nachhär i dr `docker-compose.yml` dr Wildcard-Hostname ii:
 
 ```yaml
 services:
@@ -48,10 +48,10 @@ services:
       - "dockflare.service=http://my-proxy-manager:81"
 ```
 
-### Schritt 3: Bereitstellen u Überprüfen
+### Schritt 3: Deploye u prüefe
 
 1.  Speicher dini `docker-compose.yml`-Datei u führ `docker compose up -d` aus.
-2.  DockFlare wird den Container erkennen u eine Ingress-Regel für den Hostnamen `*.plex.example.com` in dim Cloudflare Tunnel anlegen.
-3. Du chasch dies in der DockFlare Web UI sowie in der Konfiguration din Tunnels im Cloudflare-Dashboard überprüfen.
+2.  DockFlare erkennt dr Container u legt e Ingress-Regel für `*.plex.example.com` a.
+3.  Das chasch i dr DockFlare Web UI u im Cloudflare-Dashboard kontrolliere.
 
-Nun wird jede Anfrage an eine Subdomain wie `sonarr.plex.example.com` oder `radarr.plex.example.com` durch dini Cloudflare Tunnel an dini `my-proxy-manager`-Container weitergeleitet, der den Traffic dann entsprechend bearbeiten cha.
+Nachhär geit jedi Aafrag a `sonarr.plex.example.com`, `radarr.plex.example.com` usw. dür dr Tunnel a dim `my-proxy-manager` wyter.

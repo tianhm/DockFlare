@@ -35,7 +35,7 @@ services:
 ## Jak to działa w praktyce
 
 1. **Kontener zatrzymany:** Uruchamiasz `docker stop my-app`.
-2. **Oczekujące na usunięcie:** DockFlare wykrywa zdarzenie zatrzymania. W Web UI reguła `my-app.example.com` będzie teraz wyświetlać swój status jako **`pending_deletion`** oraz czas zaplanowanego usunięcia.
+2. **Oczekujące na usunięcie:** DockFlare wykrywa zdarzenie zatrzymania. W panelu administracyjnym reguła `my-app.example.com` będzie teraz wyświetlać status **`pending_deletion`** oraz planowany czas usunięcia.
 3. **Dwa scenariusze:**
     * **Scenariusz A: Wygaśnięcie okresu karencji:** Jeśli kontener pozostanie zatrzymany i upłynie okres karencji (np. 10 minut), uruchomione zostanie zadanie czyszczenia w tle DockFlare. Spowoduje to usunięcie reguły ingress z Cloudflare Tunnel i usunięcie rekordu DNS CNAME.
     * **Scenariusz B: Ponowne uruchomienie kontenera:** Jeśli uruchomisz kontener ponownie (`docker start my-app`) **przed** upłynięciem okresu karencji, DockFlare wykryje zdarzenie startu. Zobaczy, że reguła ma status `pending_deletion`, anuluje usunięcie i zmieni jej status z powrotem na **`active`**. Usługa pozostanie dostępna.

@@ -1,46 +1,43 @@
 # Wie DockFlare funktioniert
 
-DockFlare fungiert als Brücke zwischen dinere Docker-Umgebung u dem Cloudflare-Netzwerk u automatisiert die sichere Veröffentlichung von Diensten im Internet. Es überwacht dini Docker-Host kontinuierlich u nutzt die Cloudflare-API, um Tunnel, DNS-Einträge u Access-Richtlinien in dim Namen zu verwalten.
+DockFlare isch d Brugg zwüsche dim Docker-Host u Cloudflare. Es lost uf Container-Änderige, wertet d `dockflare.*`-Labels uus u verwaltet in dim Name Tunnel, DNS-Iiträg u Access-Richtlinie.
 
-## Kern-Workflow
+## Grundablouf
 
-Der grundlegende Ablauf lässt sich in einige zentrale Schritte aufteilen:
+Im Grundsatz lauft s so:
 
-1. **Überwachung von Docker-Ereignissen**: DockFlare lauscht auf Ereignisse des Docker-Sockets, etwa `start` u `stop` von Containern.
+1. **Docker-Ereignis überwachä:** DockFlare lost uf `start`, `stop` u angeri Container-Events.
 
-2. **Erkennung von Labels**: Wenn ein neuer Container startet, prüft DockFlare, öb `dockflare.`-Labels vorhanden si. Findet es `dockflare.enable=true`, weiss DockFlare, dass dieser Container verwaltet wärde soll.
+2. **Labels uswerte:** Wänn e Container startet, prüeft DockFlare d `dockflare.*`-Labels. Mit `dockflare.enable=true` weiss es, dass dä Container verwaltet söll wärde.
 
-3. **Interaktion mit der Cloudflare-API**: Auf Basis dieser Labels konfiguriert DockFlare die benötigten Ressourcen in Cloudflare:
-   * **Cloudflare Tunnel**: DockFlare fügt dem vorgesehenen Cloudflare-Tunnel eine Ingress-Regel hinzu. Diese Regel verweist den öffentlichen Hostnamen auf die interne Netzwerkadresse des Containers, zum Biispil `http://my-app:8080`.
-   * **DNS-Verwaltung**: DockFlare erstellt einen CNAME-Eintrag in dinere Cloudflare-DNS-Zone u verweist damit den gewünschten öffentlichen Hostnamen, etwa `my-app.example.com`, auf dini Cloudflare-Tunnel.
-   * **Access-Richtlinien**: Wenn Zugriffskontroll-Labels gesetzt wurden, erstellt oder aktualisiert DockFlare eine wiederverwendbare Cloudflare-Access-Richtlinie, um den Dienst mit Zero-Trust-Regeln abzusichern, zum Biispil durch Anmeldung über einen Identitätsanbieter oder durch einen öffentlichen `bypass`.
+3. **Cloudflare aktualisiere:** Usgangslage si d Labels. DockFlare legt drus a:
+   * **Tunnel-Ingress-Regle**
+   * **DNS-CNAME-Iiträg**
+   * **Access-Richtlinie oder Access Groups**
 
-4. **Automatische Bereinigung**: Wenn ein verwalteter Container gestoppt oder entfernt wird, startet DockFlare automatisch einen Cleanup-Prozess. Die zugehörige Ingress-Regel wird aus dem Cloudflare-Tunnel entfernt. Falls kei anderer Dienst denselben Hostnamen verwendet, löscht DockFlare zusätzlich den DNS-Eintrag u die Access Application. Dadurch bleiben kener veralteten Einträge zurück u dini Cloudflare-Konfiguration bleibt sauber.
+4. **Automatisch ufruume:** Wänn e verwaltete Container stoppt oder usefliegt, räumt DockFlare Ingress-Regle, DNS-Iiträg u Access-Ressource wieder uf, sofern nüt angers dä Hostname no bruucht.
 
-## Komponenten im Überblick
+## Komponente im Überblick
 
 | Komponente | Verantwortlichkeit |
 | --- | --- |
-| DockFlare Master | Hostet UI u API, überwacht Docker-Ereignisse u orchestriert Cloudflare-Tunnel, DNS u Access-Richtlinien. Läuft rootless u kommuniziert nur über den Socket-Proxy mit Docker. |
-| Docker Socket Proxy | `tecnativa/docker-socket-proxy`-Sidecar, das dem Master nur die minimale Docker-API-Oberfläche (`containers`, `events` usw.) bereitstellt. So wird verhindert, dass der Master den rohen Docker-Socket direkt bindet. |
-| Redis | Zuständig für Caching, Warteschlangen, Log-Streaming u den Heartbeat-/Backchannel der Agenten. Läuft im privaten Netzwerk `dockflare-internal`. |
-| DockFlare Agents (optional) | Remote-Prozesse, die das Verhalten des Masters auf anderen Hosts nachbilden, Docker-Ereignisse zurückstreamen u ihr eigenes `cloudflared` verwalten. |
-| `cloudflared` | Hält die Tunnelverbindung zu Cloudflare entweder für den Master oder für jeden Agenten aufrecht. |
+| DockFlare Master | Hostet UI u API, lost uf Docker-Events u steuert Tunnel, DNS u Access. |
+| Docker Socket Proxy | Git em Master nume die Docker-API-Teili frei, wo er würklech bruucht. |
+| Redis | Bruucht DockFlare für Cache, Queue, Log-Streaming u Agenten-Backchannel. |
+| DockFlare Agents (optional) | Läufe uf wytete Hosts u verwalte dört ihr eigets `cloudflared`. |
+| `cloudflared` | Baut d Verbindig zu Cloudflare ufrecht. |
 
-## Mehrschichtiges Konfigurationsmodell
+## Mehschichtigs Konfigurationsmodell
 
-DockFlare verwendet einen flexiblen, mehrschichtigen Konfigurationsansatz, der Automatisierung u feingranulare Kontrolle kombiniert:
+DockFlare kombiniert Automatisierig mit manueller Kontroll:
 
-1. **Docker-Labels (Basisschicht)**: Das isch die primäre, automatisierte Methode. Du definierisch die vollständige Konfiguration eines Dienstes, also Hostname, interne Dienst-URL u Zugriffsrichtlinie, direkt in dinere `docker-compose.yml` oder im Docker-Run-Befehl. Diese Angaben si die massgebliche Quelle für automatisierte Dienste.
+1. **Docker-Labels:** D Basis u dr Standardfall. Hie definierisch Hostname, Service-URL u Sicherheit.
 
-2. **Access Groups (Abstraktionsschicht)**: Damit komplexe Zugriffsrichtlinien nid für viele Dienste wiederholt wärde müesse, chasch in der Web UI wiederverwendbare **Access Groups** anlegen. Diese Vorlagen bündeln Regeln wie „Firmen-E-Mails zulassen“ oder „Zugriff aus bestimmten Ländern erlauben“ u synchronisieren diese mit benannten, wiederverwendbaren Cloudflare-Access-Richtlinien. Der Umschalter „Public vs Authenticated“ im Dialog legt fest, öb DockFlare ein `bypass` oder `allow` erzeugt. So cha eine gesamte Richtlinie mit nur einem Label wie `dockflare.access.group=my-policy-group` auf einen Container angewendet wärde.
+2. **Access Groups:** Wiederverwendbari Vorlag für Zugriffsregle, wo du i dr Web UI einisch aaleisch u nachhär per Label zuedotisch.
 
-3. **Web UI-Overrides (Kontrollschicht)**: Die Web UI bietet die höchste Kontrolle. Über das Dashboard chasch:
-   * die Access-Richtlinie eines Dienstes **überschreiben**, unabhängig davon, öb sie ursprünglich per Label oder Access Group definiert wurde. Diese Overrides bleiben auch nach einem Neustart des Containers bestehen.
-   * **manuelle Ingress-Regeln** für Dienste anlegen, die nid in Docker laufen, zum Biispil für einen Dienst auf einem anderen Rechner im Netzwerk.
-   * die Konfiguration eines Dienstes **auf den Stand der Docker-Labels zurücksetzen** u dabei alle in der UI vorgenommenen Overrides verwerfen.
+3. **Web UI-Overrides:** D Web UI git dir d höchscht Kontroll. Du chasch dort Policies überschrybe, manuelle Regle aalege oder e Dienst wieder uf dr Label-Stand zrüggsetze.
 
-Das Modell erlaubt es, die meisten Dienste per Docker-Label nach dem Prinzip „einrichten u laufen lassen“ zu automatisieren, ohne auf die Möglichkeit zu verzichten, Ausnahmen u komplexere Szenarien über die Web UI zu steuern.
+So chasch s meischte per Label automatisiere u gliich Spezialfäll i dr Web UI löse.
 
 ---
 
@@ -54,7 +51,7 @@ DockFlare verwendet jetzt eine **wiederverwendbare Richtlinienarchitektur**, die
 2. **Access Applications** → referenzieren → **Reusable Policy IDs**
 3. **Eine einzige Quelle der Wahrheit** → einmal aktualisieren, überall anwenden
 
-Diese Architektur vermeidet doppelte Richtlinien u ermöglicht die Verwaltung sowohl über DockFlare als auch über das Cloudflare-Dashboard mit vollständiger bidirektionaler Synchronisierung.
+Diese Architektur vermeidet doppelte Richtlinien u ermöglicht die Verwaltig sowohl über DockFlare als auch über das Cloudflare-Dashboard mit vollständiger bidirektionaler Synchronisierung.
 
 ### Systemverwaltete Richtlinien
 

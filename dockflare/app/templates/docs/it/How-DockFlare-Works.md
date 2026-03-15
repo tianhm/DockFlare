@@ -22,7 +22,7 @@ Il flusso di lavoro principale può essere suddiviso in alcuni passaggi chiave:
 
 | Componente | Responsabilità |
 | --- | --- |
-| DockFlare Master | Ospita la Web UI e l'API, monitora gli eventi Docker e orchestra tunnel Cloudflare, DNS e policy di accesso. Funziona senza root e comunica con Docker solo tramite il proxy socket. |
+| DockFlare Master | Ospita l'interfaccia web e l'API, monitora gli eventi Docker e orchestra tunnel Cloudflare, DNS e policy di accesso. Funziona senza root e comunica con Docker solo tramite il proxy socket. |
 | Proxy socket Docker | Sidecar `tecnativa/docker-socket-proxy` che espone la superficie minima dell'API Docker (`containers`, `events` e così via) al Master. Impedisce al Master di esporre direttamente il socket Docker. |
 | Redis | Caching, code, streaming di log e heartbeat/backchannel dell'agente. Vive sulla rete privata `dockflare-internal`. |
 | Agenti DockFlare (opzionale) | Worker remoti che rispecchiano il comportamento del Master su altri host, trasmettendo in streaming gli eventi Docker e gestendo i propri `cloudflared`. |
@@ -34,14 +34,14 @@ DockFlare utilizza un approccio flessibile e stratificato alla configurazione, o
 
 1. **Etichette Docker (livello base)**: questo è il metodo automatizzato principale. Puoi definire l'intera configurazione di un servizio (nome host, URL del servizio interno e policy di accesso) direttamente nel comando `docker-compose.yml` o Docker run. Questa è la "fonte della verità" per i servizi automatizzati.
 
-2. **Gruppi di accesso (livello di astrazione)**: per evitare di ripetere policy di accesso complesse su più servizi, è possibile creare **Gruppi di accesso** riutilizzabili nella Web UI. Si tratta di modelli che raggruppano una serie di regole di accesso (ad esempio, "consenti email aziendali" o "consenti accesso da paesi specifici") e si sincronizzano con policy di accesso Cloudflare riutilizzabili denominate. L'interruttore Pubblico vs Autenticato nella modalità controlla se DockFlare emette una decisione `bypass` o `allow`. Puoi quindi applicare un'intera policy a un container con una singola etichetta (`dockflare.access.group=my-policy-group`), semplificando notevolmente le etichette del container.
+2. **Gruppi di accesso (livello di astrazione)**: per evitare di ripetere policy di accesso complesse su più servizi, è possibile creare **Gruppi di accesso** riutilizzabili nell'interfaccia web. Si tratta di modelli che raggruppano una serie di regole di accesso, ad esempio "consenti email aziendali" o "consenti accesso da paesi specifici", e si sincronizzano con policy di accesso Cloudflare riutilizzabili. L'interruttore Pubblico/Autenticato controlla se DockFlare emette una decisione `bypass` o `allow`. Puoi quindi applicare un'intera policy a un container con una singola etichetta (`dockflare.access.group=my-policy-group`), semplificando notevolmente la configurazione.
 
-3. **Sostituzioni della Web UI (livello di controllo)**: la Web UI fornisce il massimo livello di controllo. Dalla dashboard puoi:
+3. **Sostituzioni dell'interfaccia web (livello di controllo)**: l'interfaccia web fornisce il massimo livello di controllo. Dalla dashboard puoi:
     * **Sostituire** la policy di accesso di qualsiasi servizio, indipendentemente dal fatto che sia stato definito da etichette o da un gruppo di accesso. Queste sostituzioni sono persistenti e non verranno annullate dal riavvio del container.
     * **Creare regole ingress manuali** per i servizi che non sono in esecuzione in Docker (ad esempio, un servizio su un altro computer nella tua rete).
-    * **Ripristinare** la configurazione di un servizio a quanto definito nelle etichette Docker, eliminando eventuali sostituzioni della Web UI.
+    * **Ripristinare** la configurazione di un servizio a quanto definito nelle etichette Docker, eliminando eventuali sostituzioni dell'interfaccia web.
 
-Questo modello a più livelli ti consente di "impostarlo e dimenticarlo" con le etichette Docker per la maggior parte dei servizi, pur avendo la possibilità di gestire eccezioni e scenari complessi tramite la Web UI.
+Questo modello a più livelli ti consente di automatizzare la maggior parte dei servizi tramite etichette Docker, mantenendo comunque la possibilità di gestire eccezioni e scenari complessi dall'interfaccia web.
 
 ---
 

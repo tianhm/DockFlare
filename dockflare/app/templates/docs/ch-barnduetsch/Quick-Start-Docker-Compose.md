@@ -1,10 +1,10 @@
-# Schnellstart (Docker Compose)
+# Schnällstart mit Docker Compose
 
-Diese Aaleitig zeigt den schnellsten Weg, um DockFlare mit dem gehärteten Socket-Proxy u der rootless Master-Konfiguration auszuführen.
+Die Aaleitig zeigt dr schnäuschti Wäg, wie du DockFlare mit em ghärtete Socket-Proxy u dr rootless Master-Konfiguration lafe lahsch.
 
-### 1. Erstell die Datei `docker-compose.yml`
+### 1. Erstell e `docker-compose.yml`
 
-Der folgende Stack startet den docker-socket-proxy, richtet das persistente Volume mit den korrekten Berechtigungen ein u startet DockFlare zusammen mit Redis.
+Dr folgend Stack startet dr `docker-socket-proxy`, macht s persistänte Volume mit de richtige Rächt parat u startet DockFlare zäme mit Redis.
 
 ```yaml
 version: '3.8'
@@ -82,32 +82,32 @@ networks:
     name: dockflare-internal
 ```
 
-**Hinweise:**
-- Der Master-Container läuft als Benutzer `dockflare` (UID/GID 65532). Wänn du abweichendi Host-Berechtige abgliiche muesch, setz `DOCKFLARE_UID`/`DOCKFLARE_GID` u bau s'Image neu oder pass den Init-Job a.
-- Der Proxy isch zwingend nötig. DockFlare mountet `/var/run/docker.sock` niemals direkt, was die von dem Master erreichbare Docker API-Fläche streng limitiert.
-- Wänn du statt benannter Volumes (`named volumes`) Bind-Mounts bruuche, lueg dass das Zielverzeichnis von UID/GID 65532 (oder dini überschriebenen Werten) beschreibbar isch.
-- Erstell das externe Netzwerk einmalig, falls es noch nid existiert: `docker network create cloudflare-net`.
+**Wichtig:**
+- Dr Master-Container lauft als Benutzer `dockflare` (UID/GID 65532). Wänn du anderi Host-Rächt hesch, setz `DOCKFLARE_UID`/`DOCKFLARE_GID` u bou s Image neu oder pass dr Init-Job aa.
+- Dr Proxy isch Pflicht. DockFlare mountet `/var/run/docker.sock` nie direkt, damit d Docker-API-Flächi möglichst chli blybt.
+- Wänn du statt named Volumes Bind-Mounts bruuchsch, mues s Zielverzeichnis für UID/GID 65532 beschrybbar si.
+- Dr externi Network `cloudflare-net` mues nume einisch erstellt wärde: `docker network create cloudflare-net`.
 
-### 2. DockFlare ausführen
+### 2. DockFlare starte
 
-Start den Stack im Detached-Modus (Hintergrund):
+Start dr Stack im Hintergrund:
 
 ```bash
 docker compose up -d
 ```
 
-Das fährt den Proxy hoch, richtet die Volumes ein u startet DockFlare zusammen mit Redis.
+Dä Befehl fährt dr Proxy u Redis hoch u startet nachhär DockFlare.
 
-### 3. Schliess d'Erstiirichtig ab
+### 3. Erstiirichtig abschliesse
 
-Nachdem die Dienste gestartet si, mach uf in dim Browser `http://<your-server-ip>:5000`.
+Sobald d Dienscht laufe, mach im Browser `http://<your-server-ip>:5000` uf.
 
-Der **Assistent für d'Erstiirichtig** führt di durch:
-1. Erstellung eines Passworts für die Web UI.
-2. Eingabe dinere Cloudflare-Anmeldedaten (Account ID, Zone ID, API Token).
-3. Konfiguration din initialen Cloudflare Tunnels.
-4. *(Optional)* Wiederherstellung us eme DockFlare-Backuparchiv. Wänn du scho e `dockflare_backup_*.zip` hesch, wähl vor Schritt 1 **Restore from backup** us; dr Assistent importiert dini Konfiguration u startet dr Container automatisch neu.
+Dr **Erstiirichtigs-Assistent** füehrt di dür:
+1. es Passwort für d Web UI setze
+2. Cloudflare-Daten iitrage (`Account ID`, `Zone ID`, `API Token`)
+3. dr erscht Tunnel konfiguriere
+4. optional es bestehends `dockflare_backup_*.zip` wiederherstelle
 
-### 4. Für bestehende Benutzer (Upgrades)
+### 4. Upgrade vo ältere Versione
 
-Wänn du es Upgrade vo ere ältere Version machsch, erkennt DockFlare d'alti `.env`-Datei, migriert dini Konfiguration i dr verschlüsslete Speicher u führt di durch d'Passworterstellung. Lah dr Socket-Proxy unverändert; direkti Mounts vo `/var/run/docker.sock` wärde nid länger unterstützt.
+Wänn du vo nere ältere Version upgradisch, erkennt DockFlare d alti `.env`, migriert dini Konfiguration i dr verschlüsslete Speicher u füehrt di dür d Passwort-Erstellige. Lah dr Socket-Proxy unveränderet; diräkti Mounts vo `/var/run/docker.sock` wärde nüm unterstützt.

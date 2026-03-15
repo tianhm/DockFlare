@@ -56,7 +56,7 @@ Per scenari di accesso complessi (autenticazione di posta elettronica/dominio, w
 1. Crea un gruppo di accesso nella pagina **Criteri di accesso**
 2. Fai riferimento con `dockflare.access.group=your-group-id`
 
-Le opzioni di creazione rapida sono state rimosse dalla Web UI per incoraggiare questo flusso di lavoro basato sulle migliori pratiche.
+Le opzioni di creazione rapida sono state rimosse dall'interfaccia web per incoraggiare questo flusso di lavoro basato sulle best practice.
 
 #### Etichetta policy predefinita della zona
 
@@ -66,7 +66,7 @@ L'etichetta `dockflare.access.policy=default_tld` funziona ancora ed erediterà 
 
 | Etichetta | Descrizione | Esempio |
 | :--- | :--- | :--- |
-| `dockflare.access.group` | L'ID di un singolo gruppo di accesso preconfigurato da applicare a questo servizio. L'ID può essere trovato nella pagina "Policy di accesso" nella Web UI di DockFlare. | `dockflare.access.group=internal-tools-policy` |
+| `dockflare.access.group` | L'ID di un singolo gruppo di accesso preconfigurato da applicare a questo servizio. L'ID può essere trovato nella pagina "Policy di accesso" nell'interfaccia web di DockFlare. | `dockflare.access.group=internal-tools-policy` |
 | `dockflare.access.groups` | Un elenco separato da virgole di ID gruppo di accesso da applicare. Ciò consente di sovrapporre più policy su un unico servizio. | `dockflare.access.groups=allow-team-a,allow-admins` |
 | `dockflare.access.policy` | Il tipo di policy principale. Può essere `bypass` (pubblico), `authenticate` (richiede l'accesso) o `default_tld` (eredita da una policy `*.domain.com`). Se non impostato, il servizio sarà pubblico. Preferire i gruppi di accesso per policy riutilizzabili; queste etichette sono per sostituzioni specializzate. | `dockflare.access.policy=authenticate` |
 | `dockflare.access.name` | Un nome personalizzato per l'applicazione Cloudflare Access. Il valore predefinito è `DockFlare-{hostname}`. | `dockflare.access.name=My Web App Access` |
@@ -91,7 +91,7 @@ Per utilizzare le etichette indicizzate, anteporre all'etichetta un numero inter
 ### Esempio
 
 Questo esempio espone due nomi host da un singolo container:
-1. `app.example.com` instrada alla Web UI principale sulla porta `80`.
+1. `app.example.com` instrada all'interfaccia web principale sulla porta `80`.
 2. `api.example.com` instrada verso l'API sulla porta `3000` ed è protetto con uno specifico gruppo di accesso.
 
 ```yaml

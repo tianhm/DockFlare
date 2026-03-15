@@ -23,7 +23,7 @@ docker logs dockflare
 docker logs -f dockflare
 ```
 
-## 2. Korzystanie z dzienników czasu rzeczywistego w Web UI
+## 2. Korzystanie z dzienników czasu rzeczywistego w panelu administracyjnym
 
 Dla wygody panel DockFlare zawiera **przeglądarkę logów w czasie rzeczywistym** u dołu strony głównej.
 

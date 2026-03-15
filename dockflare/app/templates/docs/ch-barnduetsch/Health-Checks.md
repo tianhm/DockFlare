@@ -1,19 +1,19 @@
-# Health Checks (Gesundheitsprüfungen)
+# Health Checks
 
-DockFlare bietet einen dedizierten Endpunkt zur Integritätsprüfung (Health Check), der mit dem integrierten Health-Check-Mechanismus von Docker verwendet wärde cha. Dadurch cha Docker den Status der DockFlare-Anwendung überwachen u sie automatisch neu starten, falls sie nid mehr reagiert.
+DockFlare het e eigete Endpunkt für Health Checks. Dä chasch mit em Docker-Healthcheck verknüpfe, damit Docker überwacht, öb d Aawändig no sauber reagiert, u dr Container automatisch neu startet, falls öppis hängt.
 
 ## Der Endpunkt `/ping`
 
-DockFlare stellt einen einfachen HTTP-Endpunkt unter `/ping` bereit.
+DockFlare stellt eifach dr HTTP-Endpunkt `/ping` bereit.
 
-*   **Zweck:** Einen simplen Weg für automatisierte Systeme bereitzustellen, um zu prüfen, öb der DockFlare Webserver läuft u reagiert.
-*   **Authentifizierung:** Dieser Endpunkt isch **von der Authentifizierung ausgenommen**. Du muesch nid eingeloggt sein, um darauf zuzugreifen. Genau dies ermöglicht es dem internen Health-Check-Mechanismus von Docker, ihn zu nutzen.
-*   **Gesunde Antwort:** Eine gesunde, laufende DockFlare-Anwendung antwortet auf eine Anfrage an `/ping` mit einem **HTTP 200 OK** Statuscode.
-*   **Versionsinformation:** Der Response-Body (Antworttext) der `/ping`-Schnittstelle enthält ebenfalls die aktuell laufende Version der DockFlare-Anwendung.
+* **Zweck:** Automatisiert prüefe, öb dr DockFlare-Webserver lauft u antwortet.
+* **Authentifizierig:** Uf `/ping` chasch ohni Login zugryfe. Genau drum cha Docker dä Check intern bruuche.
+* **Gsuendi Antwort:** E laufendi Instanz git uf `/ping` es **HTTP 200 OK** zrügg.
+* **Versionsinfo:** Im Antworttext steit o d aktuell lauffendi DockFlare-Version.
 
-## Wie man einen Health Check in Docker Compose konfiguriert
+## So richtsch dr Health Check i Docker Compose i
 
-Du chasch dinere `dockflare`-Service-Konfiguration in der Datei `docker-compose.yml` einen `healthcheck`-Abschnitt hinzufügen, damit Docker den Gesundheitszustand der Applikation automatisch überwacht.
+Füeg i dinere `docker-compose.yml` bim `dockflare`-Service e `healthcheck`-Abschnitt ii, damit Docker d Aawändig automatisch überwacht.
 
 ```yaml
 services:
@@ -36,12 +36,12 @@ services:
       start_period: 40s
 ```
 
-### Aufschlüsselung der `healthcheck`-Konfiguration:
+### Was d `healthcheck`-Wärt bedüte
 
-*   `test`: Das isch der Befehl, den Docker innerhalb des Containers ausführt. `curl -f` sendet eine HTTP-Anfrage an den `/ping`-Endpunkt u bricht mit einem Statuscode ungleich null ab, wenn die Antwort nid HTTP 200 OK lautet.
-*   `interval`: Docker führt diese Prüfung alle 90 Sekunden aus.
-*   `timeout`: Docker wartet bis zu 10 Sekunden auf die Ausführung des Befehls.
-*   `retries`: Schlägt die Prüfung 3-mal hintereinander fehl, markiert Docker den Container als `unhealthy` (ungesund).
-*   `start_period`: Docker wartet nach dem Containerstart noch 40 Sekunden auf die Initialisierung der Applikation, bevor der erste Test erfolgt. Das gibt der App genügend Zeit, um richtig hochzufahren.
+* `test`: Dr Befehl, wo Docker im Container usfüehrt. `curl -f` prüeft, öb `/ping` e gültigi Antwort git.
+* `interval`: Docker macht dä Check alli 90 Sekunde.
+* `timeout`: So lang wartet Docker höchstens uf e Antwort.
+* `retries`: Nach dr dritte fehlgschlagene Prüefig gilt dr Container als `unhealthy`.
+* `start_period`: Git dr App nach em Start no chli Zyt, bevor dr erscht Check lauft.
 
-Mit dieser Konfiguration chasch die Gesundheit din Containers durch den Befehl `docker ps` abfragen. Die Status-Spalte zeigt `(healthy)` an, sofern der Check erfolgreich verläuft. Wird ein Container "unhealthy", wird er von Docker gemäss der eingestellten `restart`-Policy (z.B. `unless-stopped`) automatisch neu gestartet.
+Mit däre Konfiguration gsehsch bi `docker ps`, öb dr Container `(healthy)` isch. Wänn er `unhealthy` wird, startet Docker ihn je nach `restart`-Policy automatisch neu.

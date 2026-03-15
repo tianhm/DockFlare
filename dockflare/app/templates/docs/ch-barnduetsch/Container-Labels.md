@@ -1,90 +1,95 @@
-# Container-Labels Referenz
+# Container-Labels-Referänz
 
-DockFlare wird hauptsächlich über Docker-Labels konfiguriert, die an dini Container angehängt si. Die Siite bietet eine umfassende Referenz für alle unterstützten Labels.
+DockFlare wird vor allem über Docker-Labels konfiguriert, wo du direkt a dini Container hängsch. Die Syte isch d Referänz für aui unterstützte Labels.
 
 ## Basis-Konfiguration
 
-Diese Labels steuern das grundlegende Routing u die Service-Definition für einen Container.
+Die Labels steuere ds grundlegende Routing u d Service-Definition für e Container.
 
-| Label | Beschreibung | Beispiel |
+| Label | Beschrybig | Bispiel |
 | :--- | :--- | :--- |
-| `dockflare.enable` | **Nötig.** Der Hauptschalter. Muss auf `true` gesetzt sein, damit DockFlare den Container verwaltet. | `dockflare.enable=true` |
-| `dockflare.hostname` | **Nötig.** Der öffentlich zugängliche Hostname für dini Service. | `dockflare.hostname=myservice.example.com` |
-| `dockflare.service` | **Nötig.** Die interne URL des Dienstes, mit der sich der Cloudflare Tunnel verbinden soll. Cha `http`, `https`, `tcp`, `ssh`, `rdp`, `http_status:XXX` oder `bastion` sein. | `dockflare.service=http://my-app-container:8080` |
-| `dockflare.path` | Der URL-Pfad, der an diesen Dienst weitergeleitet wärde soll. Nützlich, um mehrere Dienste unter demselben Hostnamen bereitzustellen. | `dockflare.path=/api` |
-| `dockflare.zonename` | (Optional) Explizite Cloudflare-Zone (Domäne), in der der DNS-Eintrag erstellt wärde soll. Wenn abwesend, erkennt DockFlare die Zone automatisch anhand des Hostnamens u greift nur auf den Standard (`CF_ZONE_ID`) zurück, falls dies fehlschlägt. | `dockflare.zonename=another-domain.com` |
-| `dockflare.no_tls_verify` | Wenn auf `true` gesetzt, wird die Überprüfung des TLS-Zertifikats für die Verbindung zwischen `cloudflared` u dim Ursprungsdienst deaktiviert. Nützlich für Ursprünge mit selbstsignierten Zertifikaten. | `dockflare.no_tls_verify=true` |
-| `dockflare.originsrvname` | Legt einen spezifischen Server Name Indication (SNI) Hostnamen für die TLS-Verbindung zum Ursprung fest. Das isch im Cloudflare-Dashboard auch als "Origin Server Name" bekannt. | `dockflare.originsrvname=internal.service.local` |
-| `dockflare.httpHostHeader` | Überschreibt den `Host`-Header, der von `cloudflared` an dini Ursprungsdienst gesendet wird. | `dockflare.httpHostHeader=custom-host.internal` |
-| `dockflare.http2_origin` | Wenn auf `true` gesetzt, wird das HTTP/2 Protokoll für die Verbindung zwischen `cloudflared` u dim Ursprung aktiviert. Gilt nur für HTTP/HTTPS-Dienste. Nötig für gRPC-Dienste. | `dockflare.http2_origin=true` |
-| `dockflare.disable_chunked_encoding` | Wenn auf `true` gesetzt, wird chunked transfer encoding über HTTP/1.1 deaktiviert. Nützlich für WSGI-Server (Flask, Django, FastAPI) u. a., die chunked-Anfragen nid richtig unterstützen. Gilt nur für HTTP/HTTPS. | `dockflare.disable_chunked_encoding=true` |
+| `dockflare.enable` | **Pflicht.** Dr Hauptschalter. Muess uf `true` gsetzt sy, damit DockFlare dr Container verwaltet. | `dockflare.enable=true` |
+| `dockflare.hostname` | **Pflicht.** Dr öffentlechi Hostname für dyn Dienst. | `dockflare.hostname=myservice.example.com` |
+| `dockflare.service` | **Pflicht.** D interni URL vom Dienst, wo sech dr Cloudflare Tunnel drmit verbindet. Cha `http`, `https`, `tcp`, `ssh`, `rdp`, `http_status:XXX` oder `bastion` sy. | `dockflare.service=http://my-app-container:8080` |
+| `dockflare.path` | URL-Pfad, wo a dä Dienst wytergleitet wird. Praktisch, wänn mehri Dienscht under em glyche Hostname loufe. | `dockflare.path=/api` |
+| `dockflare.zonename` | (Optional) Expliziti Cloudflare-Zone, wo dr DNS-Iitrag drin erstellt wird. Wänn s Label fählt, erkennt DockFlare d Zone normalerwys automatisch us em Hostname. | `dockflare.zonename=another-domain.com` |
+| `dockflare.no_tls_verify` | Wänn uf `true` gsetzt, wird d TLS-Zertifikatsprüefig für d Verbindig zwüsche `cloudflared` u dim Ursprung deaktiviert. Sinnvoll bi sälbstsignierte Zertifikat. | `dockflare.no_tls_verify=true` |
+| `dockflare.originsrvname` | Definiert e spezifische SNI-Hostname für d TLS-Verbindig zum Ursprung. Das isch im Cloudflare-Dashboard o als **Origin Server Name** bekannt. | `dockflare.originsrvname=internal.service.local` |
+| `dockflare.httpHostHeader` | Überschrybt dr `Host`-Header, wo `cloudflared` a dr Ursprung schickt. | `dockflare.httpHostHeader=custom-host.internal` |
+| `dockflare.http2_origin` | Wänn uf `true` gsetzt, wird HTTP/2 für d Verbindig zwüsche `cloudflared` u dim Ursprung aktiviert. Gilt nume für HTTP/HTTPS-Dienscht. Nötig für gRPC. | `dockflare.http2_origin=true` |
+| `dockflare.disable_chunked_encoding` | Wänn uf `true` gsetzt, wird chunked transfer encoding über HTTP/1.1 deaktiviert. Nützlich für WSGI-Server u angeri Ursprüng, wo chunked Requests nid guet unterstütze. | `dockflare.disable_chunked_encoding=true` |
 
-> **Tipp:** Ab DockFlare v3.0 chasch `dockflare.zonename` für die meisten Workloads weglassen. Der Master erkennt die korrekte Cloudflare-Zone durch Abgleich des Hostnamen-Suffixes. Bruuch das Label nur, wenn du eine andere Zone gezielt ansteuern.
+> **Tipp:** Ab DockFlare v3.0 chasch `dockflare.zonename` für d meischte Workloads wägla. Dr Master erkennt d korrekti Cloudflare-Zone normalerwys automatisch über ds Hostname-Suffix.
 
-> **Hinweis:** Cloudflares Option **Match SNI to Host** isch bi dr manuelle Regelkonfiguration i DockFlare im Dashboard verfüegbar. Das wird im Momänt nid über es Docker-Label gsetzt.
+> **Hinwys:** Cloudflares Option **Match SNI to Host** isch im DockFlare-Dashboard bi dr manuelle Regle-Konfiguration verfügbar. Über es Docker-Label cha mer das im Momänt nid setze.
 
 ---
 
-## Konfiguration von Zugriffsrichtlinien
+## Labels für Zuegriffsrichtlinie
 
-Diese Labels ermöglichen dir die dynamische Erstellung u Verwaltung von Cloudflare Access Anwendungen zur Absicherung dinere Dienste.
+Mit dene Labels chasch Cloudflare Access Apps u Richtlinie dynamsch steuere.
 
-**Hinweis:** Es wird dringend empfohlen, **Access Groups** (`dockflare.access.group`) für die Verwaltung von Richtlinien zu bruuche. DockFlare 3.0.3 synchronisiert jede Access Group mit einer wiederverwendbaren Cloudflare Access Policy. Wenn `dockflare.access.group` oder `dockflare.access.groups` verwendet wird, wärde alle anderen `dockflare.access.*` Labels ignoriert.
+**Hinwys:** Es wird dringend empfohle, **Access Groups** (`dockflare.access.group`) z bruuchen. Wänn `dockflare.access.group` oder `dockflare.access.groups` gsetzt isch, wärde aui andere `dockflare.access.*`-Labels ignoriert.
 
-### Wichtige Änderungen in v3.0.3
+### Wichtigi Änderige ab v3.0.3
 
-#### Bypass Systemrichtlinie
+#### Bypass-Systemrichtlinie
 
-Ab v3.0.3 referenziert din Dienst bei der Verwendung von `dockflare.access.policy=bypass` oder `dockflare.access.group=bypass` die systemverwaltete wiederverwendbare Richtlinie `public-default-bypass`, anstatt einer inline-Richtlinie. Das hält din Cloudflare-Dashboard aufgeräumt.
+Ab v3.0.3 verweist `dockflare.access.policy=bypass` oder `dockflare.access.group=bypass` uf d systemverwalteti Richtlinie `public-default-bypass` statt uf e inline-Richtlinie. So blybt ds Cloudflare-Dashboard ordentlecher.
 
-- **Vor v3.0.3:** Jede Bypass-Regel erstellte eine separate Policy
-- **v3.0.3+:** Alle Bypass-Regeln teilen sich eine einheitliche `public-default-bypass` Richtlinie
+* **Vor v3.0.3:** Jedi Bypass-Regle het e eigeti Policy erstellt
+* **Ab v3.0.3:** Aui Bypass-Regle teile sech `public-default-bypass`
 
-#### Migration von alten Labels
+#### Migration vo alte Labels
 
-DockFlare migriert alte Bypass-Labels automatisch zur zentralen Systemrichtlinie:
-- `dockflare.access.policy=bypass` → Verwendet `public-default-bypass`
-- `dockflare.access.group=bypass` → Verwendet `public-default-bypass`
-dini Container funktionieren weiterhin ohne erforderliche Änderungen.
+Alti Bypass-Labels wärde automatisch uf d zentrali Systemrichtlinie umgstellt:
 
-#### Vereinfachte Zugriffskonfiguration
+* `dockflare.access.policy=bypass` → `public-default-bypass`
+* `dockflare.access.group=bypass` → `public-default-bypass`
 
-Für komplexe Fälle (E-Mail/Domain-Authentifizierung, IP-Whitelisting, etc.) wird nun Folgendes empfohlen:
-1. Erstell eine Access Group auf der Seite **Access Policies**
-2. Referenzier sie mit `dockflare.access.group=ihre-gruppen-id`
+Dini Container loufe wyter ohni nötigi Änderige.
 
-#### Zonen-Standardrichtlinien-Label
+#### Vereinfachti Zugriffskonfiguration
 
-Das Label `dockflare.access.policy=default_tld` funktioniert weiterhin u übernimmt den Schutz der `*.domain.com` Wildcard-Richtlinie dinere Zone.
+Für komplexeri Fäll wie Mail-/Domain-Authentifizierig oder IP-Whitelisting isch d empfohlni Vorgah:
 
-| Label | Beschreibung | Beispiel |
+1. E Access Group uf dr Syte **Access Policies** erstelle
+2. Si mit `dockflare.access.group=<gruppen-id>` referenziere
+
+#### Zonen-Standardrichtlinie-Label
+
+S Label `dockflare.access.policy=default_tld` funktioniert wyterhi u übernimmt dr Schutz vo dr `*.domain.com`-Wildcard-Richtlinie dimere Zone.
+
+| Label | Beschrybig | Bispiel |
 | :--- | :--- | :--- |
-| `dockflare.access.group` | Die ID einer einzelnen Access Group. ID isch in der DockFlare UI zu finden. | `dockflare.access.group=internal-tools-policy` |
-| `dockflare.access.groups` | Kommagetrennte Liste von Access Group IDs, um mehrere Richtlinien zu schichten. | `dockflare.access.groups=allow-team-a,allow-admins` |
-| `dockflare.access.policy` | Der primäre Richtlinientyp (`bypass`, `authenticate`, oder `default_tld`). Wird bevorzugt für spezielle Overrides verwendet. | `dockflare.access.policy=authenticate` |
-| `dockflare.access.name` | Ein benutzerdefinierter Name für die Cloudflare Access App. Standard: `DockFlare-{hostname}`. | `dockflare.access.name=My Web App Access` |
-| `dockflare.access.session_duration` | Die Sitzungsdauer (z.B. `24h`, `30m`). Standard isch `24h`. | `dockflare.access.session_duration=1h` |
-| `dockflare.access.app_launcher_visible` | Falls `true`, wird die Anwendung im Cloudflare Access App Launcher sichtbar. | `dockflare.access.app_launcher_visible=true` |
-| `dockflare.access.allowed_idps` | Eine kommagetrennte Liste von erlaubten Identity Provider UUIDs. | `dockflare.access.allowed_idps=uuid1,uuid2` |
-| `dockflare.access.auto_redirect_to_identity` | Falls `true`, direkte Umleitung zur IdP-Anmeldeseite statt zum Splash-Screen. | `dockflare.access.auto_redirect_to_identity=true` |
-| `dockflare.access.custom_rules` | JSON-String der Array Cloudflare Access Rules repräsentiert. Für flexibelste Einmal-Konfigurationen. | `dockflare.access.custom_rules='[{"email":...}]'` |
+| `dockflare.access.group` | D ID vo ere einzelne Access Group. D ID findsch i dr DockFlare UI. | `dockflare.access.group=internal-tools-policy` |
+| `dockflare.access.groups` | Kommagtrennti Lischt vo Access-Group-IDs, zum mehri Richtlinie z schichte. | `dockflare.access.groups=allow-team-a,allow-admins` |
+| `dockflare.access.policy` | Dr primäri Richtlinientyp (`bypass`, `authenticate` oder `default_tld`). Vor allem für spezielli Overrides. | `dockflare.access.policy=authenticate` |
+| `dockflare.access.name` | Benutzerdefinierte Name für d Cloudflare Access App. Standard: `DockFlare-{hostname}` | `dockflare.access.name=My Web App Access` |
+| `dockflare.access.session_duration` | D Sitzigsduur, zum Bispiel `24h` oder `30m`. Standard isch `24h`. | `dockflare.access.session_duration=1h` |
+| `dockflare.access.app_launcher_visible` | Wänn `true`, wird d Aawändig im Cloudflare Access App Launcher sichtbar. | `dockflare.access.app_launcher_visible=true` |
+| `dockflare.access.allowed_idps` | Kommagtrennti Lischt mit erlaubte Identity-Provider-UUIDs. | `dockflare.access.allowed_idps=uuid1,uuid2` |
+| `dockflare.access.auto_redirect_to_identity` | Wänn `true`, geit dr Traffic diräkt zur IdP-Aamäldesyte statt uf dr Splash-Screen. | `dockflare.access.auto_redirect_to_identity=true` |
+| `dockflare.access.custom_rules` | JSON-String mit ere Array-Defintion vo Cloudflare Access Rules. Für maximal flexibel Einmal-Konfiguratione. | `dockflare.access.custom_rules='[{\"email\":...}]'` |
 
 ---
 
-## Indexierte Labels für mehrere Domains
+## Indexierti Labels für mehri Domains
 
-DockFlare unterstützt die Definition mehrerer Hostnamen für einen einzelnen Container durch *indexierte Labels*. Das isch nützlich, um verschiedene Ports oder Pfade unter verschiedenen öffentlichen Domains freizugeben.
+DockFlare unterstützt mehri Hostname für e einzelne Container über *indexierti Labels*. Das isch nützlich, wänn verschideni Ports oder Pfäd under verschidene öffentleche Domains freigeh wötsch.
 
-Um indexierte Labels zu bruuche, lueg dem Label eine ganze Zahl (beginnend bei `0`) als Präfix voran.
-* Ein indexierter Hostname (`<index>.hostname`) isch immer nötig.
-* Andere Labels im gleichen Index (z. B. `<index>.service`) überschreiben die Basis-Labels für den spezifischen Hostnamen.
-* Fehlt ein indexiertes Label, wird auf den Wert des entsprechenden Basislabels zurückgegriffen.
+Zum indexierti Labels z bruuchen, stellsch du em Label e Ganzzahl ab `0` vorane.
 
-### Beispiel
+* E indexierte Hostname (`<index>.hostname`) isch immer nötig.
+* Anderi Labels im glyche Index (z. B. `<index>.service`) überschrybe d Basis-Labels für genau dä Hostname.
+* Fählt es indexierts Label, wird dr Wert vom entsprechende Basis-Label bruucht.
 
-Das Beispiel exponiert zwei Hostnamen von einem Container:
-1. `app.example.com` leitet zur Weboberfläche auf Port `80` weiter.
-2. `api.example.com` leitet zur API auf Port `3000` u wird mit einer spezifischen Access Group gesichert.
+### Bispiel
+
+Ds Bispiel git zwei Hostname us em glyche Container frei:
+
+1. `app.example.com` leitet uf d Weboberflächi uf Port `80`
+2. `api.example.com` leitet uf d API uf Port `3000` u wird mit ere eigete Access Group gschützt
 
 ```yaml
 services:

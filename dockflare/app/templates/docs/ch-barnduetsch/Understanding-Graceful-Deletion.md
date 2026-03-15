@@ -1,26 +1,26 @@
-# Graceful Deletion verstehen
+# Graceful Deletion verstah
 
-Wänn du einen von DockFlare verwalteten Container stoppen, fällt dir vielleicht auf, dass dessen öffentlicher Hostname nid sofort offline geht. Das liegt an einem Feature, das als **Graceful Deletion** (sanftes Löschen) bezeichnet wird.
+Wänn du e vo DockFlare verwaltete Container stoppisch, merkisch vilicht, dass dr öffentlechi Hostname nid grad sofort verschwinde tuet. Das chunnt vom Feature **Graceful Deletion**.
 
 ## Was isch Graceful Deletion?
 
-Anstatt die Cloudflare Ingress-Regel u den DNS-Eintrag in dem Moment augenblicklich zu löschen, in dem ein Container stoppt, markiert DockFlare die Regel als **"pending deletion"** (Löschung ausstehend) u startet einen Timer.
+Statt d Ingress-Regel u dr DNS-Iitrag grad im Momänt vom Stoppe z lösche, markiert DockFlare d Regel als **`pending deletion`** u startet e Timer.
 
-Die zugehörigen Cloudflare-Ressourcen (die Ingress-Regel u der DNS-Eintrag) wärde erst dann endgültig gelöscht, wenn dieser Timer, bekannt als **Schonfrist (grace period)**, abläuft.
+Erst wänn die **grace period** ablouft, wärde d Cloudflare-Ressource würklech glöscht.
 
-## Warum isch das nützlich?
+## Warum das sinnvoll isch
 
-Diese Funktion wurde entwickelt, um Dienstunterbrechungen in gängigen operativen Szenarien zu verhindern:
+Das verhindert Unterbrüch bi tüüpine Situatione:
 
-*   **Container-Updates:** Wänn du ein Container-Image aktualisieren (`docker compose up -d`), stoppt Docker in der Regel den alten Container u startet einen neuen. Ohne Schonfrist wäre din Dienst für kurze Zeit nid erreichbar. Bei der Graceful Deletion bleiben der DNS-Eintrag u die Ingress-Regel aktiv, u DockFlare ordnet sie ganz einfach dem neuen Container zu – was zu null Ausfallzeit (Zero Downtime) führt.
-*   **Temporäre Neustarts:** Wänn du einen Container kurzzeitig anhalten müesse, um eine Istellige zu ändern u ihn dann neu zu starten, stellt die Schonfrist sicher, dass dini öffentlichkeitswirksame Konfiguration intakt bleibt.
+* **Container-Updates:** Bi `docker compose up -d` wird dr alti Container oft churz stoppt, bevor dr neu startet. Dank grace period blybt d Regle chli no parat.
+* **Temporäri Neustarts:** Wänn du churz öppis aapassisch u dr Container grad wieder startisch, mues nid aues neu aagleit wärde.
 
-## Die Variable `GRACE_PERIOD_SECONDS`
+## D Variable `GRACE_PERIOD_SECONDS`
 
-Die Dauer dieser Schonfrist wird durch die Umgebungsvariable `GRACE_PERIOD_SECONDS` gesteuert, die du in dinere `docker-compose.yml`-Datei festlegen chöi.
+D Längi vo dr Schonfrist steuersch mit dr Umgebigsvariable `GRACE_PERIOD_SECONDS` i dr `docker-compose.yml`.
 
-*   Der Standardwert beträgt `600` Sekunden (10 Minuten).
-*   du chasch diesen Wert an dini Bedürfnisse anpassen. Ein kürzerer Zeitraum beschleunigt die Bereinigung, während ein längerer Zeitraum ein grösseres Zeitfenster für Container-Neustarts bietet.
+* Standard isch `600` Sekunde, also 10 Minute.
+* E churzere Wert räumt schnäuer uf, e längere git meh Zyt für Neustarts.
 
 **Beispiel:**
 ```yaml
@@ -32,10 +32,10 @@ services:
       - GRACE_PERIOD_SECONDS=3600 # Set a 1-hour grace period
 ```
 
-## Wie es in der Praxis funktioniert
+## Wie s i dr Praxis lauft
 
-1.  **Container gestoppt:** du führen `docker stop my-app` aus.
-2.  **Löschung ausstehend:** DockFlare erkennt das Stopp-Ereignis. In der Web UI wird der Status für die Regel von `my-app.example.com` nun als **"pending_deletion"** angezeigt – zusammen mit der Uhrzeit, zu der die Löschung geplant isch.
-3.  **Die zwei Szenarien:**
-    *   **Szenario A: Schonfrist läuft ab:** Wenn der Container gestoppt bleibt u die Schonfrist (z.B. 10 Minuten) verstreicht, springt DockFlares Hintergrundbereinigung an. Du löscht die Ingress-Regel aus dim Cloudflare Tunnel u entfernt den CNAME-DNS-Eintrag.
-    *   **Szenario B: Container startet neu:** Wänn du den Container wieder starten (`docker start my-app`) **bevor** die Schonfrist ausläuft, registriert DockFlare den Start. Es bemerkt, dass die Löschung der Regel aussteht, bricht den Löschvorgang ab u setzt den Status wieder auf **"active"**. din Dienst läuft nahtlos weiter.
+1. **Container stoppt:** Du machsch `docker stop my-app`.
+2. **Regel wartet:** DockFlare setzt dr Status i dr Web UI uf **`pending_deletion`**.
+3. **Nachhär git s zwöi Möglichkeite:**
+   * **Ablouf vo dr grace period:** Dr Container blybt use, also löscht DockFlare d Ingress-Regel u dr CNAME.
+   * **Container chunnt zrügg:** Dr Container startet vor em Ablauf wieder, DockFlare bricht s Lösche ab u setzt dr Status wieder uf **`active`**.

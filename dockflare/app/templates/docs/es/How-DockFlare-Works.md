@@ -1,6 +1,6 @@
 # Cómo funciona DockFlare
 
-DockFlare actúa como puente entre su entorno Docker y la red de Cloudflare, automatizando la publicación segura de servicios en Internet. Supervisa continuamente el host Docker y utiliza la API de Cloudflare para gestionar túneles, registros DNS y políticas de Access en su nombre.
+DockFlare actúa como puente entre su entorno Docker y la red de Cloudflare, automatizando la publicación segura de servicios en Internet. Supervisa continuamente el host Docker y utiliza la API de Cloudflare para gestionar túneles, registros DNS y políticas de acceso en su nombre.
 
 ## Flujo de trabajo principal
 
@@ -13,7 +13,7 @@ El flujo principal puede resumirse en estos pasos:
 3. **Interacción con la API de Cloudflare**: en función de las etiquetas, DockFlare configura los recursos necesarios en Cloudflare:
    * **Cloudflare Tunnel**: añade una regla de ingress al túnel configurado. Esa regla apunta el hostname público a la dirección interna del contenedor, por ejemplo `http://my-app:8080`.
    * **Gestión de DNS**: crea un registro DNS CNAME en su zona de Cloudflare para apuntar el hostname público deseado, por ejemplo `my-app.example.com`, al túnel de Cloudflare.
-   * **Políticas de Access**: si ha definido etiquetas de control de acceso, DockFlare crea o actualiza una política de Access reutilizable para proteger el servicio con reglas Zero Trust, por ejemplo exigiendo autenticación mediante su proveedor de identidad o aplicando un `bypass` público.
+   * **Políticas de acceso**: si ha definido etiquetas de control de acceso, DockFlare crea o actualiza una política de acceso reutilizable para proteger el servicio con reglas Zero Trust, por ejemplo exigiendo autenticación mediante su proveedor de identidad o aplicando un `bypass` público.
 
 4. **Limpieza automática**: cuando un contenedor gestionado se detiene o se elimina, DockFlare ejecuta automáticamente una limpieza. Elimina la regla de ingress correspondiente del túnel de Cloudflare y, si ningún otro servicio utiliza ese hostname, también elimina el registro DNS y la aplicación de Access. Esto evita configuraciones obsoletas y mantiene limpio el entorno en Cloudflare.
 
@@ -21,9 +21,9 @@ El flujo principal puede resumirse en estos pasos:
 
 | Componente | Responsabilidad |
 | --- | --- |
-| DockFlare Master | Aloja la Web UI y la API, observa los eventos de Docker y orquesta los túneles, DNS y políticas de Access de Cloudflare. Se ejecuta sin privilegios de root y solo se comunica con Docker a través del socket proxy. |
+| DockFlare Master | Aloja la interfaz web y la API, observa los eventos de Docker y orquesta los túneles, DNS y políticas de acceso de Cloudflare. Se ejecuta sin privilegios de root y solo se comunica con Docker a través del socket proxy. |
 | Proxy de socket de Docker | Sidecar `tecnativa/docker-socket-proxy` que expone al Master la superficie mínima de la API de Docker (`containers`, `events`, etc.). Evita que el Master monte el socket Docker sin procesar. |
-| Redis | Caché, colas, streaming de logs y canal de heartbeat/retorno para agentes. Vive en la red privada `dockflare-internal`. |
+| Redis | Caché, colas, transmisión de registros y canal de heartbeat y retorno para agentes. Vive en la red privada `dockflare-internal`. |
 | DockFlare Agents (opcional) | Agentes remotos que replican el comportamiento del Master en otros hosts, transmiten eventos de Docker y gestionan su propio `cloudflared`. |
 | `cloudflared` | Mantiene la conexión del túnel con Cloudflare para el Master o para cada agente. |
 
@@ -33,14 +33,14 @@ DockFlare utiliza un enfoque flexible y por capas que combina automatización co
 
 1. **Etiquetas Docker (capa base)**: es el método principal y automatizado. La configuración completa de un servicio, como hostname, URL interna y política de acceso, se define directamente en `docker-compose.yml` o en el comando `docker run`. Esa configuración es la fuente de verdad para los servicios automatizados.
 
-2. **Grupos de acceso (capa de abstracción)**: para evitar repetir políticas complejas en muchos servicios, puede crear **Grupos de acceso** reutilizables desde la Web UI. Son plantillas que agrupan reglas de acceso, como permitir correos corporativos o acceso desde países concretos, y se sincronizan con políticas reutilizables de Cloudflare Access. La opción Public vs Authenticated del modal controla si DockFlare emite una decisión `bypass` o `allow`. Después puede aplicar toda la política a un contenedor con una sola etiqueta, por ejemplo `dockflare.access.group=my-policy-group`.
+2. **Grupos de acceso (capa de abstracción)**: para evitar repetir políticas complejas en muchos servicios, puede crear **Grupos de acceso** reutilizables desde la interfaz web. Son plantillas que agrupan reglas de acceso, como permitir correos corporativos o acceso desde países concretos, y se sincronizan con políticas reutilizables de Cloudflare Access. La opción `Public` o `Authenticated` del cuadro de diálogo controla si DockFlare emite una decisión `bypass` o `allow`. Después puede aplicar toda la política a un contenedor con una sola etiqueta, por ejemplo `dockflare.access.group=my-policy-group`.
 
-3. **Overrides desde la Web UI (capa de control)**: la Web UI ofrece el mayor nivel de control. Desde el panel puede:
+3. **Ajustes desde la interfaz web (capa de control)**: la interfaz web ofrece el mayor nivel de control. Desde el panel puede:
    * **Sobrescribir** la política de acceso de cualquier servicio, tanto si fue definida por etiquetas como por un grupo de acceso. Estas sobrescrituras son persistentes y no se revierten al reiniciar el contenedor.
    * **Crear reglas de ingress manuales** para servicios que no se ejecutan en Docker, por ejemplo un servicio en otra máquina de la red.
-   * **Revertir** la configuración de un servicio a lo definido en sus etiquetas Docker y descartar cualquier override aplicado desde la Web UI.
+   * **Revertir** la configuración de un servicio a lo definido en sus etiquetas Docker y descartar cualquier ajuste aplicado desde la interfaz web.
 
-Este modelo por capas le permite automatizar la mayoría de servicios con etiquetas Docker sin perder la capacidad de gestionar excepciones o escenarios complejos desde la Web UI.
+Este modelo por capas le permite automatizar la mayoría de servicios con etiquetas Docker sin perder la capacidad de gestionar excepciones o escenarios complejos desde la interfaz web.
 
 ---
 

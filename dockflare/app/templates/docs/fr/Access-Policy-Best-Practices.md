@@ -1,18 +1,18 @@
-# Meilleures pratiques et exemples de politique d'accès
+# Meilleures pratiques et exemples de politiques d'accès
 
-La fonctionnalité de sécurité la plus puissante de DockFlare est **Groupes d'accès**. Ils fournissent un moyen centralisé, réutilisable et maintenable de sécuriser vos services à l'aide de Cloudflare Zero Trust.
+La fonctionnalité de sécurité la plus puissante de DockFlare est constituée par les **Groupes d'accès**. Ils offrent un moyen centralisé, réutilisable et maintenable de sécuriser vos services à l'aide de Cloudflare Zero Trust.
 
 ## La « règle d'or » : utiliser les groupes d'accès
 
 La meilleure pratique la plus importante consiste à **utiliser les groupes d'accès pour toutes vos stratégies d'accès communes**.
 
-Les groupes d'accès sont des modèles de stratégie que vous créez dans l'interface utilisateur Web de DockFlare. Au lieu de définir des règles complexes avec plusieurs étiquettes sur chaque conteneur, vous créez une stratégie une seule fois et l'appliquez avec une seule étiquette propre. DockFlare v3.0.3 synchronise désormais chaque groupe avec une politique d'accès Cloudflare réutilisable afin que le même ensemble de décisions puisse servir plusieurs applications.
+Les groupes d'accès sont des modèles de stratégie que vous créez dans l'interface utilisateur web de DockFlare. Au lieu de définir des règles complexes avec plusieurs étiquettes sur chaque conteneur, vous créez une stratégie une seule fois et l'appliquez avec une seule étiquette claire. DockFlare v3.0.3 synchronise désormais chaque groupe avec une politique d'accès Cloudflare réutilisable afin qu'un même ensemble de décisions puisse servir plusieurs applications.
 
 ---
 
 ## Comment créer et utiliser des groupes d'accès
 
-La création d'un groupe d'accès est un processus simple entièrement réalisé dans l'interface utilisateur de DockFlare.
+La création d'un groupe d'accès est un processus simple qui se déroule entièrement dans l'interface DockFlare.
 
 ### Étape 1 : Créer le groupe d'accès
 
@@ -57,7 +57,7 @@ DockFlare fournit deux politiques système intégrées qui sont automatiquement 
 
 Ces stratégies système ne peuvent pas être supprimées et servent de base à la protection des zones et à la migration des étiquettes héritées.
 
-#### B) Via l'interface utilisateur Web (pour les règles manuelles ou les remplacements)
+#### B) Via l'interface web (pour les règles manuelles ou les remplacements)
 
 Vous pouvez également appliquer un groupe d'accès à n'importe quelle règle directement depuis le tableau de bord :
 1. Recherchez la règle d'entrée que vous souhaitez modifier sur le tableau de bord principal.
@@ -119,7 +119,7 @@ Les politiques par défaut de zone sont des applications d'accès génériques `
 
 **Le problème :** Si vous oubliez d'ajouter une stratégie d'accès à un service, celle-ci est exposée publiquement par défaut.
 
-**La solution :** Une stratégie de caractères génériques au niveau de la zone agit comme un filet de sécurité. Même si vous oubliez de configurer `forgotten-service.yourdomain.com`, la stratégie `*.yourdomain.com` le détectera.
+**La solution :** Une stratégie générique au niveau de la zone agit comme un filet de sécurité. Même si vous oubliez de configurer `forgotten-service.yourdomain.com`, la stratégie `*.yourdomain.com` continuera à le couvrir.
 
 ### Comment les configurer
 
@@ -188,7 +188,7 @@ Les politiques externes apparaîtront avec un badge violet **"Externe"**.
 
 ### Organiser vos politiques
 
-**Conseil de pro :** Renommez les stratégies externes dans Cloudflare pour utiliser le préfixe `DockFlare-`
+**Conseil :** Renommez les stratégies externes dans Cloudflare pour utiliser le préfixe `DockFlare-`
 
 Vous pouvez organiser des politiques externes en les renommant dans le tableau de bord Cloudflare :
 

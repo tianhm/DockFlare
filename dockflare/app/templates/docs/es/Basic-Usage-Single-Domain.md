@@ -132,7 +132,7 @@ DockFlare detectará el nuevo contenedor y realizará automáticamente las sigui
 2. Cree un registro CNAME para `nginx.example.com` en su DNS de Cloudflare, apuntando al túnel.
 
 Puedes verificar esto de varias maneras:
-* **Web UI de DockFlare**: el servicio `nginx.example.com` aparecerá en el panel.
+* **Interfaz web de DockFlare**: el servicio `nginx.example.com` aparecerá en el panel.
 * **Panel de control de Cloudflare**: Verá el nuevo registro CNAME en su configuración de DNS y la nueva regla ingress en la configuración de su túnel.
 
 Después de unos momentos para que se propague DNS, debería poder navegar a `https://nginx.example.com` en su navegador y ver la página de bienvenida predeterminada de NGINX.
@@ -147,7 +147,7 @@ Cuando descarga una copia de seguridad desde **Settings → Backup & Restore** (
 
 | Archivo | Descripción |
 | --- | --- |
-| `dockflare_config.dat` | Carga útil de configuración cifrada (credenciales de Cloudflare, hash de contraseña de la Web UI, valores predeterminados de túnel, clave API del Master, etc.). |
+| `dockflare_config.dat` | Carga útil de configuración cifrada (credenciales de Cloudflare, hash de contraseña de la interfaz web, valores predeterminados de túnel, clave API del Master, etc.). |
 | `dockflare.key` | La clave Fernet utilizada para descifrar `dockflare_config.dat` y otras cargas útiles cifradas. Guárdelo con el archivo. |
 | `agent_keys.dat` | Registro cifrado de claves API del agente, metadatos y estado de revocación. |
 | `state.json` | Instantánea JSON simple del estado del tiempo de ejecución: reglas administradas, agentes, grupos de acceso. Esto se incluye para que los operadores puedan inspeccionar o migrar piezas específicas si es necesario. |
@@ -157,7 +157,7 @@ La copia de seguridad es autónoma: restaurarla a través del asistente/punto fi
 
 ### Notas de restauración y compatibilidad
 
-- **Web UI del wizard y de Settings**: cargue el `.zip` y DockFlare lo importará, recargará el estado y saldrá. Docker reinicia el contenedor automáticamente, por lo que vuelve al modo operativo sin intervención manual.
+- **Interfaz web del asistente y de Settings**: cargue el `.zip` y DockFlare lo importará, recargará el estado y saldrá. Docker reinicia el contenedor automáticamente, por lo que vuelve al modo operativo sin intervención manual.
 - **Legacy `state.json`**: para solucionar problemas o flujos de trabajo avanzados, aún puede cargar solo un archivo `state.json`. DockFlare completará el estado de ejecución pero omitirá la configuración cifrada; luego deberá volver a ingresar las credenciales.
 - **Automatización**: debido a que el reinicio es automático, asegúrese de que cualquier verificación de estado del proxy inverso permita una breve ventana de reinicio (~5 segundos) después de una restauración.
 

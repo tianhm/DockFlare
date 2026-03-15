@@ -1,6 +1,6 @@
 # DockFlare Agent y arquitectura multiservidor
 
-DockFlare 3.0 introduce un modelo de ejecución distribuido que le permite gestionar túneles de Cloudflare en varios hosts Docker. El **Master** de DockFlare coordina la configuración, mientras que los **Agents** ligeros se ejecutan junto a sus cargas de trabajo y mantienen sincronizada su instancia local de `cloudflared`.
+DockFlare 3.0 introduce un modelo de ejecución distribuido que le permite gestionar túneles de Cloudflare en varios hosts Docker. El **Master** de DockFlare coordina la configuración, mientras que los **agentes** ligeros se ejecutan junto a sus cargas de trabajo y mantienen sincronizada su instancia local de `cloudflared`.
 
 Esta guía explica la arquitectura, el modelo de seguridad y el flujo de trabajo paso a paso para desplegar agentes.
 
@@ -8,7 +8,7 @@ Esta guía explica la arquitectura, el modelo de seguridad y el flujo de trabajo
 
 ## ¿Por qué usar agentes?
 
-* **Separar el cómputo del ingress**: mantenga las cargas de trabajo cerca de los usuarios sin perder un único plano de control.
+* **Separar la ejecución de la capa de ingress**: mantenga las cargas de trabajo cerca de los usuarios sin perder un único plano de control.
 * **Visibilidad por host**: supervise el heartbeat, el estado del túnel y el historial de comandos de cada agente.
 * **Tokens de privilegio mínimo**: revoque agentes comprometidos sin afectar al Master ni a otros hosts.
 * **Actualizaciones resilientes**: los agentes siguen sirviendo tráfico con su última configuración conocida si el Master no está disponible temporalmente.
@@ -19,8 +19,8 @@ Esta guía explica la arquitectura, el modelo de seguridad y el flujo de trabajo
 
 | Componente | Responsabilidad |
 |-----------|----------------|
-| **Master (DockFlare)** | Aloja la Web UI, almacena el estado, reconcilia las reglas ingress deseadas y emite comandos. |
-| **Redis** | Backplane para caché, heartbeats de agentes y comandos en cola. |
+| **Master (DockFlare)** | Aloja la interfaz web, almacena el estado, reconcilia las reglas ingress deseadas y emite comandos. |
+| **Redis** | Capa compartida para caché, heartbeats de agentes y comandos en cola. |
 | **DockFlare Agent** | Contenedor sin interfaz que observa eventos locales de Docker, ejecuta comandos y gestiona `cloudflared`. |
 | **cloudflared** | Gestiona la conexión real del túnel a Cloudflare para cada agente. |
 
@@ -39,11 +39,11 @@ El Master y Redis suelen ejecutarse juntos, mientras que los agentes se ejecutan
 
 ## Resumen del flujo de trabajo
 
-1. **Genere una clave API de agente** en la Web UI de DockFlare (`Agents → Generate Key`).
+1. **Genere una clave API de agente** en la interfaz web de DockFlare (`Agents → Generate Key`).
 2. **Despliegue el contenedor DockFlare Agent** en el host remoto, proporcionando la URL del Master y la clave.
 3. El agente **se registra** en el Master y aparece con estado *Pending*.
-4. Desde la Web UI del Master, **inscriba** el agente y asígnele o cree un túnel de Cloudflare para ese host.
-5. El Master pone los comandos en cola; el agente **consulta**, aplica la configuración e informa del estado y del heartbeat. DockFlare detecta automáticamente la zona de destino para cada nombre de host y solo recurre a la zona predeterminada cuando la detección falla.
+4. Desde la interfaz web del Master, **apruebe** el agente y asígnele o cree un túnel de Cloudflare para ese host.
+5. El Master pone los comandos en cola; el agente los recupera, aplica la configuración e informa del estado y del heartbeat. DockFlare detecta automáticamente la zona de destino para cada nombre de host y solo recurre a la zona predeterminada cuando la detección falla.
 6. A medida que los contenedores se inician o se detienen en el host del agente, este transmite los eventos de vuelta al Master, que actualiza DNS, las políticas de Access y las reglas ingress del túnel.
 
 ---
@@ -125,7 +125,7 @@ networks:
 
 ## Modelo de seguridad
 
-* **Clave API del Master**: protege la API administrativa. La Web UI solo la muestra después de hacer clic en *Show master API key*.
+* **Clave API del Master**: protege la API administrativa. La interfaz web solo la muestra después de hacer clic en *Show master API key*.
 * **Claves API de agente**: únicas por agente. Revocar una clave bloquea inmediatamente nuevas inscripciones y comandos desde ese host.
 * **Redis**: se usa para colas y cachés; protéjalo con contraseña y ACL de red si se ejecuta fuera de una LAN de confianza.
 * **Transporte**: ejecute el Master detrás de HTTPS, por ejemplo mediante Cloudflare Access, para que el tráfico del agente vaya cifrado.
@@ -134,9 +134,9 @@ networks:
 ### Endurecimiento recomendado
 
 1. Guarde las claves de agente en una bóveda o gestor de contraseñas y rótelas periódicamente.
-2. **No desactive el inicio de sesión con contraseña**. Use proveedores OAuth/OIDC para obtener comodidad de single sign-on sin asumir riesgos de seguridad. Si debe desactivarlo, tenga en cuenta que esto crea una vulnerabilidad de red en Docker por la que cualquier contenedor de la misma red puede eludir la autenticación externa. Consulte [Acceso a la Web UI](Accessing-the-Web-UI.md) para ver todas las implicaciones de seguridad.
+2. **No desactive el inicio de sesión con contraseña**. Use proveedores OAuth/OIDC para obtener la comodidad del single sign-on sin asumir riesgos de seguridad. Si debe desactivarlo, tenga en cuenta que esto crea una vulnerabilidad de red en Docker por la que cualquier contenedor de la misma red puede eludir la autenticación externa. Consulte [Acceso a la interfaz web](Accessing-the-Web-UI.md) para ver todas las implicaciones de seguridad.
 3. Utilice túneles independientes por agente para mantener el aislamiento de privilegio mínimo.
-4. Supervise la página `Agents` para detectar huecos en el heartbeat. Los nodos sin conexión pueden eliminarse directamente desde la Web UI.
+4. Supervise la página `Agents` para detectar huecos en el heartbeat. Los nodos sin conexión pueden eliminarse directamente desde la interfaz.
 
 ---
 
@@ -144,7 +144,7 @@ networks:
 
 | Síntoma | Solución |
 |---------|-----|
-| El agente se queda en `pending` | Asegúrese de que se haya registrado con la clave API correcta e inscríbalo desde la Web UI. |
+| El agente se queda en `pending` | Asegúrese de que se haya registrado con la clave API correcta y apruébelo desde la interfaz web. |
 | Los comandos no desaparecen nunca | Confirme la conectividad con Redis y que los relojes de los contenedores del agente estén sincronizados. |
 | DNS no se actualiza | El Master debe poder llegar a Cloudflare y el agente debe enviar eventos de contenedores; revise `docker logs dockflare-agent`. |
 | Heartbeat offline | Compruebe la ruta de red entre el agente y el Master; los problemas de firewall o TLS son causas habituales. |
@@ -153,8 +153,8 @@ networks:
 
 ## Próximos pasos
 
-* Revise el Quick Start actualizado en el README del repositorio para confirmar que Redis está configurado.
-* Consulte el changelog para ver cambios incompatibles y notas de migración.
+* Revise la guía de inicio rápido actualizada en el README del repositorio para confirmar que Redis está configurado.
+* Consulte el registro de cambios para ver cambios incompatibles y notas de migración.
 * Suscríbase al repositorio público de DockFlare Agent cuando se publique para mantenerse al día con las versiones.
 
-¡Feliz tunneling! 🚇
+Buena gestión de túneles.

@@ -6,17 +6,17 @@ La funzionalità di sicurezza più potente di DockFlare sono i **Gruppi di acces
 
 La best practice più importante è **utilizzare i gruppi di accesso per tutte le policy di accesso comuni**.
 
-I gruppi di accesso sono modelli di policy creati nella Web UI di DockFlare. Invece di definire regole complesse con più etichette su ogni container, crei una policy una volta e la applichi con un'unica etichetta pulita. DockFlare v3.0.3 ora sincronizza ogni gruppo con una policy di accesso Cloudflare riutilizzabile in modo che lo stesso insieme di decisioni possa servire più applicazioni.
+I gruppi di accesso sono modelli di policy creati nell'interfaccia web di DockFlare. Invece di definire regole complesse con più etichette su ogni container, crei una policy una sola volta e la applichi con un'unica etichetta chiara. DockFlare v3.0.3 sincronizza ogni gruppo con una policy di accesso Cloudflare riutilizzabile, così lo stesso insieme di decisioni può essere applicato a più applicazioni.
 
 ---
 
 ## Come creare e utilizzare i gruppi di accesso
 
-La creazione di un gruppo di accesso è un processo semplice eseguito interamente nella Web UI di DockFlare.
+La creazione di un gruppo di accesso è un processo semplice che si svolge interamente nell'interfaccia web di DockFlare.
 
 ### Passaggio 1: crea il gruppo di accesso
 
-1. Vai alla pagina **Policy di accesso** dalla barra di navigazione principale nella Web UI di DockFlare.
+1. Vai alla pagina **Policy di accesso** dalla barra di navigazione principale nell'interfaccia web di DockFlare.
 2. Fai clic sul pulsante **"Aggiungi gruppo di accesso"**.
 3. Assegna al tuo gruppo un **ID univoco e descrittivo**. Questo ID è quello che utilizzerai nelle etichette Docker. Ad esempio: `admin-users`, `home-network`, `geo-block`.
 4. Seleziona la **Modalità di accesso** dalle schede nella parte superiore della finestra modale:
@@ -57,7 +57,7 @@ DockFlare fornisce due policy di sistema integrate che sono automaticamente disp
 
 Queste policy di sistema non sono eliminabili e fungono da base per la protezione della zona e la migrazione delle etichette legacy.
 
-#### B) Tramite la Web UI (per regole manuali o sostituzioni)
+#### B) Dall'interfaccia web (per regole manuali o sostituzioni)
 
 Puoi anche applicare un gruppo di accesso a qualsiasi regola direttamente dalla dashboard:
 1. Trova la regola ingress che desideri modificare nella dashboard principale.

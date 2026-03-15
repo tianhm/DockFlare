@@ -1,58 +1,57 @@
-# Persistenter Status
+# Persistänte Status
 
-DockFlare isch eine zustandsbehaftete Anwendung. Du muesch die verwalteten Dienste, UI-Overrides u weitere Konfigurationsdetails nachverfolgen. Dieser Zustand wird auf der Festplatte gespeichert, damit dini Konfiguration beim Neustart oder bei einer Neuerstellung des DockFlare-Containers nid verloren geht.
+DockFlare isch e zustandsbehafteti Aawändig. Verwalteti Dienscht, UI-Overrides u angeri Konfigurationsdate müesse irgendwone persistiert wärde, damit nach eme Neustart oder eme Container-Neubau nid aues verlore geit.
 
-## Wie der Status gespeichert wird
+## Wie DockFlare dr Status speicheret
 
-DockFlare speichert seinen Zustand in drei wichtigen Dateien im Verzeichnis `/app/data` innerhalb des Containers:
+DockFlare speicheret sini wichtige Date i `/app/data` im Container:
 
-1.  `dockflare_config.dat`: Das isch die wichtigste Datei. Si enthält alle zentralen Istellige u sensiblen Informationen in **verschlüsselter** Form. Dazu gehören:
-    *   din Cloudflare-API-Token u dini Account-ID
-    *   Der Passwort-Hash für die DockFlare-UI
-    *   Zentrale Istellige aus der UI, etwa Tunnelname u Zonen-IDs
+1. `dockflare_config.dat`: Di wichtigschti Datei. Da drin si d zentrale Istellige u sensible Date **verschlüsslet** gspeicheret:
+   * dis Cloudflare-API-Token u dini Account-ID
+   * dr Passwort-Hash vo dr DockFlare-UI
+   * Tunnel-Defaults, Zone-ID u angeri UI-Istellige
 
-2.  `agent_keys.dat`: Ein verschlüsselter Speicher mit allen Agent-API-Schlüsseln u den dazugehörigen Metadaten (Besitzer, Status, Zeitstempel). Wenn diese Datei sicher aufbewahrt wird, chöi veraltete Schlüssel nid erneut verwendet wärde.
+2. `agent_keys.dat`: Es verschlüsselts Register mit aune Agent-API-Schlüssle u Metadate wie Besitzer, Status u Zytstämple.
 
-3.  `state.json`: Diese Datei speichert den dynamischen Status dinere verwalteten Dienste im JSON-Klartextformat. Dazu gehören:
-    *   Alle von DockFlare verwalteten Ingress-Regeln, unabhängig davon, öb sie aus Docker-Labels stammen oder manuell in der UI erstellt wurden
-    *   Alle UI-Overrides für Access Policies
-    *   Sämtliche von dir angelegten Access Groups
-    *   Der Status `pending deletion` für Dienste, die gestoppt wurden, sich aber noch innerhalb ihrer Grace Period befinden
+3. `state.json`: Dr dynamischi Laufzitstatus im JSON-Klartext. Da drin si zum Bispil:
+   * verwalteti Ingress-Regle
+   * UI-Overrides für Access Policies
+   * aagleiti Access Groups
+   * `pending deletion`-Status für temporär gstoppeti Dienscht
 
-## Die Bedeutung eines persistenten Volumes
+## Warum es es persistents Volume bruucht
 
-Da dini gesamte Konfiguration im Verzeichnis `/app/data` gespeichert wird, isch es **absolut entscheidend**, dass du dieses Verzeichnis auf ein persistentes Volume auf dim Host-Rechner mappen.
+Wiu dini ganz Konfiguration i `/app/data` ligt, isch es **absolut entscheidend**, dass das Verzeichnis uf es persistents Volume oder e persistente Bind-Mount geit.
 
-Wänn du kei persistents Volume bruuchsch, **geit dr jedes Mal alles verlore (Istellige, UI-Passwörter u Regelkonfiguratione)**, sobald dr DockFlare-Container entfernt u neu erstellt wird (z.B. biim Aktualisiere vom Image).
+Ohni persistänts Volume geit der bi jedem Neu-Erstelle vom Container praktisch aues verlore: Istellige, UI-Login, Regle u Access-Konfiguration.
 
-### Empfohlene Docker-Compose-Konfiguration
+### Empfohlni Docker-Compose-Konfiguration
 
-Die empfohlene `docker-compose.yml`-Konfiguration erledigt dies für di automatisch, indem sie ein benanntes Volume definiert u es nach `/app/data` mountet:
+E tüüpi Konfiguration luegt so uus:
 
 ```yaml
 services:
   dockflare:
-    # ... other settings
+    # ... angeri Istellige
     volumes:
-      # This line ensures your data is persisted
       - ./dockflare_data:/app/data
 
 volumes:
-  # This defines the named volume on your host
   dockflare_data:
 ```
 
-Mit dieser Konfiguration wärde dini Dateien `dockflare_config.dat`, `agent_keys.dat` u `state.json` in einem Verzeichnis namens `dockflare_data` auf dim Host gespeichert, sodass din Setup über Container-Updates hinweg sicher erhalten bleibt.
+Mit so nere Konfiguration blybe `dockflare_config.dat`, `agent_keys.dat` u `state.json` bi Updates u Neustarts erhalte.
 
-## Backup u Wiederherstellung
+## Backup u Wiederherstellig
 
-DockFlare bündelt nun alle kritischen Daten in ein einzelnes verschlüsseltes Backup-Archiv. Redis-Caches wärde dabei ausgelassen, da sie sicher im privaten Netzwerk `dockflare-internal` neu aufgebaut wärde chöi. Das Panel **Istellige → Backup & Wiederherstellung** ermöglicht dir den Download einer `.zip`-Datei, die enthält:
+DockFlare bündlet aui kritische Date i nes einzelts Backup-Archiv. Redis-Caches si nid debi, wiu si bi Bedarf wieder neu ufbout wärde chöi. Under **Istellige -> Backup & Wiederherstellig** chasch e `.zip` abelade mit:
 
 * `dockflare_config.dat`
 * `dockflare.key`
 * `agent_keys.dat`
 * `state.json` (falls vorhanden)
-* Ein Manifest mit Prüfsummen zur Integritätsverifizierung
+* em Manifest mit Prüefsummene
 
-Beim Wiederherstellen des Archivs wärde diese Dateien neu erstellt u in die laufende Instanz geladen. Ältere Uploads einer reinen `state.json` wärde weiterhin akzeptiert, stellen aber nur Regel-Metadaten wieder her. Zugangsdaten müesse danach manuell neu eingegeben wärde.
-Nach einer vollständigen Archiv-Wiederherstellung startet DockFlare den Container automatisch neu, damit die verschlüsselte Konfiguration sofort geladen wird.
+Bi dr Wiederherstellig wärde die Date zrügggschribe u i d laufendi Instanz glade. E alti, einzelni `state.json` cha no importiert wärde, stellt aber nume Regel-Metadate wieder här; Zugangsdaten muesch nachhär neu iihgäh.
+
+Nach ere vollständige Wiederherstellig startet DockFlare dr Container automatisch neu, damit d verschlüssleti Konfiguration grad wieder aktiv isch.

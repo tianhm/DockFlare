@@ -42,7 +42,7 @@
                         <div class="form-control mb-3">
                             {% if form %}
                                 {{ form.username.label(class="label hidden") }}
-                                {{ form.username(class="input input-bordered w-full", placeholder="{{ t('login.username_placeholder') }}") }}
+                                {{ form.username(class="input input-bordered w-full", placeholder=t('login.username_placeholder')) }}
                             {% else %}
                                 <input type="text" name="username" class="input input-bordered w-full" placeholder="{{ t('login.username_placeholder') }}" required>
                             {% endif %}
@@ -51,7 +51,7 @@
                         <div class="form-control mb-4">
                             {% if form %}
                                 {{ form.password.label(class="label hidden") }}
-                                {{ form.password(class="input input-bordered w-full", placeholder="{{ t('login.password_placeholder') }}") }}
+                                {{ form.password(class="input input-bordered w-full", placeholder=t('login.password_placeholder')) }}
                             {% else %}
                                 <input type="password" name="password" class="input input-bordered w-full" placeholder="{{ t('login.password_placeholder') }}" required>
                             {% endif %}
@@ -59,7 +59,7 @@
 
                         <div class="form-control">
                             {% if form %}
-                                {{ form.submit(class="btn btn-primary w-full") }}
+                                <button type="submit" name="submit" class="btn btn-primary w-full">{{ t('login.submit') }}</button>
                             {% else %}
                                 <input type="submit" value="{{ t('login.submit') }}" class="btn btn-primary w-full">
                             {% endif %}
@@ -106,7 +106,7 @@
                 <div class="form-control mb-3">
                     {% if form %}
                         {{ form.username.label(class="label hidden") }}
-                        {{ form.username(class="input input-bordered w-full", placeholder="{{ t('login.username_placeholder') }}") }}
+                        {{ form.username(class="input input-bordered w-full", placeholder=t('login.username_placeholder')) }}
                     {% else %}
                         <input type="text" name="username" class="input input-bordered w-full" placeholder="{{ t('login.username_placeholder') }}" required>
                     {% endif %}
@@ -114,14 +114,14 @@
                 <div class="form-control mb-4">
                     {% if form %}
                         {{ form.password.label(class="label hidden") }}
-                        {{ form.password(class="input input-bordered w-full", placeholder="{{ t('login.password_placeholder') }}") }}
+                        {{ form.password(class="input input-bordered w-full", placeholder=t('login.password_placeholder')) }}
                     {% else %}
                         <input type="password" name="password" class="input input-bordered w-full" placeholder="{{ t('login.password_placeholder') }}" required>
                     {% endif %}
                 </div>
                 <div class="form-control">
                     {% if form %}
-                        {{ form.submit(class="btn btn-primary w-full") }}
+                        <button type="submit" name="submit" class="btn btn-primary w-full">{{ t('login.submit') }}</button>
                     {% else %}
                         <input type="submit" value="{{ t('login.submit') }}" class="btn btn-primary w-full">
                     {% endif %}

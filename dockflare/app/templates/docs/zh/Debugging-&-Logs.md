@@ -23,7 +23,7 @@ docker logs dockflare
 docker logs -f dockflare
 ```
 
-## 2. 使用 Web UI 实时日志
+## 2. 使用网页管理界面的实时日志
 
 为了方便起见，DockFlare 仪表板在主页底部包含一个**实时日志查看器**。
 

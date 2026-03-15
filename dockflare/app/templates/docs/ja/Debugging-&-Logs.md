@@ -23,7 +23,7 @@ docker logs dockflare
 docker logs -f dockflare
 ```
 
-## 2. Web UI のリアルタイムログを使う
+## 2. 管理画面のリアルタイムログを使う
 
 DockFlare ダッシュボードのメインページ下部には、**リアルタイムログビューア** が用意されています。
 
@@ -55,5 +55,5 @@ docker logs cloudflared-agent-dockflare-tunnel
 
 最後に、Cloudflare ダッシュボード自体も重要なデバッグ手段です。
 * **DNS ページ:** CNAME レコードが想定どおりに作成されているか確認します。
-* **Zero Trust Dashboard:** **Access -> Tunnels** でトンネルの状態と ingress ルールを確認します。
+* **Zero Trust Dashboard:** **Access -> Tunnels** でトンネルの状態と入口ルールを確認します。
 * **Zero Trust Dashboard:** **Access -> Applications** で Zero Trust ポリシーの設定や状態を確認します。ポリシーの "Last Seen" は有用な手がかりになることがあります。

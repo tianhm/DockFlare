@@ -1,24 +1,24 @@
-# Verwaltung von DNS-Zonen
+# DNS-Zone verwalte
 
-DockFlare isch in der Lage, DNS-Einträge über mehrere Domains (Cloudflare Zones) innerhalb desselben Cloudflare-Kontos hinweg zu verwalten. Das ermöglicht es dir, Dienste sowohl auf `service-a.domain-one.com` als auch auf `service-b.another-domain.org` von derselben DockFlare-Instanz aus zu betreiben.
+DockFlare cha DNS-Iiträg über mehri Domains, also mehri Cloudflare-Zone im gliiche Account, verwalte. So chasch du Dienscht uf `service-a.domain-one.com` u `service-b.another-domain.org` mit dr glyche DockFlare-Instanz fahre.
 
 ## Standard-Zone
 
-Bim erschte Iirichte vo DockFlare gisch du e **Zone ID** aa. Das isch d'**Standard-Zone**, i der DockFlare alli DNS-Iiträg erstellt. Wänn du nume e einzelni Domain bruuche wotsch, längt das völlig.
+Bi dr erschte Iirichtig gisch du e **Zone ID** aa. Das isch d **Standard-Zone**, wo DockFlare standardmässig alli DNS-Iiträg drin aaleit. Wänn du nume e einzigi Domain hesch, längt das völlig.
 
-## Die Zone mit einem Label überschreiben
+## D Zone pro Dienst überschrybe
 
-Um einen Dienst in einer anderen Domäne als in der konfigurierten Standard-Zone zu verwalten, chasch das Label `dockflare.zonename` bruuche.
+Wänn e Dienst i nere andere Domain söll aagleit wärde als i dr Standard-Zone, chasch s Label `dockflare.zonename` bruuche.
 
-Das Label weist DockFlare an, den DNS-Eintrag für diesen bestimmten Dienst explizit in der von dir benannten Cloudflare-Zone anzulegen.
+Mit däm Label seitsch DockFlare explizit, i wellere Zone dr DNS-Iitrag für genau dä Dienst söll erstellt wärde.
 
-### Voraussetzige
+### Was wichtig isch
 
-Damit dies funktioniert, muesch garantieren, dass das **Cloudflare API-Token**, welches du bruuche, über die Berechtigung `Zone:DNS:Edit` für **alle** von dir beabsichtigten Zonen verfügt.
+Damit das funktioniert, mues dis **Cloudflare API-Token** für **alli** Zone, wo du wotsch bruuche, d Berechtigung `Zone:DNS:Edit` ha.
 
-### Beispiel
+### Bispil
 
-Näh mer aa, dini Standard-Zone isch `example.com`, aber du wotsch nun einen neuen Dienst auf `media.io` bereitstelle.
+Näh mer aa, dini Standard-Zone isch `example.com`, aber du wotsch e neue Dienst uf `media.io` veröffentliche.
 
 ```yaml
 services:
@@ -41,21 +41,21 @@ services:
       - "dockflare.zonename=media.io"
 ```
 
-Wänn du dies ausrollen (deployen), geschieht durch DockFlare folgendes:
-1.  Ein CNAME-Eintrag für `nginx.example.com` in der `example.com` Zone wird erstellt.
-2.  Ein CNAME-Eintrag für `portainer.media.io` in der `media.io` Zone wird erstellt.
+Wänn du das deploysch, macht DockFlare Folgends:
+1. E CNAME-Iitrag für `nginx.example.com` i dr Zone `example.com`
+2. E CNAME-Iitrag für `portainer.media.io` i dr Zone `media.io`
 
-Beide Hostnamen wärde als Ingress-Route an denselben Cloudflare Tunnel gereiht.
+Beidi Hostname wärde als Ingress-Regle am glyche Cloudflare-Tunnel zuegordnet.
 
-## Ansicht dinere DNS-Iiträg i dr Web UI
+## DNS-Iiträg i dr Web UI aluege
 
-Auf der **Settings**-Seite zeigt DockFlare alle Cloudflare Tunnels in dim Account sowie die zugehörigen CNAME-DNS-Einträge, die auf diese Tunnels verweisen.
+Uf dr **Settings**-Syte zeigt DockFlare alli Cloudflare-Tunnel i dim Account mitsamt de CNAME-Iiträg, wo druf verwise.
 
-Wänn du zusätzlich zur Standard-Zone auch weitere Zonen in dieser Ansicht berücksichtigen wotsch, setz die Umgebungsvariable `TUNNEL_DNS_SCAN_ZONE_NAMES`.
+Wänn i däre Aazeig zusätzlich no meh Zone söue usgläse wärde, setz d Umgebigsvariable `TUNNEL_DNS_SCAN_ZONE_NAMES`.
 
 ### `TUNNEL_DNS_SCAN_ZONE_NAMES`
 
-Diese Umgebungsvariable erwartet eine kommagetrennte Liste der Zonennamen, die die UI zusätzlich zur Standard-Zone nach Tunnel-DNS-Records durchsuchen soll.
+Die Variable erwartet e kommagtrennti Liste vo Zonename, wo d UI zusätzlich zur Standard-Zone nach Tunnel-DNS-Iiträg söll dürchsueche.
 
 **Beispiel `docker-compose.yml`:**
 ```yaml
@@ -68,4 +68,4 @@ services:
       - TUNNEL_DNS_SCAN_ZONE_NAMES=media.io,another-domain.org
 ```
 
-So hesch du i dr Tunnel-Übersicht e vollständigi Liste vo allne relevante DNS-Iiträg über alli agäh Zonen.
+So hesch du i dr Tunnel-Übersicht e vollständigere Sicht uf alli relevante DNS-Iiträg über mehri Zone.

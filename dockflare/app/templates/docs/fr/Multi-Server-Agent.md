@@ -8,8 +8,8 @@ Ce guide explique l'architecture, le modèle de sécurité et le flux de travail
 
 ## Pourquoi utiliser des agents ?
 
-* **Dissocier le calcul de l'ingress** : gardez les charges de travail proches des utilisateurs tout en conservant un plan de contrôle unique.
-* **Visibilité par hôte** : surveillez le heartbeat, l'état du tunnel et l'historique des commandes pour chaque agent.
+* **Séparer l'exécution de la couche d'ingress** : gardez les charges de travail proches des utilisateurs tout en conservant un plan de contrôle unique.
+* **Visibilité par hôte** : surveillez le heartbeat, l'état du tunnel et l'historique des commandes de chaque agent.
 * **Jetons de moindre privilège** : révoquez un agent compromis sans toucher au Master ni aux autres hôtes.
 * **Mises à jour résilientes** : les agents continuent de servir le trafic avec leur dernière configuration connue si le Master est temporairement indisponible.
 
@@ -19,8 +19,8 @@ Ce guide explique l'architecture, le modèle de sécurité et le flux de travail
 
 | Composant | Responsabilité |
 |-----------|----------------|
-| **Master (DockFlare)** | Héberge la Web UI, stocke l'état, aligne les règles d'ingress souhaitées et émet des commandes. |
-| **Redis** | Backplane pour le cache, les heartbeats des agents et les commandes en file d'attente. |
+| **Master (DockFlare)** | Héberge l'interface web, stocke l'état, aligne les règles d'ingress souhaitées et émet des commandes. |
+| **Redis** | Couche partagée pour le cache, les heartbeats des agents et les commandes en file d'attente. |
 | **DockFlare Agent** | Conteneur sans interface qui surveille les événements Docker locaux, exécute des commandes et gère `cloudflared`. |
 | **cloudflared** | Gère la connexion réelle du tunnel vers Cloudflare pour chaque agent. |
 
@@ -42,8 +42,8 @@ Le Master et Redis s'exécutent généralement ensemble, tandis que les agents s
 1. **Générez une clé API d'agent** dans l'interface DockFlare (`Agents → Generate Key`).
 2. **Déployez le conteneur DockFlare Agent** sur l'hôte distant en lui fournissant l'URL du Master et la clé.
 3. L'agent **s'enregistre** auprès du Master et apparaît avec l'état *Pending*.
-4. Depuis l'interface du Master, **inscrivez** l'agent et attribuez-lui, ou créez, un tunnel Cloudflare pour cet hôte.
-5. Le Master met les commandes en file d'attente ; l'agent **interroge**, applique la configuration et remonte son état ainsi que son heartbeat. DockFlare détecte automatiquement la zone cible pour chaque nom d'hôte et ne revient à la zone par défaut qu'en cas d'échec de la détection.
+4. Depuis l'interface du Master, **approuvez** l'agent et attribuez-lui, ou créez, un tunnel Cloudflare pour cet hôte.
+5. Le Master met les commandes en file d'attente ; l'agent les récupère régulièrement, applique la configuration et remonte son état ainsi que son heartbeat. DockFlare détecte automatiquement la zone cible pour chaque nom d'hôte et ne revient à la zone par défaut qu'en cas d'échec de la détection.
 6. Lorsque des conteneurs démarrent ou s'arrêtent sur l'hôte de l'agent, celui-ci renvoie les événements vers le Master, qui met à jour le DNS, les politiques Access et les règles d'ingress du tunnel.
 
 ---
@@ -134,7 +134,7 @@ networks:
 ### Renforcement recommandé
 
 1. Stockez les clés des agents dans un coffre-fort ou un gestionnaire de mots de passe et faites-les tourner régulièrement.
-2. **Ne désactivez pas la connexion par mot de passe**. Utilisez plutôt des fournisseurs OAuth/OIDC pour bénéficier du single sign-on sans compromettre la sécurité. Si vous devez la désactiver, comprenez bien que cela crée une vulnérabilité réseau Docker : n'importe quel conteneur sur le même réseau peut contourner l'authentification externe. Consultez [Accès à la Web UI](Accessing-the-Web-UI.md) pour connaître toutes les implications de sécurité.
+2. **Ne désactivez pas la connexion par mot de passe**. Utilisez plutôt des fournisseurs OAuth/OIDC pour bénéficier du single sign-on sans compromettre la sécurité. Si vous devez la désactiver, gardez à l'esprit que cela crée une vulnérabilité réseau Docker : n'importe quel conteneur sur le même réseau peut contourner l'authentification externe. Consultez [Accès à l'interface web](Accessing-the-Web-UI.md) pour connaître toutes les implications de sécurité.
 3. Utilisez des tunnels séparés par agent afin de conserver une isolation de moindre privilège.
 4. Surveillez la page `Agents` pour détecter les trous dans le heartbeat ; les nœuds hors ligne peuvent être supprimés directement depuis l'interface.
 
@@ -144,7 +144,7 @@ networks:
 
 | Symptôme | Correctif |
 |---------|-----|
-| Agent bloqué dans `pending` | Assurez-vous qu'il s'est enregistré avec la bonne clé API puis inscrivez-le depuis l'interface. |
+| Agent bloqué dans `pending` | Assurez-vous qu'il s'est enregistré avec la bonne clé API puis approuvez-le depuis l'interface. |
 | Les commandes ne disparaissent jamais | Vérifiez la connectivité Redis et la synchronisation des horloges des conteneurs d'agents. |
 | Le DNS ne se met pas à jour | Le Master doit pouvoir joindre Cloudflare et l'agent doit envoyer les événements de conteneurs ; vérifiez `docker logs dockflare-agent`. |
 | Heartbeat hors ligne | Vérifiez le chemin réseau entre l'agent et le Master ; les problèmes de pare-feu ou de TLS sont fréquents. |
@@ -153,8 +153,8 @@ networks:
 
 ## Étapes suivantes
 
-* Consultez le Quick Start mis à jour dans le README du dépôt afin de confirmer que Redis est configuré.
-* Consultez le changelog pour voir les changements incompatibles et les notes de migration.
+* Consultez le guide de démarrage rapide mis à jour dans le README du dépôt afin de confirmer que Redis est configuré.
+* Consultez le journal des modifications pour voir les changements incompatibles et les notes de migration.
 * Abonnez-vous au dépôt public DockFlare Agent lorsqu'il sera publié afin de rester à jour sur les versions.
 
-Bon tunneling ! 🚇
+Bonne gestion des tunnels.

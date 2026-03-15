@@ -1,6 +1,6 @@
 # 身份提供商
 
-> **📌 重要提示：** 本指南用于配置 **Cloudflare 访问策略中的身份提供商**，以保护您的服务和应用程序。如果您想为 **DockFlare Web UI 登录** 配置 OAuth/OIDC，请参阅 [OAuth 提供程序设置](OAuth-Provider-Setup.md)。
+> **📌 重要提示：** 本指南用于配置 **Cloudflare 访问策略中的身份提供商**，以保护您的服务和应用程序。如果您想为 **DockFlare 网页管理界面登录** 配置 OAuth/OIDC，请参阅 [OAuth 提供程序设置](OAuth-Provider-Setup.md)。
 
 身份提供商（IdP）可为受 Cloudflare Zero Trust 保护的应用启用 OAuth/OIDC 身份验证。DockFlare 让您能够更轻松地管理 IdP，并将其集成到访问策略中。
 

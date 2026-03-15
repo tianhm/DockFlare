@@ -1,8 +1,8 @@
 ## Konfiguracja dostawcy OAuth
 
-> **📌 Ważne:** Ten przewodnik dotyczy konfiguracji **uwierzytelniania Web UI DockFlare** (logowania do samego DockFlare). Jeśli chcesz skonfigurować OAuth/OIDC dla **zasad dostępu Cloudflare** w celu ochrony swoich usług, zobacz [Dostawcy tożsamości](Identity-Providers.md).
+> **📌 Ważne:** Ten przewodnik dotyczy konfiguracji **uwierzytelniania panelu administracyjnego DockFlare** (czyli logowania do samego DockFlare). Jeśli chcesz skonfigurować OAuth/OIDC dla **zasad dostępu Cloudflare** w celu ochrony swoich usług, zobacz [Dostawcy tożsamości](Identity-Providers.md).
 
-DockFlare pozwala przekazać uwierzytelnianie użytkowników zewnętrznym dostawcom przy użyciu standardu OpenID Connect (OIDC). Dzięki temu możesz włączyć jednokrotne logowanie (SSO) do Web UI DockFlare i zintegrować się z dostawcami tożsamości takimi jak Google, Authentik, Okta i inni.
+DockFlare pozwala przekazać uwierzytelnianie użytkowników zewnętrznym dostawcom przy użyciu standardu OpenID Connect (OIDC). Dzięki temu możesz włączyć jednokrotne logowanie (SSO) do panelu administracyjnego DockFlare i zintegrować się z dostawcami tożsamości, takimi jak Google, Authentik czy Okta.
 
 ### Dodawanie nowego dostawcy
 
@@ -99,5 +99,5 @@ services:
 
 1. **Dokładne dopasowanie ścieżki**: ścieżka callbacku musi dokładnie odpowiadać temu, czego oczekuje dostawca OAuth.
 2. **Wielu dostawców**: dodaj osobną indeksowaną regułę dla każdego skonfigurowanego dostawcy OAuth.
-3. **Bez wildcardów**: ze względów bezpieczeństwa unikaj ścieżek z wildcardami; używaj konkretnych adresów URL callbacków.
+3. **Bez symboli wieloznacznych**: ze względów bezpieczeństwa unikaj ścieżek z wildcardami i używaj konkretnych adresów URL callbacków.
 4. **Testy**: po konfiguracji sprawdź zarówno chroniony dostęp do głównego interfejsu, jak i przepływy logowania OAuth.

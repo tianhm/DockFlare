@@ -16,7 +16,7 @@ Una caratteristica fondamentale delle etichette indicizzate è il meccanismo di 
 
 Ciò consente di definire le impostazioni comuni una volta al livello di base e di sovrascrivere solo i valori specifici che devono essere modificati per ciascuna regola indicizzata.
 
-## Esempio: esposizione di una Web UI e di un'API
+## Esempio: esposizione dell'interfaccia web e di un'API
 
 Supponiamo che tu abbia un singolo container che serve sia un'applicazione web sulla porta `80` sia un'API separata sulla porta `3000`. Vuoi esporli rispettivamente su `app.example.com` e `api.example.com`. Vuoi anche proteggere l'API con un gruppo di accesso specifico, mentre l'app principale rimane pubblica.
 
@@ -36,7 +36,7 @@ services:
       # This service is used by rule 0, as it's not specified there.
       - "dockflare.service=http://my-app:80" 
 
-      # --- Rule 0: The Web UI ---
+      # --- Rule 0: interfaccia web ---
       - "dockflare.0.hostname=app.example.com"
       # No 'service' label here, so it falls back to the base one.
       # No 'access.group' label, so it's public.

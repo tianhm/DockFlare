@@ -21,7 +21,7 @@
 <form method="POST" action="{{ url_for('setup.step4_finalize') }}">
     {{ form.hidden_tag() }}
     <div class="card-actions">
-        {{ form.submit(class="btn btn-primary w-full") }}
+        <button type="submit" name="submit" class="btn btn-primary w-full">{{ t('form.setup.complete_setup') }}</button>
         <a href="{{ url_for('setup.step3_tunnel_config') }}" class="btn btn-ghost w-full">{{ t('setup.step4.back') }}</a>
     </div>
 </form>

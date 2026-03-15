@@ -103,7 +103,7 @@ docker compose up -d
 サービスの実行後、ブラウザを開いて `http://<your-server-ip>:5000` を表示します。
 
 **Pre-Flight Setup Wizard** では、次の手順を実行できます。
-1. Web UI のパスワードを作成します。
+1. 管理画面のパスワードを作成します。
 2. Cloudflare 認証情報 (アカウント ID、ゾーン ID、API トークン) を入力します。
 3. 初期の Cloudflare Tunnel を構成します。
 4. *(オプション)* DockFlare バックアップ アーカイブからの復元。すでに `dockflare_backup_*.zip` がある場合は、ステップ 1 の前に **バックアップから復元** を選択してください。ウィザードは構成をインポートし、コンテナを自動的に再起動します。

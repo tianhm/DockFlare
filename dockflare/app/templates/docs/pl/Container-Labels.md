@@ -66,7 +66,7 @@ Etykieta `dockflare.access.policy=default_tld` nadal działa i będzie dziedzicz
 
 | Etykieta | Opis | Przykład |
 | :--- | :--- | :--- |
-| `dockflare.access.group` | Identyfikator pojedynczej, wstępnie skonfigurowanej grupy dostępu, która ma zostać zastosowana do tej usługi. Identyfikator można znaleźć na stronie „Zasady dostępu” w Web UI DockFlare. | `dockflare.access.group=internal-tools-policy` |
+| `dockflare.access.group` | Identyfikator pojedynczej, wcześniej skonfigurowanej grupy dostępu, która ma zostać zastosowana do tej usługi. Identyfikator znajdziesz na stronie „Zasady dostępu” w panelu DockFlare. | `dockflare.access.group=internal-tools-policy` |
 | `dockflare.access.groups` | Rozdzielana przecinkami lista identyfikatorów grup dostępu do zastosowania. Umożliwia to nałożenie wielu zasad na jedną usługę. | `dockflare.access.groups=allow-team-a,allow-admins` |
 | `dockflare.access.policy` | Podstawowy typ zasad. Może mieć wartość `bypass` (publiczny), `authenticate` (wymaga logowania) lub `default_tld` (dziedziczy z zasady `*.domain.com`). Jeśli nieskonfigurowana, usługa będzie publiczna. Preferuj grupy dostępu dla polityk wielokrotnego użytku; te etykiety służą do specjalistycznych zastąpień. | `dockflare.access.policy=authenticate` |
 | `dockflare.access.name` | Niestandardowa nazwa aplikacji dostępowej Cloudflare. Wartość domyślna to `DockFlare-{hostname}`. | `dockflare.access.name=My Web App Access` |
@@ -91,7 +91,7 @@ Aby użyć etykiet indeksowanych, poprzedź etykietę liczbą całkowitą, zaczy
 ### Przykład
 
 Ten przykład przedstawia dwie nazwy hostów z jednego kontenera:
-1. `app.example.com` kieruje do głównego Web UI na porcie `80`.
+1. `app.example.com` kieruje do głównego interfejsu WWW na porcie `80`.
 2. `api.example.com` kieruje do API na porcie `3000` i jest zabezpieczony określoną grupą dostępu.
 
 ```yaml

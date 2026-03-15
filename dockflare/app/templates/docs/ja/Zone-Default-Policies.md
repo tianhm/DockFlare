@@ -221,7 +221,7 @@ services:
 ## 関連ドキュメント
 
 - [アクセス ポリシーのベスト プラクティス](Access-Policy-Best-Practices.md)
-- [Web UI の使用](Using-the-Web-UI.md)
+- [管理画面の使い方](Using-the-Web-UI.md)
 - [コンテナラベル](Container-Labels.md)
 - [DockFlareの仕組み](How-DockFlare-Works.md)
 - [セキュリティアーキテクチャ](Security-Architecture.md)

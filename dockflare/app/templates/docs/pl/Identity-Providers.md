@@ -1,6 +1,6 @@
 # Dostawcy tożsamości
 
-> **📌 Ważne:** Ten przewodnik dotyczy konfigurowania **dostawców tożsamości dla zasad dostępu Cloudflare**, aby chronić Twoje usługi i aplikacje. Jeśli chcesz skonfigurować OAuth/OIDC dla **logowania do Web UI DockFlare**, zobacz [Konfiguracja dostawcy OAuth](OAuth-Provider-Setup.md).
+> **📌 Ważne:** Ten przewodnik dotyczy konfigurowania **dostawców tożsamości dla zasad dostępu Cloudflare**, aby chronić Twoje usługi i aplikacje. Jeśli chcesz skonfigurować OAuth/OIDC dla **logowania do panelu administracyjnego DockFlare**, zobacz [Konfiguracja dostawcy OAuth](OAuth-Provider-Setup.md).
 
 Dostawcy tożsamości (IdP) umożliwiają uwierzytelnianie OAuth/OIDC w aplikacjach chronionych przez Cloudflare Zero Trust. DockFlare ułatwia zarządzanie IdP i ich integrowanie z zasadami dostępu.
 

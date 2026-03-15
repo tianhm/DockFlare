@@ -1,10 +1,10 @@
-# Externer `cloudflared`-Modus
+# Externe `cloudflared`-Modus
 
-DockFlare bietet einen erweiterten "Externen `cloudflared`-Modus" für Benutzer, die den `cloudflared`-Agenten selbst verwalten wotsch.
+DockFlare unterstützt o dr **Externe `cloudflared`-Modus**. Dä isch für Lüt gmacht, wo `cloudflared` nid vo DockFlare verwalte lah wöi, sondern sälber deploye u betreibe.
 
-Das Thema wird ausführlich auf der Seite **[Interner vs. Externer `cloudflared`](Internal-vs-External-cloudflared.md)** behandelt.
+D ganzi Erklärung findsch uf dr Syte **[Interner vs. Externer `cloudflared`](Internal-vs-External-cloudflared.md)**.
 
-Bitte läs auf dieser Seite die vollständige Erklärung zu:
-*   Dem Unterschied zwischen dem internen u externen Modus.
-*   Den Vor- u Nachteilen jedes Ansatzes.
-*   Der Konfiguration von DockFlare zur Nutzung eines externen `cloudflared`-Agenten.
+Dort gsehsch:
+* was dr Unterschied zwüsche internem u externem Modus isch
+* weli Vor- u Nachteile jede Variante het
+* wie du DockFlare für en extern verwaltete `cloudflared`-Agent iirichtsch

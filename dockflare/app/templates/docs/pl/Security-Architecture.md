@@ -6,7 +6,7 @@ Ten dokument wyjaśnia, w jaki sposób DockFlare chroni zarówno węzeł Master,
 
 - **Master jako źródło prawdy** – DockFlare Master przechowuje wszystkie poświadczenia Cloudflare oraz definicje zasad. Agenci nigdy nie zarządzają tokenami API samodzielnie; wykonują wyłącznie instrukcje otrzymane przez uwierzytelniony kanał.
 - **Klucze API dla każdego agenta** – Rejestracja wymaga unikalnego klucza API wydanego przez Mastera. Klucze są przechowywane w zaszyfrowanym magazynie `agent_keys.dat` wraz z metadanymi, takimi jak właściciel, znaczniki czasu i status, dzięki czemu można je rotować lub unieważniać w dowolnym momencie.
-- **Ochrona API Mastera** – Endpointy administracyjne, w tym Web UI i `/api/v2/*`, wymagają ważnej sesji albo klucza API Mastera. Tokeny są maskowane w odpowiedziach i logach, a ich rotacja nie wymaga restartu stacka.
+- **Ochrona API Mastera** – Endpointy administracyjne, w tym panel administracyjny i `/api/v2/*`, wymagają ważnej sesji albo klucza API Mastera. Tokeny są maskowane w odpowiedziach i logach, a ich rotacja nie wymaga restartu stacka.
 
 ## 2. Szyfrowana konfiguracja i zarządzanie kluczami
 
@@ -32,7 +32,7 @@ Ten dokument wyjaśnia, w jaki sposób DockFlare chroni zarówno węzeł Master,
 
 - **Wzmocnione logowanie do UI** – Asystent konfiguracji początkowej wymusza utworzenie konta administratora UI. Logowanie hasłem można wyłączyć, ale **jest to zdecydowanie odradzane** ze względu na konsekwencje bezpieczeństwa w sieci Docker.
 - **Zarządzanie sesją** – Sesje Flask-Login są powiązane z szyfrowaną konfiguracją. Przywrócenie kopii zapasowej lub rotacja poświadczeń automatycznie unieważnia istniejące sesje.
-- **Listy ACL agentów** – Każdy rekord agenta śledzi przypisanie tunelu, znaczniki czasu heartbeatów i oczekujące polecenia. Master przekazuje polecenia tylko agentom przedstawiającym poprawny token i prawidłowy status rejestracji.
+- **Listy ACL agentów** – Każdy rekord agenta śledzi przypisanie tunelu, znaczniki czasu heartbeat i oczekujące polecenia. Master przekazuje polecenia tylko agentom przedstawiającym poprawny token i prawidłowy status rejestracji.
 
 ### ⚠️ Ważne: ostrzeżenie bezpieczeństwa dotyczące „Disable Password Login”
 
@@ -74,7 +74,7 @@ Obie opcje zapewniają prawidłowe uwierzytelnienie i jednocześnie zachowują w
 | Kopie zapasowe | Regularnie pobieraj `.zip` i przechowuj go razem z `dockflare.key`. Do odszyfrowania konfiguracji podczas przywracania potrzebne są oba pliki. |
 | Agenci | Traktuj klucze API jak poufne poświadczenia. Wdrażaj agentów z socket proxy, tak aby widoczne były tylko wymagane endpointy Dockera, i pamiętaj, że kontener działa jako nieuprzywilejowany użytkownik `dockflare` (UID/GID 65532); dopasuj uprawnienia hosta lub przebuduj obraz z odpowiednim `DOCKFLARE_UID/DOCKFLARE_GID`. |
 | Reverse proxy | Umieść DockFlare za Cloudflare Access lub innym zaufanym IdP. Jeśli wyłączysz logowanie hasłem, upewnij się, że uwierzytelnianie upstream jest zawsze wymuszane. |
-| Monitoring | Generuj alerty przy nieoczekiwanych restartach, brakujących heartbeatach agentów lub wystawieniu nowych kluczy poza planowanymi oknami serwisowymi. |
+| Monitoring | Generuj alerty przy nieoczekiwanych restartach, brakujących sygnałach heartbeat agentów lub wystawieniu nowych kluczy poza planowanymi oknami serwisowymi. |
 
 ## 8. Przyszłe ulepszenia (roadmapa)
 

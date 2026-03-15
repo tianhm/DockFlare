@@ -1,6 +1,6 @@
 # Provider di identità
 
-> **📌 Importante:** questa guida serve per configurare i **provider di identità per le policy di accesso Cloudflare** al fine di proteggere servizi e applicazioni. Se invece vuoi configurare OAuth/OIDC per **l'accesso alla Web UI di DockFlare**, consulta [Configurazione provider OAuth](OAuth-Provider-Setup.md).
+> **📌 Importante:** questa guida serve per configurare i **provider di identità per le policy di accesso Cloudflare** al fine di proteggere servizi e applicazioni. Se invece vuoi configurare OAuth/OIDC per **l'accesso all'interfaccia web di DockFlare**, consulta [Configurazione provider OAuth](OAuth-Provider-Setup.md).
 
 I provider di identità (IdP) abilitano l'autenticazione OAuth/OIDC per le applicazioni protette da Cloudflare Zero Trust. DockFlare semplifica la gestione degli IdP e la loro integrazione nelle policy di accesso.
 

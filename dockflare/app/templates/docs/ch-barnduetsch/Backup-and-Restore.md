@@ -1,44 +1,49 @@
-# Backup u Wiederherstellung
+# Backup u Wiederhärstellig
 
-DockFlare 3.0 führt ein vollständiges Backup-Archiv ein. Damit chasch einen Master auf neue Hardware umziehen, sich nach einem Ausfall erholen oder Upgrades vorbereiten, ohne das rohe Datenverzeichnis direkt anfassen zu müesse.
+DockFlare 3.0 het es vollständigs Backup-Archiv. Damit chasch e Master uf nöii Hardware umzügle, nach eme Usfall schnäll wieder härstelle oder es Upgrade vorbereite, ohni ds Dateiverzeichnis diräkt manuell aafasse z müesse.
 
-## Was gesichert wird
-- `dockflare.key` – Der Fernet-Schlüssel, mit dem sich jede verschlüsselte Datei entschlüsseln lässt.
-- `dockflare_config.dat` – Verschlüsselte Cloudflare-Anmeldedaten, UI-Konten u Laufzeiteinstellungen.
-- `agent_keys.dat` – Verschlüsselte Agent-API-Schlüssel u Audit-Metadaten.
-- `state.json` – Ein unverschlüsselter JSON-Spiegel dinere Regeln, Agenten u Access Groups.
-- `manifest.json` – Prüfsummen u Versionsinformationen für das Archiv (wird automatisch erzeugt).
+## Was wird gsicheret?
 
-Alle diese Dateien wärde in einer einzelnen `dockflare_backup_YYYYMMDD_HHMMSS.zip` gebündelt. Bhalt das ZIP-Archiv u die extrahierten Dateien zusammen auf. Ohne `dockflare.key` si die verschlüsselten Artefakte nid nutzbar.
+* `dockflare.key` – dr Fernet-Schlüssu, mit em sich aui verschlüsslete Dateie entschlüssle löh
+* `dockflare_config.dat` – verschlüssleti Cloudflare-Zuegangsdaten, UI-Konte u Laufzyt-Iistellige
+* `agent_keys.dat` – verschlüssleti Agent-API-Schlüssle u Audit-Metadate
+* `state.json` – e unverschlüsslete JSON-Spiegel vo dine Regle, Agente u Access Groups
+* `manifest.json` – Prüefsummene u Versions-Infos fürs Archiv (wird automatisch erzeugt)
 
-## Ein Backup erstellen
-1. Mach uf in der Master-UI **Settings → Backup & Restore**.
-2. Klick auf **Download Backup (.zip)**.
-3. Bhalt das Archiv an einem sicheren Ort auf. Behandle es wie sensible Zugangsdaten, denn es enthält alles, was für die Steuerung din Cloudflare-Kontos über DockFlare nötig isch.
+Aui die Dateie wärde i nere einzelne `dockflare_backup_YYYYMMDD_HHMMSS.zip` zämegfasst. Heb ds ZIP-Archiv u d extrahierte Dateie sicher uf. Ohni `dockflare.key` sy d verschlüsslete Artefakt nid bruuchbar.
 
-Backups chöi erstellt wärde, während der Master läuft. Jedes Archiv enthält ein Manifest mit SHA-256-Hashes, sodass sich beschädigte Downloads leicht erkennen lassen.
+## Es Backup erstelle
 
-## Wiederherstellung auf einem existierenden Master
+1. Gang i dr Master-UI uf **Settings → Backup & Restore**.
+2. Klick uf **Download Backup (.zip)**.
+3. Heb s Archiv a mene sichere Ort uf. Behandle's wie sensibli Zuegangsdaten, will es im Prinzip aues enthält, was du für d Steuerig vo dim Cloudflare-Konto über DockFlare bruchsch.
+
+Backups chöi erstellt wärde, während dr Master louft. Jedes Archiv enthält es Manifest mit SHA-256-Hashes, damit beschädigti Downloads eifach erkannt wärde.
+
+## Wiederhärstellig uf eme bestehende Master
+
 1. Gang zu **Settings → Backup & Restore**.
-2. Lad die `.zip`-Datei über **Restore from Backup** hoch.
-3. Bestätig die Warnung: Eine Wiederherstellung überschreibt die vorhandene Konfiguration, Agent-Schlüssel u Regeln.
+2. Lad d `.zip`-Datei über **Restore from Backup** uf.
+3. Bestätig d Warnig: E Wiederhärstellig überschrybt d vorhandeni Konfiguration, Agent-Schlüssle u Regle.
 
-DockFlare schreibt die verschlüsselten Dateien zrugg, lädt `state.json` neu u setzt falls nötig es Neustart-Flag. Dr Container beendet sich churz druf sälber, demit Docker ne mit dr neue Konfiguration neu startet. Nachhär isch d'Web UI wieder mit de wiederhergstelltete Aamäldedate verfügbar.
+DockFlare schrybt die verschlüsslete Dateie zrügg, lädt `state.json` neu u setzt falls nötig es Neustart-Flag. Dr Container beendet sech churz druf sälber, demit Docker ne mit dr neue Konfiguration neu startet. Nachhär isch d Web UI wieder mit de wiederhärgstelltete Aamäldedate verfügbar.
 
-Ältere `state.json`-Dateien aus früheren Versionen wärde für Teilwiederherstellungen weiterhin akzeptiert. Das Hochladen einer reinen JSON-Datei ersetzt nur Regeln u lässt die verschlüsselte Konfiguration unverändert.
+Älteri `state.json`-Dateie us früehnere Versione wärde für Teil-Wiederhärstellig wyterhi akzeptiert. Wänn du nume e JSON-Datei ufladsch, wärde nume Regle ersetzt; d verschlüssleti Konfiguration blybt unveränderet.
 
-## Wiederherstellung während des Einrichtungsassistenten
-Bei Neuinstallationen erscheint jetzt vor Schritt 1 des Einrichtungsassistenten der Link **Restore from Backup**.
+## Wiederhärstellig während em Iirichtigsassistent
 
-1. Lad die Backup-ZIP-Datei hoch.
-2. DockFlare schreibt die verschlüsselten Artefakte u den Zustand auf die Festplatte.
-3. Der Container startet automatisch neu. Mäld di aa nach dem Neustart mit dem wiederhergestellten Administratorkonto an.
+Bi Neuinstallatione erschynt vor Schritt 1 vom Iirichtigsassistent dr Link **Restore from Backup**.
 
-Dieser Ablauf isch der schnellste Weg, um einen produktiven Master zu klonen oder sich nach dem Löschen des Datenvolumens zu erholen. Du muesch den Assistenten nid erneut durchlaufen u auch die Cloudflare-Anmeldedaten nid noch einmal eingeben.
+1. Lad ds Backup-ZIP uf.
+2. DockFlare schrybt d verschlüsslete Artefakt u dr Status uf d Feschtplatte.
+3. Dr Container startet automatisch neu. Mäld di nach em Neustart mit em wiederhärgstelltete Administratorkonto aa.
 
-## Nach der Wiederherstellung
-- Mach uf **Settings → Backup & Restore**, um den neuesten Zeitstempel im Manifest zu prüfen.
-- Prüef unter **Agents → Overview**, öb sich registrierte Agenten wieder verbinden. Stell bi Bedarf neui Agent-Schlüssel uus, falls du die zwüscheziit rotiert hesch.
-- Stoss e Abglich aa, wänn du i e angri Umgebig wiederhergstellt hesch (`Actions → Reconcile Now`).
+Das isch dr schnäuschti Wäg, zum e produktive Master z klone oder sech nach em Lösche vom Datenvolume z erhole. Du muesch dr Assistent nid no einisch dürloufe u ou d Cloudflare-Zuegangsdaten nid no einisch neu iigäh.
 
-Führ regelmässig Offline-Backups durch u kombinier diese idealerweise mit Versionskontrolle für dini Compose-Stack, damit du die gesamte Bereitstellige im Bedarfsfall schnell neu aufbauen chöi.
+## Nach dr Wiederhärstellig
+
+* Gang uf **Settings → Backup & Restore**, zum dr nöischte Zytstempel im Manifest z prüefe.
+* Prüef under **Agents → Overview**, ob registrierti Agente sech wieder verbinde.
+* Stoss e Abglich aa, wänn du i e angri Umgebig wiederhärgstellt hesch (`Actions → Reconcile Now`).
+
+Mach regelmässig Offline-Backups u kombinier si idealerwys mit Versionskontrolle für dini Compose-Stacks, damit du dini ganz Bereitstellig im Notfall schnäll wider ufbaue chasch.

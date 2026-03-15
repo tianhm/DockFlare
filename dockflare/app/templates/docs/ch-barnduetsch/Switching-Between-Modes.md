@@ -1,26 +1,26 @@
-# Zwischen den Modi wechseln
+# Zwüsche Modis wächsle
 
-Du chasch DockFlare jederzeit zwischen dem **Internen** (Standard) u dem **Externen** `cloudflared`-Modus umschalten. Dieser Leitfaden erklärt den Ablauf für einen reibungslosen Übergang.
+Du chasch DockFlare jederzeit zwüsche em **Interne** u em **Externe** `cloudflared`-Modus wächsle. Da findsch dr Ablauf, ohni dass du der unnötig Problem iifangsch.
 
-Einen detaillierten Vergleich der beiden Modi findsch auf der Seite [Interner vs. Externer `cloudflared`](Internal-vs-External-cloudflared.md).
+E ausführleche Verglych vo beidne Modis findsch uf dr Syte [Interner vs. Externer `cloudflared`](Internal-vs-External-cloudflared.md).
 
 ---
 
 ## Wechsel vom Internen zum Externen Modus
 
-Dieser Prozess beinhaltet die Einrichtung din eigenen `cloudflared`-Agenten u die anschliessende Konfiguration von DockFlare, diesen zu nutzen.
+Da Prozess heisst: Du richtsch zerscht dis eigets `cloudflared` ii u seisch nachhär DockFlare, dass es dä Tunnel söll bruuche.
 
-**Schritt 1: Richt dini externen `cloudflared`-Agenten ii**
+**Schritt 1: Externs `cloudflared` iirichte**
 
-Zuerst muesch dini eigenen `cloudflared`-Agenten einrichten u ausführen. Das cha ein Prozess auf dem Host-Betriebssystem oder in einem separaten Docker-Container sein.
+Zerscht muesch dis eigets `cloudflared` starte. Das cha direkt uf em Host laufe oder i mene separate Docker-Container.
 
-*   lueg dass er so konfiguriert isch, dass er en bestimmte Cloudflare Tunnel nutzt.
-*   Schrib dr d'**Tunnel ID** (UUID) uuf.
-*   Start de Agent u lueg, dass er korrekt lauft u im Cloudflare-Dashboard als "connected" (verbunde) angezeigt wird.
+* lueg, dass es dr richtig Cloudflare-Tunnel bruucht
+* schrib dr d **Tunnel ID** (UUID) uuf
+* prüef im Cloudflare-Dashboard, dass dr Tunnel als `connected` aazeigt wird
 
-**Schritt 2: DockFlare rekonfigurieren u neu starten**
+**Schritt 2: DockFlare umstelle**
 
-Als Nächstes muesch die Umgebungsvariablen für dini DockFlare-Container aktualisieren, um in den externen Modus zu wechseln.
+Nachhär passisch d Umgebigsvariable i dr `docker-compose.yml` aa:
 
 In dinere `docker-compose.yml`:
 ```yaml
@@ -29,32 +29,30 @@ services:
     image: alplat/dockflare:stable
     # ... other settings
     environment:
-      # Enable external mode
       - USE_EXTERNAL_CLOUDFLARED=true
-      # Provide the ID of your running tunnel
       - EXTERNAL_TUNNEL_ID=your-tunnel-uuid-goes-here
 ```
 
-**Schritt 3: Die Änderung anwenden**
+**Schritt 3: Änderig übernäh**
 
-Führ `docker compose up -d` aus, um den DockFlare-Container mit den neuen Umgebungsvariablen neu zu erstellen.
+Füehr `docker compose up -d` uus, zum DockFlare neu z erstelle.
 
-Wenn der aktualisierte DockFlare-Container startet:
-1.  Wird er erkennen, dass `USE_EXTERNAL_CLOUDFLARED` auf `true` gesetzt isch.
-2.  Wird er seinen eigenen verwalteten `cloudflared-agent`-Container **stoppen u entfernen**.
-3.  Wird er beginnen, alle seine Ingress-Regelkonfigurationen an den durch `EXTERNAL_TUNNEL_ID` angegebenen Tunnel zu senden.
+Wänn dr aktualisierti Container wieder startet:
+1. erkennt DockFlare, dass dr externi Modus aktiv isch
+2. stoppt u entfernt es dr eiget verwaltete `cloudflared-agent`
+3. schickt es sini Ingress-Konfiguration an dr Tunnel us `EXTERNAL_TUNNEL_ID`
 
-dini Dienste wärde nun von dim extern verwalteten `cloudflared`-Agenten bereitgestellt.
+Dini Dienscht wärde de über dis extern verwaltete `cloudflared` usgspiut.
 
 ---
 
 ## Wechsel vom Externen zum Internen Modus
 
-Dieser Prozess isch einfacher, da du dabei DockFlare wieder die Kontrolle überlassen.
+Da Wächsu isch einfacher, wiu DockFlare nachhär wieder sälber `cloudflared` verwaltet.
 
-**Schritt 1: DockFlare neu konfigurieren**
+**Schritt 1: Externi Variable use näh**
 
-Entfern die Umgebungsvariablen für den externen Modus aus dinere DockFlare `docker-compose.yml`-Datei.
+Nimm die Variable für dr externi Modus us dr `docker-compose.yml` use.
 
 ```yaml
 services:
@@ -62,20 +60,19 @@ services:
     image: alplat/dockflare:stable
     # ... other settings
     environment:
-      # Remove the following two lines
       # - USE_EXTERNAL_CLOUDFLARED=true
       # - EXTERNAL_TUNNEL_ID=your-tunnel-uuid-goes-here
 ```
 
-**Schritt 2: Die Änderung anwenden**
+**Schritt 2: Neu deploye**
 
-Führ `docker compose up -d` aus, um den DockFlare-Container neu zu erstellen.
+Füehr wider `docker compose up -d` uus.
 
-Wenn der aktualisierte DockFlare-Container startet:
-1.  Wird er erkennen, dass `USE_EXTERNAL_CLOUDFLARED` auf `false` gesetzt isch.
-2.  Wird er automatisch seinen eigenen internen `cloudflared-agent`-Container **erstellen, konfigurieren u starten**.
-3.  Wird er diesen neuen Agenten so konfigurieren, dass er den in dini DockFlare-Istellige definierten Tunnelnamen verwendet.
+Wänn dr Container neu startet:
+1. merkt DockFlare, dass dr externi Modus nüm aktiv isch
+2. erstellt u startet es wieder en eigete interne `cloudflared-agent`
+3. konfiguriert es dä mit em Tunnelname us dine DockFlare-Istellige
 
-**Schritt 3: dini externen Agenten ausser Betrieb nehmen**
+**Schritt 3: Externs `cloudflared` usschalte**
 
-Sobald du bestätigt hesch, dass dr neue intern Agent fehlerfrei lauft u dr Datenverkehr verarbeitet, chasch dini eigene `cloudflared`-Agenten sicher stoppe u entferne.
+Sobald du sicher bisch, dass dr intern Agent sauber lauft u dr Traffic übernimmt, chasch dis externs `cloudflared` stoppe u use näh.

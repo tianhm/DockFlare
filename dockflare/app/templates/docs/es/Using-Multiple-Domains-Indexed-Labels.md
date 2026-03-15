@@ -16,11 +16,11 @@ Una característica clave de las etiquetas indexadas es el mecanismo de reserva.
 
 Esto le permite definir configuraciones comunes una vez en el nivel base y solo anular los valores específicos que deben cambiar para cada regla indexada.
 
-## Ejemplo: exponer una Web UI y una API
+## Ejemplo: exponer una interfaz web y una API
 
-Supongamos que tiene un único contenedor que sirve tanto a una aplicación web en el puerto `80` como a una API independiente en el puerto `3000`. Desea exponerlos en `app.example.com` y `api.example.com` respectivamente. También desea proteger la API con un grupo de acceso específico, mientras que la aplicación principal permanece pública.
+Supongamos que tiene un único contenedor que sirve tanto una aplicación web en el puerto `80` como una API independiente en el puerto `3000`. Desea exponerlas en `app.example.com` y `api.example.com` respectivamente. También desea proteger la API con un grupo de acceso específico, mientras que la aplicación principal permanece pública.
 
-Así es como configurarías esto usando etiquetas indexadas:
+Así es como puede configurarlo usando etiquetas indexadas:
 
 ```yaml
 services:
@@ -36,7 +36,7 @@ services:
       # This service is used by rule 0, as it's not specified there.
       - "dockflare.service=http://my-app:80" 
 
-      # --- Rule 0: The Web UI ---
+      # --- Rule 0: Main web interface ---
       - "dockflare.0.hostname=app.example.com"
       # No 'service' label here, so it falls back to the base one.
       # No 'access.group' label, so it's public.

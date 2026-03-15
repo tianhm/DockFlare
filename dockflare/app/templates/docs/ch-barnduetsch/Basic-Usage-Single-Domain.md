@@ -1,21 +1,21 @@
-# Grundlegende Nutzung (Einzelne Domain)
+# Grundlag vom Bruuch (einzeli Domain)
 
-Da Leitfade zeigt dr häufigschti Use-Case für DockFlare: En einzelne Docker-Container fürs Internet freigäh, und zwar unter eme öffentliche Hostname.
+Da Leitfade zeigt dr tüüpschti Use Case: E einzelne Docker-Container über en öffentliche Hostname erreichbar mache.
 
 ## Voraussetzige
 
-Bevor du afahsch, lueg dass das passt:
-1. Du hesch den [Quick Start](Quick-Start-Docker-Compose.md) Guide (Schnellstart) abgeschlossen.
-2.  DockFlare läuft u isch mit dim Cloudflare-Konto verbunden.
-3. Du hesch einen Dienst, den du exponieren wotsch (wir wärde in diesem Beispiel `nginx` bruuche).
+Bevor du afahsch:
+1. Du hesch dr [Schnällstart](Quick-Start-Docker-Compose.md) gmacht.
+2. DockFlare lauft u isch mit Cloudflare verbunde.
+3. Du hesch e Dienst, wo du wotsch veröffentliche.
 
 ## Beispiel: Freigabe eines NGINX-Containers
 
-Näh mer aa, du wotsch en Standard-NGINX-Webserver under em Hostname `nginx.example.com` bereitstelle.
+Näh mer aa, du wotsch en NGINX-Webserver under `nginx.example.com` laufe lah.
 
-### 1. Füg den Service zu dinere `docker-compose.yml` hinzu
+### 1. Dienst i dini `docker-compose.yml` iiträge
 
-Bearbeit dini `docker-compose.yml`-Datei, um den Dienst `nginx` aufzunehmen. Der entscheidende Punkt isch, die `dockflare.*` Labels zu seiner Konfiguration hinzuzufügen.
+Dr wichtigschti Teil si d `dockflare.*`-Labels am Dienst.
 
 ```yaml
 version: '3.8'
@@ -107,43 +107,43 @@ networks:
   dockflare-internal:
     name: dockflare-internal
 ```
-> **Warum Redis?** DockFlare nutzt Redis für Caching, Log-Streaming u agentenübergreifende Kommunikation. Wänn du Redis im privaten Netzwerk `dockflare-internal` betreiben, bleibt er nur für DockFlare erreichbar, während Workloads weiterhin sicher in `cloudflare-net` isoliert si.
+> **Warum Redis?** DockFlare bruucht Redis für Cache, Log-Streaming u d Kommunikation zwüsche Komponente. Im private Network `dockflare-internal` blybt Redis vo de Workloads trennt.
 
-### 2. Labels verstehen
+### 2. Was d Labels bedüte
 
-*   `dockflare.enable=true`: Das teilt DockFlare mit, diesen Container zu verwalten.
-*   `dockflare.hostname=nginx.example.com`: Das isch die öffentliche URL, unter der din Dienst erreichbar sein wird. DockFlare erstellt einen DNS-Eintrag für diesen Hostnamen in dim Cloudflare-Konto.
-*   `dockflare.service=http://nginx-webserver:80`: Bestimmt intern das Ziel des Cloudflare Tunnels (hier der NGINX-Container).
-*   `dockflare.access.group=public-default-bypass`: (Optional) Nutzt die Systemrichtlinie zum Bypass, um direkten Zugriff zu gewähren, u übergeht alle `*.example.com`-Zonen-Sperren, die auf Access gesetzt si.
+* `dockflare.enable=true`: DockFlare söll dä Container verwalte.
+* `dockflare.hostname=nginx.example.com`: Das isch dr öffentliche Hostname.
+* `dockflare.service=http://nginx-webserver:80`: Da geit dr Tunnel intern häre.
+* `dockflare.access.group=public-default-bypass`: Optional für öffentliche Zugäng mit Bypass.
 
-### 3. Den Dienst bereitstelle
+### 3. Dienst starte
 
-Speicher dini `docker-compose.yml` Datei u führ den folgenden Befehl aus, um den neuen Dienst zu starten:
+Speicher dini `docker-compose.yml` u start dr Stack:
 
 ```bash
 docker compose up -d
 ```
 
-### 4. Überprüfung
+### 4. Prüefe
 
-DockFlare wird den neuen Container erkennen u automatisiert folgende Aktionen durchführen:
-1.  Hinzufügen einer Ingress-Regel zu dim Tunnel für `nginx.example.com`.
-2.  Erstellen eines CNAME-Eintrages auf Cloudflare.
+DockFlare erkennt dr neu Container u macht automatisch:
+1. e Ingress-Regel für `nginx.example.com`
+2. e CNAME-Iitrag i Cloudflare
 
-Du chasch dies auf verschiedene Arten überprüfen:
-*   **DockFlare Web UI**: Der Dienst `nginx.example.com` erscheint auf dem Dashboard.
-*   **Cloudflare Dashboard**: Der neue CNAME Eintrag wird in der DNS Konfiguration angezeigt u die neue Route existiert im Zero Trust Tunnel.
+Prüefe chasch s so:
+* **DockFlare Web UI:** `nginx.example.com` erscheint im Dashboard
+* **Cloudflare Dashboard:** Dr CNAME-Iitrag u d Tunnel-Route si sichtbar
 
-Nach kurzer Zeit für die DNS-Propagation söttsch `https://nginx.example.com` im Browser aufrufen u die standardmässige NGINX-Begrüssungsseite sehen chöi.
+Nach ere churze DNS-Propagation söttsch `https://nginx.example.com` im Browser chönne ufmache.
 
 
 ## Backup & Wiederherstellung im Detail
 
-DockFlare bietet einen integrierten Backup-Flow, mit dem du eine Instanz in wenigen Minuten migrieren oder wiederherstellen chöi.
+DockFlare het en integrierte Backup-Flow, mit däm du e Instanz schnäu migriere oder wiederherstelle chasch.
 
-### Was das Backup-Archiv enthält
+### Was im Backup-Archiv drin isch
 
-Wänn du ein Backup unter **Settings → Backup & Restore** (oder im Onboarding-Assistenten) herunterladen, erzeugt DockFlare eine `.zip`-Datei mit folgenden Dateien:
+Wänn du under **Settings -> Backup & Restore** es Backup abeladsch, bechunsch e `.zip` mit dene Date:
 
 | Datei | Beschreibung |
 | --- | --- |
@@ -153,12 +153,12 @@ Wänn du ein Backup unter **Settings → Backup & Restore** (oder im Onboarding-
 | `state.json` | Unverschlüsselter JSON-Snapshot des Laufzeitstatus (verwaltete Regeln, Agents, Access Groups). Zum Prüfen oder für gezielte Migration einzelner Teile. |
 | `manifest.json` | Checksummen u Versionsinformationen für jede Datei im Archiv. |
 
-Das Backup isch in sich geschlossen: Eine Wiederherstellung über Wizard/Upload schreibt die Dateien nach `/app/data/` u plant sofort einen Container-Neustart, damit die verschlüsselte Konfiguration beim Boot geladen wird.
+Das Backup isch sich sälber gnueg: Bi dr Wiederherstellig wärde d Date nach `/app/data/` zrügggschribe u dr Container startet automatisch neu.
 
-### Wiederherstellung u Kompatibilität
+### Wiederherstellig u Kompatibilität
 
-- **Wizard & Settings UI**: Lad die `.zip` hoch. DockFlare importiert sie, lädt den Status neu u beendet sich. Docker startet den Container automatisch neu, sodass du ohne manuelle Schritte wieder im Betriebsmodus si.
-- **Legacy `state.json`**: Für Troubleshooting oder fortgschrittni Workflows chasch weiterhin nur eine `state.json` hochladen. DockFlare übernimmt dann nur den Laufzeitstatus u lässt die verschlüsselte Konfiguration aus; Zugangsdaten müesse nachhär erneut eingegeben wärde.
-- **Automatisierung**: Da der Neustart automatisch erfolgt, sollten Reverse-Proxy-Healthchecks ein kurzes Restart-Fenster (ca. 5 s) nach einer Wiederherstellung tolerieren.
+- **Wizard u Settings UI:** `.zip` ufelade, importiere lah, fertig.
+- **Legacy `state.json`:** Für Troubleshooting geit o nume `state.json`, aber Zugangsdaten wärde nid wiederhärgstellt.
+- **Automatische Neustarts:** Health Checks söue churzi Restart-Fänschter vertrage.
 
-Backups enthalten **nid** das Redis-Dataset; Redis isch nur Cache. Kritisch isch das `/app/data`-Volume zusammen mit dem Archiv.
+Im Backup isch **nid** s Redis-Dataset drin, wiu Redis nume Cache isch. Kritisch isch `/app/data` plus dis Backup-Archiv.

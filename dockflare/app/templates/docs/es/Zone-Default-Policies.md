@@ -214,7 +214,7 @@ services:
 ### Recomendación
 
 En lugar de confiar en la etiqueta `default_tld`:
-1. Cree políticas predeterminadas de zona en la Web UI.
+1. Cree políticas predeterminadas de zona en la interfaz web.
 2. Deje que la política de comodines proteja automáticamente todos los servicios.
 3. Cree únicamente políticas específicas para excepciones.
 
@@ -223,7 +223,7 @@ Esto garantiza una mejor seguridad de forma predeterminada.
 ## Documentación relacionada
 
 - [Mejores prácticas de política de acceso](Access-Policy-Best-Practices.md)
-- [Uso de la Web UI](Using-the-Web-UI.md)
+- [Uso de la interfaz web](Using-the-Web-UI.md)
 - [Etiquetas de contenedor](Container-Labels.md)
 - [Cómo funciona DockFlare](How-DockFlare-Works.md)
 - [Arquitectura de seguridad](Security-Architecture.md)

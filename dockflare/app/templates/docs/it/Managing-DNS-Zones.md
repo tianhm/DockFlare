@@ -22,7 +22,7 @@ Supponiamo che la tua zona predefinita sia `example.com`, ma desideri anche eseg
 
 ```yaml
 services:
-  # This service will be created in the default zone (example.com)
+  # Questo servizio verrà creato nella zona predefinita (example.com)
   service-one:
     image: nginx
     labels:
@@ -30,14 +30,14 @@ services:
       - "dockflare.hostname=nginx.example.com"
       - "dockflare.service=http://service-one:80"
 
-  # This service will be created in the 'media.io' zone
+  # Questo servizio verrà creato nella zona "media.io"
   service-two:
     image: portainer/portainer-ce
     labels:
       - "dockflare.enable=true"
       - "dockflare.hostname=portainer.media.io"
       - "dockflare.service=http://service-two:9000"
-      # Override the default zone for this service
+      # Sovrascrive la zona predefinita per questo servizio
       - "dockflare.zonename=media.io"
 ```
 
@@ -47,15 +47,15 @@ Quando lo distribuisci, DockFlare:
 
 Entrambi i nomi host verranno aggiunti come regole ingress allo stesso tunnel Cloudflare.
 
-## Visualizzazione dei record DNS nella Web UI
+## Visualizzazione dei record DNS nell'interfaccia web
 
-La Web UI di DockFlare include una funzionalità nella pagina **Impostazioni** che ti consente di visualizzare tutti i tunnel Cloudflare sul tuo account e i record DNS che puntano ad essi.
+La pagina **Impostazioni** dell'interfaccia web di DockFlare include una funzione che consente di visualizzare tutti i tunnel Cloudflare presenti nel tuo account e i record DNS che puntano a essi.
 
-Per garantire che la Web UI possa trovare i record DNS in tutte le diverse zone, puoi utilizzare la variabile di ambiente `TUNNEL_DNS_SCAN_ZONE_NAMES`.
+Per fare in modo che l'interfaccia web trovi i record DNS in tutte le zone, puoi utilizzare la variabile di ambiente `TUNNEL_DNS_SCAN_ZONE_NAMES`.
 
 ### `TUNNEL_DNS_SCAN_ZONE_NAMES`
 
-Questa variabile di ambiente accetta un elenco separato da virgole di nomi di zone che la Web UI deve analizzare durante la ricerca di record DNS.
+Questa variabile di ambiente accetta un elenco di nomi di zona separati da virgole che DockFlare deve analizzare durante la ricerca dei record DNS.
 
 **Esempio `docker-compose.yml`:**
 ```yaml
@@ -64,8 +64,8 @@ services:
     image: alplat/dockflare:stable
     # ... other settings
     environment:
-      # Tell the UI to scan these zones in addition to the default one
+      # Fa analizzare all'interfaccia anche queste zone oltre a quella predefinita
       - TUNNEL_DNS_SCAN_ZONE_NAMES=media.io,another-domain.org
 ```
 
-Ciò garantirà che il visualizzatore di record DNS nella Web UI fornisca un quadro completo di tutti i domini che puntano ai tuoi tunnel.
+In questo modo il visualizzatore dei record DNS nell'interfaccia web mostrerà un quadro completo di tutti i domini che puntano ai tuoi tunnel.

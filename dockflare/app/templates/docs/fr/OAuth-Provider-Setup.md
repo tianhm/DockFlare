@@ -1,8 +1,8 @@
 ## Configuration du fournisseur OAuth
 
-> **📌 Important :** Ce guide sert à configurer **l'authentification de la Web UI de DockFlare**. Si vous souhaitez configurer OAuth/OIDC pour les **politiques d'accès Cloudflare** afin de protéger vos services, consultez plutôt [Fournisseurs d'identité](Identity-Providers.md).
+> **📌 Important :** Ce guide sert à configurer **l'authentification de l'interface web de DockFlare**. Si vous souhaitez configurer OAuth/OIDC pour les **politiques d'accès Cloudflare** afin de protéger vos services, consultez plutôt [Fournisseurs d'identité](Identity-Providers.md).
 
-DockFlare permet de déléguer l'authentification des utilisateurs à des fournisseurs externes via le standard OpenID Connect (OIDC). Cela permet de mettre en place le single sign-on (SSO) pour l'interface Web de DockFlare et de l'intégrer à des fournisseurs d'identité comme Google, Authentik, Okta et d'autres.
+DockFlare permet de déléguer l'authentification des utilisateurs à des fournisseurs externes via le standard OpenID Connect (OIDC). Cela permet de mettre en place le single sign-on (SSO) pour l'interface web de DockFlare et de l'intégrer à des fournisseurs d'identité comme Google, Authentik, Okta et d'autres.
 
 ### Ajouter un nouveau fournisseur
 

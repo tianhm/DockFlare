@@ -212,7 +212,7 @@ services:
 ### 推荐
 
 而不是依赖 `default_tld` 标签：
-1. 在 UI 中创建区域默认策略
+1. 在管理界面中创建区域默认策略
 2. 让通配符策略自动保护所有服务
 3. 只针对例外情况创建特定策略
 
@@ -221,7 +221,7 @@ services:
 ## 相关文档
 
 - [访问策略最佳实践](Access-Policy-Best-Practices.md)
-- [使用 Web UI](Using-the-Web-UI.md)
+- [使用网页管理界面](Using-the-Web-UI.md)
 - [容器标签](Container-Labels.md)
 - [DockFlare 的工作原理](How-DockFlare-Works.md)
 - [安全架构](Security-Architecture.md)

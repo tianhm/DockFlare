@@ -70,7 +70,7 @@
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
-        {{ form.submit(class="btn btn-primary w-full") }}
+        <button type="submit" name="submit" class="btn btn-primary w-full">{{ t('form.setup.next') }}</button>
         <a href="{{ url_for('setup.step2_api_credentials') }}" class="btn btn-ghost w-full">{{ t('setup.step3.back') }}</a>
     </div>
 </form>

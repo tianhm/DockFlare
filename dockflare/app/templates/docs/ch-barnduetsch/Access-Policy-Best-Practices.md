@@ -1,38 +1,37 @@
-# Best Practices & Beispiele für Zugriffsrichtlinien
+# Best Practices für Zuegriffsrichtlinie
 
-Das stärkste Sicherheitsfeature von DockFlare si die **Access Groups** (Zugriffsgruppen). Du bieten eine zentralisierte, wiederverwendbare u wartbare Möglichkeit, dini Dienste mit Cloudflare Zero Trust abzusichern.
+Ds stärksti Sicherheitswärkzüg i DockFlare si d **Access Groups**. Si gäbe dir wiederverwendbari, zentral verwalteti Zugriffsregle für dini Dienscht.
 
 ## Die "Goldene Regel": Bruuch Access Groups
 
-Die mit Abstand wichtigste Best Practice isch: **Bruuch Access Groups für all dini gängigen Zugriffsrichtlinien**.
+D wichtigschti Regel isch eifach: **Bruuch Access Groups für aui häufige Zugriffs-Fäll**.
 
-Access Groups si Richtlinienvorlagen, die du in der DockFlare Web UI erstellen. Anstatt komplexe Regeln mit mehreren Labels auf jedem Container zu definieren, erstell eine Richtlinie einmalig u wenden sie mit einem einzigen, sauberen Label an. DockFlare v3.0.3 synchronisiert nun jede Gruppe mit einer wiederverwendbaren Cloudflare Access Policy, sodass dieselben Entscheidungsregeln für mehrere Anwendungen gelten chöi.
+Statt uf jedem Container mehri einzelni Labels für E-Mail, Land oder Bypass z pflege, leisch du e Gruppe einisch a u weist sie nachhär mit `dockflare.access.group` zue.
 
 ---
 
 ## So erstellsch u bruuchsch du Access Groups
 
-Das Erstellen einer Access Group isch ein einfacher Prozess, der komplett innerhalb der DockFlare UI stattfindet.
+E Access Group isch schnäu gmacht u passiert komplett i dr DockFlare-UI.
 
-### Schritt 1: Erstellen der Access Group
+### Schritt 1: Access Group aalege
 
-1.  Navigier zur Seite **Access Policies** über die Hauptnavigationsleiste in der DockFlare UI.
-2.  Klick auf den Button **"Add Access Group"** (Zugriffsgruppe hinzufügen).
-3.  Gib dinere Gruppe e **eindeutigi u aussagekräftigi ID**. Die ID bruuchsch spöter i dine Docker-Labels. zum Biispil: `admin-users`, `home-network`, `geo-block`.
-4.  Wähl den **Access Mode** (Zugriffsmodus) aus den Reitern oben im Modalfenster:
-    *   **Authenticated** erfordert eine Benutzeranmeldung u gibt eine `allow`-Entscheidung aus.
-    *   **Public** verwendet eine `bypass`-Entscheidung, sodass die Anwendung offen bleibt, Geo-Blockaden aber dennoch berücksichtigt wärde.
-5.  Füll die Eingabefelder aus, die für den gewählten Modus erscheinen (E-Mails für "Authenticated", optionale Länderliste für beide).
-6.  Pass optionale Istellige wie Sitzungsdauer, App-Launcher-Sichtbarkeit u die automatische Weiterleitung zum IdP (Identity Provider) an, falls du im "Authenticated"-Modus si.
-7.  Speicher die Gruppe. DockFlare schreibt die Definition lokal u synchronisiert sie mit Cloudflare als `DockFlare-AccessGroup-<id>`.
+1. Gang uf **Access Policies**
+2. Klick uf **Add Access Group**
+3. Gib ere Gruppe e sauberi ID wie `admin-users`, `home-network` oder `geo-block`
+4. Wähl dr Modus:
+   * **Authenticated** für Login-geschützte Zugäng
+   * **Public** für öffentliche Dienscht mit `bypass`
+5. Trag d nötige Date ii
+6. Speicher d Gruppe
 
-### Schritt 2: Anwenden der Access Group
+### Schritt 2: Access Group aa hänge
 
-Sobald si erstellt isch, hesch du zwei Möglichkeite, dini Access Group uf en Dienst azwände:
+Du chasch d Gruppe uf zwöi Art aa hänge:
 
-#### A) Mit einem Docker Label (Die empfohlene Methode)
+#### A) Mit em Docker-Label
 
-Füg bei jedem neuen oder bestehenden Container einfach das Label `dockflare.access.group` mit der ID der von dir erstellten Gruppe hinzu.
+Das isch dr empfohlni Wäg. Trag eifach `dockflare.access.group=<id>` ii.
 
 ```yaml
 services:
@@ -45,27 +44,27 @@ services:
       # Apply the entire policy with one simple label:
       - "dockflare.access.group=admin-users"
 ```
-Du chasch auch mehrere Gruppen anwenden, indem du `dockflare.access.groups` mit einer kommagetrennten Liste von IDs bruuche:
+Für mehri Gruppe git s `dockflare.access.groups` mit ere kommagtrennti Liste:
 `dockflare.access.groups=admin-users,home-network`
 
 #### Systemverwaltete Richtlinien
 
-DockFlare bietet zwei integrierte Systemrichtlinien, die automatisch verfügbar si:
+DockFlare het zwöi integrierte Systemrichtlinie:
 
 - **`public-default-bypass`** - Öffentlicher Zugriff mit Bypass-Entscheidung (für wirklich öffentliche Dienste bruuche)
 - **`authenticated-default`** - Standardauthentifizierung mit Einmal-PIN + E-Mail-Einschränkung
 
-Diese Systemrichtlinien si nid löschbar u dienen als Basis für den Zonenschutz sowie die Migration alter Labels.
+Die si nid löschbar u diene als Basis für Zoneschutz u d Migration vo alte Labels.
 
-#### B) Über die Web UI (Für manuelle Regeln oder Überschreibungen)
+#### B) Direkt i dr Web UI
 
-Du chasch eine Access Group auch direkt aus dem Dashboard auf jede Regel anwenden:
-1.  Suech die Ingress-Regel, die du ändern wotsch, auf dem Haupt-Dashboard.
-2.  Klick auf den Button **"Manage Rule"** (Regel verwalten).
-3.  Wähl im Bearbeitungsmodal dini gewünschte(n) Access Group(s) aus dem Dropdown-Menü "Access Groups".
-4.  Speicher die Änderungen.
+Du chasch d Gruppe o direkt im Dashboard zuewyse:
+1. Regel sueche
+2. **Manage Rule** ufmache
+3. Access Group(s) uswähle
+4. speichere
 
-Das isch perfekt, um Richtlinien auf manuell erstellte Regeln (für Nicht-Docker-Dienste) anzuwenden oder um eine durch Docker-Labels definierte Richtlinie vorübergehend zu überschreiben.
+Das isch praktisch für manuell aagleiti Regle oder temporäri Overrides.
 
 ---
 
@@ -126,7 +125,7 @@ Zonen-Standardrichtlinien si Wildcard `*.domain.com` Access-Aawändige, wo autom
 1. Navigier zur Seite **Access Policies**
 2. Scroll zum Bereich **Zone Default Policies (*.tld Wildcards)**
 3. Acht auf Zonen mit dem Warnschild "Not Protected" ⚠️
-4. Klick auf **Create Policy**
+4. Klick uf **Create Policy**
 5. Wähl eine geeignete Zugriffsgruppe aus:
    - **Für öffentliche Domains:** Bruuch `public-default-bypass`
    - **Für interne Domains:** Bruuch eine Authentifizierungsrichtlinie
@@ -170,7 +169,7 @@ Standardmässig importiert DockFlare nur Richtlinien mit dem Präfix `DockFlare-
 
 1. Setz die Umgebungsvariable: `SYNC_ALL_CLOUDFLARE_POLICIES=true`
 2. Start DockFlare neu
-3. Klick auf der Seite "Access Policies" auf **"Sync from Cloudflare"**
+3. Klick uf der Seite "Access Policies" auf **"Sync from Cloudflare"**
 
 Externe Richtlinien wärde dann mit einem violetten Badge **"External"** versehen.
 
@@ -179,7 +178,7 @@ Externe Richtlinien wärde dann mit einem violetten Badge **"External"** versehe
 **Vorteile:**
 - Vollständige Sichtbarkeit din gesamten Cloudflare Access Setups
 - Wiederverwendung bestehender Richtlinien ohne Neuerstellung
-- Zentrale Verwaltung in einer Oberfläche
+- Zentrale Verwaltig in einer Oberfläche
 - Anwendung jeder beliebigen Richtlinie auf jeden Dienst (öb von DockFlare verwaltet oder nid)
 
 **Nachteile:**

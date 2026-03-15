@@ -128,12 +128,12 @@ docker compose up -d
 ### 4. 検証
 
 DockFlare は新しいコンテナを検出し、次のアクションを自動的に実行します。
-1. `nginx.example.com` の Cloudflare Tunnel に ingress ルールを追加します。
+1. `nginx.example.com` の Cloudflare Tunnel に入口ルールを追加します。
 2. Cloudflare DNS で、トンネルを指す `nginx.example.com` の CNAME レコードを作成します。
 
 これはいくつかの方法で確認できます。
-* **DockFlare Web UI**: `nginx.example.com` サービスがダッシュボードに表示されます。
-* **Cloudflare ダッシュボード**: DNS 設定に新しい CNAME レコードが表示され、トンネル設定に新しい ingress ルールが表示されます。
+* **DockFlare 管理画面**: `nginx.example.com` サービスがダッシュボードに表示されます。
+* **Cloudflare ダッシュボード**: DNS 設定に新しい CNAME レコードが表示され、トンネル設定に新しい入口ルールが表示されます。
 
 DNS が伝播したら、ブラウザーで `https://nginx.example.com` にアクセスし、デフォルトの NGINX のようこそページが表示されることを確認してください。
 
@@ -147,7 +147,7 @@ DockFlare にはバックアップ/復元フローが組み込まれているた
 
 |ファイル |説明 |
 | --- | --- |
-| `dockflare_config.dat` |暗号化された設定ペイロード (Cloudflare 認証情報、UI パスワードハッシュ、トンネルのデフォルト、master API key など)。 |
+| `dockflare_config.dat` |暗号化された設定ペイロード（Cloudflare 認証情報、管理画面のパスワードハッシュ、トンネルのデフォルト、Master API キーなど）。 |
 | `dockflare.key` | `dockflare_config.dat` およびその他の暗号化されたペイロードを復号化するために使用される Fernet キー。アーカイブと一緒に保管してください。 |
 | `agent_keys.dat` |エージェント API キー、メタデータ、失効ステータスの暗号化されたレジストリ。 |
 | `state.json` |実行時状態のプレーンな JSON スナップショット (管理対象ルール、エージェント、アクセス グループ)。これは、オペレーターが必要に応じて特定の部分を検査または移行できるように含まれています。 |

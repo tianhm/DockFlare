@@ -22,7 +22,7 @@ Załóżmy, że Twoja domyślna strefa to `example.com`, ale chcesz także uruch
 
 ```yaml
 services:
-  # This service will be created in the default zone (example.com)
+  # Ta usługa zostanie utworzona w strefie domyślnej (example.com)
   service-one:
     image: nginx
     labels:
@@ -30,14 +30,14 @@ services:
       - "dockflare.hostname=nginx.example.com"
       - "dockflare.service=http://service-one:80"
 
-  # This service will be created in the 'media.io' zone
+  # Ta usługa zostanie utworzona w strefie „media.io”
   service-two:
     image: portainer/portainer-ce
     labels:
       - "dockflare.enable=true"
       - "dockflare.hostname=portainer.media.io"
       - "dockflare.service=http://service-two:9000"
-      # Override the default zone for this service
+      # Nadpisz strefę domyślną dla tej usługi
       - "dockflare.zonename=media.io"
 ```
 
@@ -47,15 +47,15 @@ Po wdrożeniu DockFlare:
 
 Obie nazwy hostów zostaną dodane jako reguły ingress do tego samego Cloudflare Tunnel.
 
-## Wyświetlanie rekordów DNS w Web UI
+## Wyświetlanie rekordów DNS w panelu administracyjnym
 
-Web UI DockFlare zawiera na stronie **Ustawienia** widok, który umożliwia przeglądanie wszystkich Cloudflare Tunnel na Twoim koncie i wskazujących je rekordów DNS.
+Na stronie **Ustawienia** panelu DockFlare znajdziesz widok wszystkich Cloudflare Tunnel na Twoim koncie oraz rekordów DNS wskazujących na te tunele.
 
-Aby mieć pewność, że Web UI znajdzie rekordy DNS we wszystkich strefach, możesz użyć zmiennej środowiskowej `TUNNEL_DNS_SCAN_ZONE_NAMES`.
+Aby mieć pewność, że panel znajdzie rekordy DNS we wszystkich strefach, możesz użyć zmiennej środowiskowej `TUNNEL_DNS_SCAN_ZONE_NAMES`.
 
 ### `TUNNEL_DNS_SCAN_ZONE_NAMES`
 
-Ta zmienna środowiskowa akceptuje rozdzieloną przecinkami listę nazw stref, które Web UI powinien skanować podczas wyszukiwania rekordów DNS.
+Ta zmienna środowiskowa przyjmuje listę nazw stref rozdzielonych przecinkami. DockFlare będzie je skanował podczas wyszukiwania rekordów DNS.
 
 **Przykład `docker-compose.yml`:**
 ```yaml
@@ -64,8 +64,8 @@ services:
     image: alplat/dockflare:stable
     # ... other settings
     environment:
-      # Tell the UI to scan these zones in addition to the default one
+      # Poleć panelowi skanowanie tych stref oprócz strefy domyślnej
       - TUNNEL_DNS_SCAN_ZONE_NAMES=media.io,another-domain.org
 ```
 
-Dzięki temu przeglądarka rekordów DNS w interfejsie użytkownika zapewni pełny obraz wszystkich domen wskazujących Twoje tunele.
+Dzięki temu widok rekordów DNS pokaże wszystkie domeny wskazujące na Twoje tunele.

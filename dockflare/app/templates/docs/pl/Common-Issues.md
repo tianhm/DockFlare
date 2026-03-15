@@ -35,7 +35,7 @@ Na tej stronie wymieniono niektóre typowe problemy, jakie mogą napotkać użyt
 
 **Rozwiązanie:**
 1. **Sprawdź uprawnienia tokena API:** Upewnij się, że token API ma uprawnienie `Account:Access: Apps and Policies:Edit`.
-2. **Sprawdź UI Override:** W panelu DockFlare sprawdź, czy reguła ma status `UI Override`. UI Override ma pierwszeństwo przed etykietami.
+2. **Sprawdź `UI Override`:** W panelu DockFlare sprawdź, czy reguła ma status `UI Override`. Ten status ma pierwszeństwo przed etykietami.
 3. **Sprawdź identyfikator grupy dostępu:** Jeśli używasz `dockflare.access.group`, upewnij się, że identyfikator podany na etykiecie **dokładnie** pasuje do identyfikatora utworzonego dla grupy dostępu na stronie „Zasady dostępu”.
 4. **Sprawdź pulpit nawigacyjny Cloudflare:** Zaloguj się do Cloudflare Zero Trust. Przejdź do **Access -> Applications**, aby sprawdzić, czy utworzono aplikację Access. Czasami Cloudflare pokaże tam błąd, który nie będzie widoczny w odpowiedzi API.
 

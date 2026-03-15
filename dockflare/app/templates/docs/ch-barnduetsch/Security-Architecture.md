@@ -1,32 +1,32 @@
 # DockFlare Sicherheitsarchitektur u Härtung
 
-Das Dok erläutert, wie DockFlare in Version 3.0+ sowohl den Master-Knoten als auch registrierte Agenten absichert. Es ergänzt das Sicherheitsaudit, indem es die in DockFlare integrierten Schutzmechanismen u empfohlene Betriebspraktiken zusammenfasst.
+Das Dok git dir e Überblick, wie DockFlare ab Version 3.0+ Master u Agent absichert u was im Betrieb wichtig isch.
 
 ## 1. Vertrauensmodell der Control Plane
 
-- **Master als massgebliche Instanz** – Der DockFlare Master verwaltet alle Cloudflare-Zugangsdaten u Richtliniendefinitionen. Agenten verwalten kener API-Tokens selbst, sondern führen Anweisungen aus, die sie über einen authentifizierten Kanal erhalten.
-- **API-Schlüssel pro Agent** – Für die Registrierung isch ein eindeutiger API-Schlüssel nötig, der vom Master ausgestellt wird. Die Schlüssel wärde zusammen mit Metadaten wie Eigentümer, Zeitstempeln u Status verschlüsselt in `agent_keys.dat` gespeichert, sodass sie jederzeit rotiert oder widerrufen wärde chöi.
-- **Schutz der Master-API** – Administrative Endpunkte, darunter die Web UI u `/api/v2/*`, erfordern entweder eine gültige Sitzung oder den Master-API-Schlüssel. Tokens wärde in Antworten u Logs maskiert u chöi ohne Neustart des Stacks rotiert wärde.
+- **Dr Master isch d zentrale Vertrauensinstanz**: Cloudflare-Zugangsdaten u Richtlinie blybe dört.
+- **Jede Agent-Registrierig het eigeti API-Schlüssle**: Die wärde verschlüsslet gspeicheret.
+- **D Master-API isch gschützt**: Web UI u `/api/v2/*` bruuchä e Session oder dr Master-API-Key.
 
 ## 2. Verschlüsselte Konfiguration u Schlüsselverwaltung
 
-- **Verschlüsseltes `dockflare_config.dat`** – Cloudflare-Zugangsdaten, UI-Konten, Tunnel-Standardeinstellungen u der Master-Schlüssel wärde in einem verschlüsselten Blob gespeichert, der durch `dockflare.key` geschützt isch.
-- **Verschlüsseltes Agentenregister** – API-Schlüssel der Agenten u ihre Audit-Metadaten liegen in `agent_keys.dat`, verschlüsselt mit demselben Fernet-Schlüssel. Sensible Daten erscheinen nid mehr im Klartext in `state.json`.
-- **Automatischer Neustart nach Wiederherstellung** – Wenn ein Backup wiederhergestellt wird, schreibt DockFlare die verschlüsselten Artefakte, lädt den Laufzeitstatus neu, setzt ein Neustart-Flag u beendet sich. Die Docker-Restart-Policy startet den Container nachhär sofort mit der neuen Konfiguration neu.
-- **Klartext-`state.json` für Beobachtbarkeit** – `state.json` bleibt bewusst im Klartext, damit Operatoren Regeln u Agenten prüfen chöi. Für Geheimnisse bleiben die verschlüsselten Dateien massgeblich.
+- **`dockflare_config.dat` isch verschlüsslet**
+- **`agent_keys.dat` isch o verschlüsslet**
+- **Nach ere Wiederherstellig startet dr Container automatisch neu**
+- **`state.json` blybt bewusst im Klartext für Sichtbarkeit, aber ohni Geheimnis**
 
 ## 3. Garantien für Backup u Wiederherstellung
 
-- **Inhalt des Archivs** – Jedes Backup-Archiv (`dockflare_backup_*.zip`) enthält `dockflare_config.dat`, `dockflare.key`, `agent_keys.dat`, `state.json` sowie ein `manifest.json` mit Prüfsummen u Versionsmetadaten. Zum Wiederaufbau eines Master-Knotens si kener weiteren Dateien nötig.
-- **Automatisierter Wiederherstellungsablauf** – Eine Wiederherstellung über den Einrichtungsassistenten oder die Einstellungsseite schreibt die Artefakte, lädt Laufzeit-Caches neu u erzwingt einen Container-Neustart, damit die verschlüsselte Konfiguration sofort aktiv wird.
-- **Abwärtskompatibilität** – Das Hochladen einer einzelnen `state.json` wird weiterhin für Troubleshooting oder Teilmigrationen unterstützt. DockFlare importiert dabei den Laufzeitstatus, behält aber die vorhandene verschlüsselte Konfiguration bei, um versehentliche Zurücksetzungen von Zugangsdaten zu vermeiden.
+- **Im Archiv si aui kritische Date drin**
+- **D Wiederherstellig lädt d Artefakt wieder i u startet neu**
+- **E einzelni `state.json` wird für Spezialfäll no unterstützt**
 
 ## 4. Netzwerk- u Kommunikationssicherheit
 
-- **Cloudflare-Tunnel als Transportweg** – Agenten ufmache kener eingehenden Ports. Der gesamte Verkehr läuft über den vom Master verwalteten Cloudflare-Tunnel, wodurch sich die Angriffsfläche auf entfernten Hosts verringert.
-- **Authentifizierte Agentenaufrufe** – REST-Aufrufe der Agenten enthalten ihren API-Schlüssel u si an die registrierte Agent-ID gebunden. Token-Abweichungen oder widerrufene Schlüssel wärde abgewiesen.
-- **Redis-Backplane** – DockFlare verwendet Redis für Caching, Log-Streaming u Signalisierung zwischen Threads. Der empfohlene Compose-Stack hält Redis in einem eigenen `dockflare-internal`-Netzwerk, sodass Workloads im `cloudflare-net` nid direkt darauf zugreifen chöi. Externes Redis sollte mit Authentifizierung u TLS abgesichert wärde.
-- **Least-Privilege-Laufzeit** – Sowohl der Master als auch die Agenten laufen als Benutzer `dockflare` (UID/GID 65532) u kommunizieren mit Docker ausschliesslich über den mitgelieferten Socket-Proxy, wodurch die freigegebene API-Oberfläche klein bleibt.
+- **Agenten müesse kei iigahendi Port ufmache**
+- **Agentenaufrüef si mit API-Key u Agent-ID abgsicheret**
+- **Redis söll im private `dockflare-internal`-Netz blybe**
+- **Master u Agent laufe mit möglichst wenig Rächt**
 
 ## 5. Authentifizierung u Autorisierung
 

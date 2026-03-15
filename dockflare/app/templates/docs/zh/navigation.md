@@ -1,6 +1,6 @@
-# 欢迎来到 DockFlare 文档！
+# 欢迎来到 DockFlare 文档
 
-DockFlare 是一款功能强大的自托管 ingress 控制器，可简化 Cloudflare Tunnel 与 Zero Trust 的管理。它通过 Docker 标签实现自动化配置，同时提供强大的 Web UI，用于手动定义服务与覆盖策略。
+DockFlare 是一款功能强大的自托管入口控制器，可简化 Cloudflare Tunnel 与 Zero Trust 的管理。它通过 Docker 标签实现自动化配置，同时提供网页管理界面，用于手动定义服务与覆盖策略。
 
 本文档涵盖 DockFlare 的核心概念、配置方式与常见运维场景。无论您是首次上手还是已在生产环境中使用，都能在这里快速找到所需信息。
 
@@ -10,10 +10,10 @@ DockFlare 是一款功能强大的自托管 ingress 控制器，可简化 Cloudf
 * **开始使用**
     * [先决条件](Prerequisites.md)
     * [快速入门 (Docker Compose)](Quick-Start-Docker-Compose.md)
-    * [访问 Web UI](Accessing-the-Web-UI.md)
+    * [访问网页管理界面](Accessing-the-Web-UI.md)
 * **核心概念**
     * [DockFlare 的工作原理](How-DockFlare-Works.md)
-    * [DockFlare Agent 与多服务器架构](Multi-Server-Agent.md)
+    * [DockFlare 代理与多服务器架构](Multi-Server-Agent.md)
     * [访问策略最佳实践](Access-Policy-Best-Practices.md)
     * [区域默认策略](Zone-Default-Policies.md)
     * [内部与外部 `cloudflared`](Internal-vs-External-cloudflared.md)
@@ -28,7 +28,7 @@ DockFlare 是一款功能强大的自托管 ingress 控制器，可简化 Cloudf
     * [使用通配符域名](Using-Wildcard-Domains.md)
     * [管理 DNS 区域](Managing-DNS-Zones.md)
     * [了解优雅删除](Understanding-Graceful-Deletion.md)
-    * [使用 Web UI](Using-the-Web-UI.md)
+    * [使用网页管理界面](Using-the-Web-UI.md)
     * [备份与恢复](Backup-and-Restore.md)
 * **高级主题**
     * [外部 `cloudflared` 模式](External-cloudflared-Mode.md)

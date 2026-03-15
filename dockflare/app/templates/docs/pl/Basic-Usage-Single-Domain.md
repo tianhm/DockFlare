@@ -132,7 +132,7 @@ DockFlare wykryje nowy kontener i automatycznie wykona następujące czynności:
 2. Utwórz rekord CNAME dla `nginx.example.com` w swoim DNS Cloudflare, wskazując tunel.
 
 Możesz to zweryfikować na kilka sposobów:
-* **DockFlare Web UI**: Usługa `nginx.example.com` pojawi się na pulpicie nawigacyjnym.
+* **Panel administracyjny DockFlare**: Usługa `nginx.example.com` pojawi się na pulpicie nawigacyjnym.
 * **Cloudflare Dashboard**: Zobaczysz nowy rekord CNAME w ustawieniach DNS i nową regułę ingress w konfiguracji tunelu.
 
 Po kilku chwilach, zanim DNS się rozpropaguje, powinieneś móc przejść do `https://nginx.example.com` w przeglądarce i zobaczyć domyślną stronę powitalną NGINX.
@@ -147,7 +147,7 @@ Kiedy pobierasz kopię zapasową z **Ustawienia → Kopia zapasowa i przywracani
 
 | Plik | Opis |
 | --- | --- |
-| `dockflare_config.dat` | Zaszyfrowany ładunek konfiguracyjny (poświadczenia Cloudflare, skrót hasła Web UI, domyślne ustawienia tunelu, Master API key itp.). |
+| `dockflare_config.dat` | Zaszyfrowany pakiet konfiguracyjny (poświadczenia Cloudflare, skrót hasła do panelu administracyjnego, domyślne ustawienia tunelu, klucz API Mastera itd.). |
 | `dockflare.key` | Klucz Fernet używany do odszyfrowywania `dockflare_config.dat` i innych zaszyfrowanych ładunków. Zachowaj to w archiwum. |
 | `agent_keys.dat` | Zaszyfrowany rejestr kluczy API agenta, metadanych i statusu unieważnienia. |
 | `state.json` | Zwykła migawka JSON stanu środowiska wykonawczego — zarządzane reguły, agenci, grupy dostępu. Jest to uwzględnione, aby operatorzy mogli w razie potrzeby sprawdzać lub migrować określone elementy. |

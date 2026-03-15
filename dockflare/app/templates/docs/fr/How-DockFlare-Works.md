@@ -21,9 +21,9 @@ Le fonctionnement général peut être résumé en quelques étapes :
 
 | Composant | Responsabilité |
 | --- | --- |
-| DockFlare Master | Héberge l'UI et l'API, surveille les événements Docker et orchestre les tunnels Cloudflare, le DNS et les politiques d'accès. Il fonctionne sans privilèges root et communique avec Docker uniquement via le socket proxy. |
+| DockFlare Master | Héberge l'interface web et l'API, surveille les événements Docker et orchestre les tunnels Cloudflare, le DNS et les politiques d'accès. Il fonctionne sans privilèges root et communique avec Docker uniquement via le socket proxy. |
 | Docker Socket Proxy | Sidecar `tecnativa/docker-socket-proxy` qui expose au Master la surface minimale de l'API Docker (`containers`, `events`, etc.). Il empêche le Master de monter directement le socket Docker brut. |
-| Redis | Gère le cache, les files d'attente, le streaming des logs et le canal heartbeat/retour des agents. Il s'exécute sur le réseau privé `dockflare-internal`. |
+| Redis | Gère le cache, les files d'attente, le streaming des logs et le canal de heartbeat et de retour d'état des agents. Il s'exécute sur le réseau privé `dockflare-internal`. |
 | DockFlare Agents (facultatif) | Processus distants qui reproduisent le comportement du Master sur d'autres hôtes, retransmettent les événements Docker et gèrent leur propre `cloudflared`. |
 | `cloudflared` | Maintient la connexion du tunnel vers Cloudflare pour le Master ou pour chaque agent. |
 
@@ -33,14 +33,14 @@ DockFlare utilise une approche de configuration souple et en couches, qui combin
 
 1. **Labels Docker (couche de base)** : c'est la méthode principale et automatisée. Vous définissez directement dans `docker-compose.yml` ou dans votre commande `docker run` l'ensemble de la configuration du service : hostname, URL interne et politique d'accès. Ces labels constituent la source de vérité des services automatisés.
 
-2. **Access Groups (couche d'abstraction)** : pour éviter de répéter des politiques d'accès complexes sur de nombreux services, vous pouvez créer des **Access Groups** réutilisables dans la Web UI. Ces modèles regroupent des règles comme « autoriser les e-mails de l'entreprise » ou « autoriser l'accès depuis certains pays », puis les synchronisent avec des politiques Cloudflare Access nommées et réutilisables. Le sélecteur Public vs Authenticated dans la fenêtre modale détermine si DockFlare émet une décision `bypass` ou `allow`. Vous pouvez ensuite appliquer toute une politique à un conteneur avec un simple label, par exemple `dockflare.access.group=my-policy-group`.
+2. **Access Groups (couche d'abstraction)** : pour éviter de répéter des politiques d'accès complexes sur de nombreux services, vous pouvez créer des **Access Groups** réutilisables dans l'interface web. Ces modèles regroupent des règles comme « autoriser les e-mails de l'entreprise » ou « autoriser l'accès depuis certains pays », puis les synchronisent avec des politiques Cloudflare Access nommées et réutilisables. Le sélecteur `Public` ou `Authenticated` dans la fenêtre modale détermine si DockFlare émet une décision `bypass` ou `allow`. Vous pouvez ensuite appliquer toute une politique à un conteneur avec un simple label, par exemple `dockflare.access.group=my-policy-group`.
 
-3. **Overrides dans la Web UI (couche de contrôle)** : la Web UI offre le niveau de contrôle le plus élevé. Depuis le tableau de bord, vous pouvez :
+3. **Overrides dans l'interface web (couche de contrôle)** : l'interface web offre le niveau de contrôle le plus élevé. Depuis le tableau de bord, vous pouvez :
    * **remplacer** la politique d'accès d'un service, qu'elle ait été définie par des labels ou par un Access Group. Ces overrides sont persistants et ne sont pas perdus lors d'un redémarrage du conteneur.
    * **créer des règles d'ingress manuelles** pour des services qui ne tournent pas dans Docker, par exemple sur une autre machine du réseau.
    * **revenir** à la configuration définie dans les labels Docker d'un service et supprimer les overrides appliqués depuis l'interface.
 
-Ce modèle en couches vous permet d'automatiser la plupart des services avec des labels Docker, tout en conservant la souplesse nécessaire pour gérer les exceptions et les scénarios plus complexes via la Web UI.
+Ce modèle en couches vous permet d'automatiser la plupart des services avec des labels Docker, tout en conservant la souplesse nécessaire pour gérer les exceptions et les scénarios plus complexes depuis l'interface web.
 
 ---
 

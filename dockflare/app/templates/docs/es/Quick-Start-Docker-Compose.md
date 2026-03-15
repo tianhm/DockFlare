@@ -102,8 +102,8 @@ Esto abre el proxy, prepara el volumen e inicia DockFlare junto con Redis.
 
 Una vez que los servicios se estén ejecutando, abra su navegador en `http://<your-server-ip>:5000`.
 
-El **Pre-Flight Setup Wizard** le guiará a través de:
-1. Crear una contraseña para la Web UI.
+El **asistente de configuración inicial** le guiará a través de:
+1. Crear una contraseña para la interfaz web.
 2. Ingresando sus credenciales de Cloudflare (ID de cuenta, ID de zona, token API).
 3. Configurar su túnel Cloudflare inicial.
 4. *(Opcional)* Restauración desde un archivo de copia de seguridad de DockFlare. Si ya tiene un `dockflare_backup_*.zip`, elija **Restaurar desde copia de seguridad** antes del Paso 1; el asistente importa su configuración y reinicia el contenedor automáticamente.

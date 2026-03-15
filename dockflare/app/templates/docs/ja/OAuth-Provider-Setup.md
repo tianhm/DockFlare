@@ -1,6 +1,6 @@
 ## OAuth プロバイダーのセットアップ
 
-> **📌 重要:** このガイドは、**DockFlare Web UI の認証**を設定するためのものです。サービスを保護するために **Cloudflare Access ポリシー** 用の OAuth/OIDC を構成したい場合は、代わりに [アイデンティティプロバイダー](Identity-Providers.md) を参照してください。
+> **📌 重要:** このガイドは、**DockFlare 管理画面の認証**を設定するためのものです。サービスを保護するために **Cloudflare Access ポリシー** 用の OAuth/OIDC を構成したい場合は、代わりに [アイデンティティプロバイダー](Identity-Providers.md) を参照してください。
 
 DockFlare では、OpenID Connect（OIDC）標準を使ってユーザー認証を外部プロバイダーに委任できます。これにより、DockFlare の Web インターフェースでシングルサインオン（SSO）を利用でき、Google、Authentik、Okta などの ID プロバイダーと連携できます。
 

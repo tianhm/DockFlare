@@ -1,8 +1,8 @@
-# Politiche predefinite della zona: protezione wildcard
+# Politiche predefinite della zona: protezione con wildcard
 
 ## Panoramica
 
-Le policy predefinite di zona sono una funzionalità best practice di sicurezza che utilizza le applicazioni wildcard di Cloudflare Access (`*.domain.com`) per proteggere automaticamente tutti i sottodomini di una zona DNS.
+Le policy predefinite di zona sono una funzionalità di sicurezza che utilizza le applicazioni wildcard di Cloudflare Access (`*.domain.com`) per proteggere automaticamente tutti i sottodomini di una zona DNS.
 
 ## Il problema che questo risolve
 
@@ -24,7 +24,7 @@ Cloudflare valuta le policy di accesso in questo ordine:
 
 ### Implementazione DockFlare
 
-Sezione **Zone Default Policies** di DockFlare:
+La sezione **Zone Default Policies** di DockFlare:
 - Elenca tutte le tue zone DNS Cloudflare
 - Mostra lo stato della protezione con badge visivi
 - Consente la creazione con un clic delle norme `*.zone.com`
@@ -44,8 +44,8 @@ Sezione **Zone Default Policies** di DockFlare:
 
 Per ogni zona non protetta:
 
-1. Fare clic sul pulsante **Crea policy**
-2. La modale mostra il nome host `*.zone-name.com`
+1. Fai clic sul pulsante **Crea policy**
+2. La finestra modale mostra il nome host `*.zone-name.com`
 3. Selezionare la politica di accesso appropriata:
    - **Zone pubbliche** → `public-default-bypass`
    - **Zone interne** → Politica di autenticazione
@@ -84,7 +84,7 @@ Revisionare regolarmente:
 
 ## Risoluzione dei problemi
 
-### Errore "La policy esiste già".
+### Errore "La policy esiste già"
 
 Esiste già un'applicazione di accesso `*.domain.com`. Questo potrebbe essere:
 - Creato manualmente in Cloudflare
@@ -97,8 +97,8 @@ Esiste già un'applicazione di accesso `*.domain.com`. Questo potrebbe essere:
 
 Controlla la priorità della politica:
 1. Verificare che il servizio abbia una politica del nome host specifica
-2. Confermare che il carattere jolly della zona esiste e che è configurato correttamente
-3. Se il servizio deve essere pubblico nonostante la protezione della zona, aggiungere l'etichetta `dockflare.access.group=public-default-bypass`
+2. Verifica che la wildcard della zona esista e sia configurata correttamente
+3. Se il servizio deve restare pubblico nonostante la protezione della zona, aggiungi l'etichetta `dockflare.access.group=public-default-bypass`
 
 ### Aggirare la protezione delle zone per i servizi pubblici
 
@@ -109,11 +109,11 @@ Se disponi di una policy di autenticazione a livello di zona ma hai bisogno che 
    labels:
      - "dockflare.access.group=public-default-bypass"
    ```
-2. Ciò crea un'applicazione di accesso al nome host esatto con decisione di bypass
-3. Le policy esatte del nome host sovrascrivono le policy wildcard
+2. In questo modo viene creata un'applicazione di accesso per il nome host esatto con decisione di bypass
+3. Le policy specifiche del nome host sovrascrivono le policy wildcard
 4. Il servizio diventa accessibile al pubblico mentre la zona rimane protetta
-3. Controllare i log di accesso di Cloudflare per l'ordine di valutazione delle policy
-4. Assicurarsi che il record DNS punti al tunnel corretto
+5. Controlla i log di accesso di Cloudflare per verificare l'ordine di valutazione delle policy
+6. Assicurati che il record DNS punti al tunnel corretto
 
 ### Zona non visualizzata nell'elenco
 
@@ -128,7 +128,7 @@ Possibili cause:
 
 1. **Crea prima le policy di zona** - Prima di aggiungere servizi
 2. **Utilizza l'autenticazione per le zone interne** - Non utilizzare mai il bypass
-3. **Documentare le eccezioni** - Se una zona non necessita di protezione, documentarne il motivo
+3. **Documenta le eccezioni** - Se una zona non necessita di protezione, documentane il motivo
 4. **Controlli regolari** - Revisione mensile dello stato di protezione della zona
 5. **Test prima della produzione**: verifica che la policy wildcard non interrompa i servizi esistenti
 6. **Principio del privilegio minimo**: utilizza la politica più restrittiva che consente comunque l'accesso legittimo
@@ -214,7 +214,7 @@ services:
 ### Raccomandazione
 
 Invece di fare affidamento sull'etichetta `default_tld`:
-1. Crea policy predefinite della zona nella Web UI
+1. Crea policy predefinite della zona nell'interfaccia web
 2. Lascia che la policy wildcard protegga automaticamente tutti i servizi
 3. Crea solo policy specifiche per le eccezioni
 
@@ -223,7 +223,7 @@ Ciò garantisce una migliore sicurezza per impostazione predefinita.
 ## Documentazione correlata
 
 - [Best practice per le politiche di accesso](Access-Policy-Best-Practices.md)
-- [Uso della Web UI](Using-the-Web-UI.md)
+- [Uso dell'interfaccia web](Using-the-Web-UI.md)
 - [Etichette contenitori](Container-Labels.md)
 - [Come funziona DockFlare](How-DockFlare-Works.md)
 - [Architettura di sicurezza](Security-Architecture.md)

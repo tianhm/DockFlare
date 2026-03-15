@@ -1,26 +1,26 @@
-# Mitwirken an DockFlare
+# A DockFlare mitwirke
 
-Zerscht mau: Merci viu mau, dass du der überlegsch, bi DockFlare mitzmache. Beiträg us dr Community si mega wertvoll. I däm Dok findsch es paar Richtlinie für dini Mithilf.
+Merci, wänn du bi DockFlare mitchaue wotsch. Biiträg us dr Community si wertvou, egal ob s um Bugs, Doku oder Code geit.
 
-## Wie du helfen chöi
+## Wie du cha hälfe
 
-*   **Fehler melden:** Mach uf ein **Issue** auf GitHub mit detaillierten Schritten zur Reproduktion des Fehlers.
-*   **Verbesserungen & Ideen vorschlagen:** Start e **Discussion** im Tab "Discussions" vom GitHub-Repo.
-*   **Doku verbessern:** Din Feedback oder Pull Requests zur Doku si herzlich willkommen.
-*   **Pull Requests einreichen:** Wänn du Code beisteuern wotsch, halt di a bitte die folgenden Richtlinien.
+* **Fehler mälde:** Mach es **Issue** uf GitHub uf u beschrib möglichst klar, wie me dr Fähler reproduziere cha.
+* **Idee u Verbessrige vorschlah:** Nutzt s **Discussions**-Board im Repo.
+* **Doku verbessere:** Feedback u Pull Requests für d Doku si sehr willkomme.
+* **Code biiträge:** Wänn du Code schicksch, halt di a d Richtlinie wyter unde.
 
-## Richtlinien für Pull Requests
+## Richtlinie für Pull Requests
 
-1.  **Zerscht abkläre:** Bi grössere Änderige mach bitte zerscht es Issue uf oder start e Discussion, demit mer de Lösigsweg chöi abspreche.
-2.  **Branching:** Erstell einen neuen Branch für din Feature oder dini Bugfix (`feature/ihr-feature` oder `fix/ihr-bug`).
-3.  **Code-Stil:** Halt di a PEP 8 für Python. Bruuch klari Variablen- u Funktionsnämme u verzicht uf inline Kommentar i de App-Modul.
-4.  **Testen:** Test dini Änderungen gründlich u beschrib den Testprozess in dim Pull Request.
-5.  **Doku:** Aktualisier die `README.md` oder diese Doku, falls dini Änderungen die benutzerseitige Funktionalität betreffen.
-6.  **PR iireiche:** Mach e Pull Request gägen den `unstable`-Branch vom DockFlare-Hauptrepo. Gib e churzi, klari Beschribig vo dine Änderige mit.
+1. **Bi grössere Änderige zerscht abkläre:** Mach zerscht es Issue uf oder start e Discussion.
+2. **Eigete Branch bruuche:** Zum Bispil `feature/deis-feature` oder `fix/dei-bug`.
+3. **Code-Stil iihalte:** Python nach PEP 8, klari Nämme, kei unnötigi Inline-Kommentar i dr App.
+4. **Sorgfältig teste:** Erklär im Pull Request, was du getestet hesch.
+5. **Doku aktualisiere:** Wänn sich s Verhalte ändert, sött o d Doku mitcho.
+6. **PR gege `unstable`:** Schick dr Pull Request gege dr `unstable`-Branch u mach e churzi, präzisi Beschrybig drzue.
 
-## Community & Support
+## Community u Support
 
-*   Für **Fehlerberichte** bruuchsch dr Tracker unter [GitHub Issues](https://github.com/ChrispyBacon-dev/DockFlare/issues).
-*   Für **Feature-Aafrage, Frage, Idee oder allgmeini Diskussione** bruuchsch s'[GitHub Discussions](https://github.com/ChrispyBacon-dev/DockFlare/discussions)-Board.
+* Für **Fehlerbricht**: [GitHub Issues](https://github.com/ChrispyBacon-dev/DockFlare/issues)
+* Für **Frage, Idee u Diskussione**: [GitHub Discussions](https://github.com/ChrispyBacon-dev/DockFlare/discussions)
 
-Das isch e churzi Zämefassig vo dr vollständige `CONTRIBUTING.md`. Meh Detail findsch i dr [Originaldatei](https://github.com/ChrispyBacon-dev/DockFlare/blob/main/CONTRIBUTING.md) im Repo.
+Das da isch nume d churzi Zämefassig. Meh Detail findsch i dr [CONTRIBUTING.md](https://github.com/ChrispyBacon-dev/DockFlare/blob/main/CONTRIBUTING.md) im Repo.

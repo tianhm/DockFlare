@@ -4,7 +4,7 @@ DockFlare 3.0 introduce un archivio di backup completo, così puoi spostare un M
 
 ## Cosa viene salvato
 - `dockflare.key` – la chiave Fernet che permette di decifrare ogni file protetto.
-- `dockflare_config.dat` – credenziali Cloudflare cifrate, account della Web UI e impostazioni di runtime.
+- `dockflare_config.dat` – credenziali Cloudflare cifrate, account dell'interfaccia web e impostazioni di runtime.
 - `agent_keys.dat` – chiavi API degli agenti cifrate e metadati di audit.
 - `state.json` – una copia JSON in chiaro di regole, agenti e Access Groups.
 - `manifest.json` – checksum e informazioni di versione dell'archivio, generati automaticamente.
@@ -12,7 +12,7 @@ DockFlare 3.0 introduce un archivio di backup completo, così puoi spostare un M
 Tutti questi file vengono raccolti in un unico `dockflare_backup_YYYYMMDD_HHMMSS.zip`. Conserva insieme il file ZIP e gli eventuali file estratti: senza `dockflare.key`, gli artefatti cifrati non possono essere utilizzati.
 
 ## Creazione di un backup
-1. Apri **Impostazioni → Backup e ripristino** nella Web UI.
+1. Apri **Impostazioni → Backup e ripristino** nell'interfaccia web.
 2. Fai clic su **Scarica backup (.zip)**.
 3. Conserva l'archivio in un luogo sicuro. Trattalo come una credenziale sensibile: contiene tutto il necessario per gestire il tuo account Cloudflare tramite DockFlare.
 
@@ -23,7 +23,7 @@ I backup possono essere creati mentre il Master è in esecuzione. Ogni archivio 
 2. Carica il file `.zip` tramite **Ripristina da backup**.
 3. Conferma l'avviso: il ripristino sovrascrive la configurazione esistente, le chiavi degli agenti e le regole.
 
-DockFlare riscrive i file cifrati, ricarica `state.json` e, se necessario, imposta un flag di riavvio. Dopo pochi secondi il container termina, così Docker può riavviarlo con la nuova configurazione. Al termine, la Web UI tornerà disponibile con le credenziali ripristinate.
+DockFlare riscrive i file cifrati, ricarica `state.json` e, se necessario, imposta un flag di riavvio. Dopo pochi secondi il container termina, così Docker può riavviarlo con la nuova configurazione. Al termine, l'interfaccia web tornerà disponibile con le credenziali ripristinate.
 
 I file `state.json` legacy sono ancora supportati per ripristini parziali. Il caricamento di un semplice file JSON sostituisce solo le regole e lascia invariata la configurazione cifrata.
 

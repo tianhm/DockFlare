@@ -19,8 +19,8 @@ Questa guida spiega l'architettura, il modello di sicurezza e il flusso di lavor
 
 | Componente | Responsabilità |
 |-----------|----------------|
-| **Master (DockFlare)** | Ospita la Web UI, memorizza lo stato, riconcilia le regole ingress desiderate, invia comandi. |
-| **Redis** | Backplane per memorizzazione nella cache, heartbeat dell'agente e comandi in coda. |
+| **Master (DockFlare)** | Ospita l'interfaccia web, memorizza lo stato, riconcilia le regole ingress desiderate e invia comandi. |
+| **Redis** | Livello condiviso per cache, heartbeat dell'agente e comandi in coda. |
 | **Agente DockFlare** | Contenitore headless che osserva gli eventi Docker locali, esegue comandi e gestisce `cloudflared`. |
 | **cloudflared** | Gestisce la connessione tunnel effettiva a Cloudflare per agente. |
 
@@ -39,10 +39,10 @@ Il Master e Redis vengono generalmente eseguiti insieme, mentre gli agenti vengo
 
 ## Panoramica del flusso di lavoro
 
-1. **Genera una chiave API dell'agente** nella Web UI di DockFlare (`Agents → Generate Key`).
+1. **Genera una chiave API dell'agente** nell'interfaccia web di DockFlare (`Agents → Generate Key`).
 2. **Distribuire il contenitore DockFlare Agent** sull'host remoto, passando l'URL principale e la chiave.
 3. L'agente **si registra** presso il Master e appare con lo stato *In sospeso*.
-4. Dalla Web UI principale, **iscrivi** l'agente: assegna o crea un tunnel Cloudflare per quell'host.
+4. Dall'interfaccia principale, **approva** l'agente: assegna o crea un tunnel Cloudflare per quell'host.
 5. Il Master mette in coda i comandi; l'agente **esegue il polling**, applica la configurazione e segnala lo stato/battito cardiaco. DockFlare rileva automaticamente la zona di destinazione per ciascun nome host (ritornando alla zona predefinita solo quando il rilevamento fallisce).
 6. Quando i container vengono avviati/arrestati sull'host dell'agente, l'agente trasmette gli eventi al Master che aggiorna DNS, policy di accesso e regole ingress del tunnel.
 
@@ -125,7 +125,7 @@ networks:
 
 ## Modello di sicurezza
 
-* **Chiave API principale**: protegge l'API amministrativa. L'interfaccia utente lo espone solo dopo aver fatto clic su *Mostra chiave API principale*.
+* **Chiave API principale**: protegge l'API amministrativa. L'interfaccia la mostra solo dopo aver fatto clic su *Mostra chiave API principale*.
 * **Chiavi API dell'agente**: univoche per agente. La revoca di una chiave blocca immediatamente ulteriori registrazioni/comandi da quell'host.
 * **Redis** – utilizzato per code e cache; proteggerlo (password + ACL di rete) se eseguito all'esterno di una LAN attendibile.
 * **Trasporto** – esegui il Master dietro HTTPS (ad esempio, tramite Cloudflare Access) in modo che il traffico dell'agente sia crittografato.
@@ -134,7 +134,7 @@ networks:
 ### Indurimento consigliato
 
 1. Conservare le chiavi dell'agente in un vault/gestore di password; ruotare regolarmente.
-2. **Non disabilitare l'accesso tramite password**: utilizza invece i provider OAuth/OIDC per comodità di accesso singolo senza rischi per la sicurezza. Se è necessario disabilitare l'accesso tramite password, tieni presente che ciò crea una vulnerabilità della sicurezza della rete Docker in cui qualsiasi container sulla stessa rete può ignorare l'autenticazione esterna. Consulta [Accesso alla Web UI](Accessing-the-Web-UI.md) per tutte le implicazioni sulla sicurezza.
+2. **Non disabilitare l'accesso tramite password**: utilizza invece i provider OAuth/OIDC per ottenere il single sign-on senza introdurre rischi per la sicurezza. Se è necessario disabilitare l'accesso tramite password, tieni presente che ciò crea una vulnerabilità sulla rete Docker: qualsiasi container sulla stessa rete può ignorare l'autenticazione esterna. Consulta [Accesso all'interfaccia web](Accessing-the-Web-UI.md) per tutte le implicazioni sulla sicurezza.
 3. Utilizzare tunnel separati per agente per l'isolamento con privilegi minimi.
 4. Monitora la pagina `Agents` per eventuali lacune di heartbeat: i nodi offline possono essere rimossi direttamente dall'interfaccia utente.
 
@@ -144,7 +144,7 @@ networks:
 
 | Sintomo | Correzione |
 |---------|-----|
-| Agente bloccato in `pending` | Assicurati che sia stato registrato con la chiave API corretta e registralo dalla Web UI. |
+| Agente bloccato in `pending` | Assicurati che sia stato registrato con la chiave API corretta e approvalo dall'interfaccia web. |
 | I comandi non cancellano mai | Conferma la connettività Redis e che gli orologi del contenitore dell'agente siano sincronizzati. |
 | DNS non aggiornato | Il Master deve raggiungere Cloudflare e l'agente deve inviare eventi container; verifica `docker logs dockflare-agent`. |
 | Battito cardiaco offline | Controlla il percorso di rete tra agente e Master; i problemi relativi al firewall o al TLS sono cause comuni. |

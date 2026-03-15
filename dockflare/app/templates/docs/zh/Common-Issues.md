@@ -35,7 +35,7 @@
 
 **解决方案：**
 1. **检查 API 令牌权限：** 确保您的 API 令牌具有 `Account:Access: Apps and Policies:Edit` 权限。
-2. **检查 UI 覆盖：** 在 DockFlare 仪表板中，检查规则是否具有“UI 覆盖”状态。UI 覆盖优先于标签。
+2. **检查界面覆盖：** 在 DockFlare 仪表板中，检查规则是否具有“界面覆盖”状态。界面覆盖优先于标签。
 3. **检查访问组 ID：** 如果您使用 `dockflare.access.group`，请确保您在标签中指定的 ID **完全** 与您在“访问策略”页面上为访问组创建的 ID 匹配。
 4. **检查 Cloudflare 仪表板：** 登录到您的 Cloudflare 零信任仪表板。导航到 **Access -> 应用程序** 以查看是否已创建 Access 应用程序。有时，Cloudflare 会显示一个在 API 响应中不可见的错误。
 

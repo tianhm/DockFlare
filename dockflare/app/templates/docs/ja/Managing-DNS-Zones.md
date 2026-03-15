@@ -45,17 +45,17 @@ services:
 1. `example.com` ゾーンに `nginx.example.com` の CNAME レコードを作成します。
 2. `media.io` ゾーンに `portainer.media.io` の CNAME レコードを作成します。
 
-両方のホスト名は、同じ Cloudflare Tunnel の ingress ルールとして追加されます。
+両方のホスト名は、同じ Cloudflare Tunnel の入口ルールとして追加されます。
 
-## UI で DNS レコードを表示する
+## 管理画面で DNS レコードを表示する
 
-DockFlare Web UI の **設定** ページでは、アカウント内の Cloudflare Tunnel 一覧と、それらを指している DNS レコードを確認できます。
+DockFlare 管理画面の **設定** ページでは、アカウント内の Cloudflare Tunnel 一覧と、それらを指している DNS レコードを確認できます。
 
 複数ゾーンにまたがって DNS レコードを確実に検出したい場合は、`TUNNEL_DNS_SCAN_ZONE_NAMES` 環境変数を使います。
 
 ### `TUNNEL_DNS_SCAN_ZONE_NAMES`
 
-この環境変数には、UI が DNS レコード検索時にスキャンするゾーン名をカンマ区切りで指定します。
+この環境変数には、管理画面が DNS レコード検索時にスキャンするゾーン名をカンマ区切りで指定します。
 
 **例 `docker-compose.yml`:**
 ```yaml
@@ -64,8 +64,8 @@ services:
     image: alplat/dockflare:stable
     # ... other settings
     environment:
-      # Tell the UI to scan these zones in addition to the default one
+      # Tell the management UI to scan these zones in addition to the default one
       - TUNNEL_DNS_SCAN_ZONE_NAMES=media.io,another-domain.org
 ```
 
-これにより、UI の DNS レコードビューアで、トンネルを指しているすべてのドメインを横断して確認できるようになります。
+これにより、管理画面の DNS レコードビューアで、トンネルを指しているすべてのドメインを横断して確認できるようになります。

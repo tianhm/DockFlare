@@ -1,6 +1,6 @@
-# Persistencia del Estado
+# Persistencia del estado
 
-DockFlare es una aplicación con estado. Necesita realizar un seguimiento de los servicios que administra, los overrides de la Web UI y otros detalles de configuración. Este estado persiste en el disco para garantizar que su configuración no se pierda si se reinicia o se vuelve a crear el contenedor DockFlare.
+DockFlare es una aplicación con estado. Necesita realizar un seguimiento de los servicios que administra, los ajustes aplicados desde la interfaz web y otros detalles de configuración. Este estado persiste en el disco para garantizar que su configuración no se pierda si se reinicia o se vuelve a crear el contenedor DockFlare.
 
 ## Cómo se almacena el estado
 
@@ -8,14 +8,14 @@ DockFlare almacena su estado en tres archivos clave ubicados en el directorio `/
 
 1. `dockflare_config.dat`: Este es el archivo más crítico. Contiene todas sus configuraciones principales e información confidencial en un formato **cifrado**. Esto incluye:
     * Su token API de Cloudflare y su ID de cuenta.
-    * Su hash de contraseña de la Web UI de DockFlare.
-    * Configuraciones principales configuradas a través de la Web UI, como el nombre del túnel y los ID de zona.
+    * El hash de contraseña de la interfaz web de DockFlare.
+    * Configuraciones principales establecidas a través de la interfaz web, como el nombre del túnel y los ID de zona.
 
 2. `agent_keys.dat`: un almacén cifrado que contiene todas las claves API del agente y sus metadatos (propietario, estado, marcas de tiempo). Mantener este archivo seguro evita que se reutilicen claves obsoletas.
 
 3. `state.json`: este archivo almacena el estado dinámico de sus servicios administrados en un formato JSON simple. Esto incluye:
-    * La lista de todas las reglas ingress que DockFlare administra, ya sea que provengan de etiquetas de Docker o se hayan creado manualmente en la Web UI.
-    * Cualquier override de la Web UI aplicado a las políticas de acceso.
+    * La lista de todas las reglas ingress que DockFlare administra, ya sea que provengan de etiquetas de Docker o se hayan creado manualmente en la interfaz web.
+    * Cualquier ajuste aplicado desde la interfaz web a las políticas de acceso.
     * Todos los grupos de acceso que hayas creado.
     * El estado de "eliminación pendiente" para los servicios que se han detenido pero que aún se encuentran dentro de su período de gracia.
 
@@ -23,7 +23,7 @@ DockFlare almacena su estado en tres archivos clave ubicados en el directorio `/
 
 Debido a que toda su configuración se almacena en el directorio `/app/data`, es **absolutamente crucial** que asigne este directorio a un volumen persistente en su máquina host.
 
-Si no utiliza un volumen persistente, **todas sus configuraciones, contraseña de la Web UI y configuraciones de reglas se perderán** cada vez que se elimine y vuelva a crear el contenedor DockFlare (por ejemplo, cuando actualice la imagen).
+Si no utiliza un volumen persistente, **todas sus configuraciones, la contraseña de la interfaz web y la configuración de reglas se perderán** cada vez que se elimine y vuelva a crear el contenedor DockFlare, por ejemplo al actualizar la imagen.
 
 ### Configuración recomendada de Docker Compose
 

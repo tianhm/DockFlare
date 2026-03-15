@@ -1,55 +1,72 @@
-# Interner vs. Externer `cloudflared`
+# Interne vs. externe `cloudflared`
 
-DockFlare cha in zwei Modi betrieben wärde, um den `cloudflared`-Agenten zu verwalten, also die Softwarekomponente, die tatsächlich die dauerhafte Verbindung zwischen dim Server u dem Cloudflare-Netzwerk herstellt. Das Verständnis dieser beiden Modi isch entscheidend für die Wahl des richtigen Setups für dini Umgebung.
+DockFlare cha i zwöi Modis loufe, zum `cloudflared` z verwalte. `cloudflared` isch dr Teil, wo d permanänti Verbindig zwüsche dim Server u em Cloudflare-Netz ufbout. Wänn du de Unterschied vo de beidne Modis verstande hesch, chasch ds passendere Setup für dini Umgebig wähle.
 
-## Interner Modus (Standard)
+## Interne Modus (Standard)
 
-Im internen Modus übernimmt DockFlare die volle Verantwortung für die Verwaltung des `cloudflared`-Agenten.
+Im interne Modus übernimmt DockFlare d ganz Verwaltig vom `cloudflared`-Agent sälber.
 
-### Wie es funktioniert
-Wenn DockFlare startet, wird es automatisch:
-1.  Einen eigenen Docker-Container erstellen, auf dem das `cloudflare/cloudflared`-Image läuft.
-2.  Diesen Agenten-Container konfigurieren, um sich mit dim Cloudflare-Konto zu verbinden u den in dini DockFlare-Istellige angegebenen Tunnel zu bruuche.
-3.  Sicherstellen, dass der Agent läuft, u ihn im Fehlerfall neu starten.
-4.  Automatisch alle relevanten Istellige anwenden, wie z.B. die Aktivierung des Prometheus-Metrik-Endpunkts.
+Wänn DockFlare startet, macht es automatisch:
 
-Das isch der **Standard- u empfohlene** Modus für die meisten Benutzer.
+1. Es eigets Docker-Container für `cloudflare/cloudflared` erstelle
+2. Dr Tunnel mit de richtige Zugangsdaten konfigurieren
+3. D Ingress-Regle aktuell halte
+4. `cloudflared` neu starte, wänn sich d Konfiguration änderet
 
-### Vorteile
-*   **Einfachheit:** Es isch eine "Zero-Configuration"-Einrichtung. DockFlare übernimmt alles für di.
-*   **Garantierte Kompatibilität:** DockFlare stellt sicher, dass der Agent so konfiguriert isch, wie er damit arbeiten cha.
-*   **Zentrale Verwaltung:** Alles, was mit dini Tunneln zu tun hat, wird von DockFlare verwaltet.
+Das isch dr **Standard** u ou dr empfohlni Modus für d meischte Benutzer.
 
-### Nachteile
-*   **Weniger Kontrolle:** du hesch nur eingeschränkte Kontrolle über die Konfiguration des `cloudflared`-Agenten, abseits dessen, was DockFlare offenlegt.
+### Vorteil
 
----
+* **Eifachs Setup** – DockFlare übernimmt praktisch aues für di
+* **Zentrali Verwaltig** – Tunnel u `cloudflared` si us ere Hand verwaltet
+* **Weniger Handarbeit** – Kei separati Prozesspflege nötig
 
-## Externer `cloudflared` Modus
+### Nachteil
 
-Im externen Modus si du selbst für den Betrieb u die Verwaltung des `cloudflared`-Agenten verantwortlich. DockFlare verbindet sich mit diesem bestehenden Agenten, anstatt einen eigenen zu erstellen.
+* **Weniger Feinkontroll** – Du bisch uf die Optione beschränkt, wo DockFlare bereitstellt
 
-### Wie es funktioniert
-DockFlare wird **kei** `cloudflared`-Container erstellen. Stattdessen geht es davon aus, dass irgendwo ein `cloudflared`-Agent läuft, den es bruuche cha. Das könnte sein:
-*   Ein `cloudflared`-Prozess, der direkt auf dem Host-Betriebssystem läuft (z.B. als `systemd`-Dienst).
-*   En `cloudflared`-Container, wo du säuber mit ere separierte `docker-compose.yml`-Datei oder mit eme Docker-Run-Befehl verwaltisch.
-*   Ein `cloudflared`-Agent, der auf einer komplett anderen Maschine läuft.
+## Externe Modus
 
-Das isch ein **fortgeschrittener Modus**, der für Benutzer mit spezifischen Anforderungen oder komplexen bestehenden Setups gedacht isch.
+Im externe Modus bisch du sälber für Betrieb u Verwaltig vom `cloudflared`-Agent verantwortlich. DockFlare verbindet sech de mit eme bestehende Agent statt sälber eine z erstelle.
 
-### Vorteile
-*   **Maximale Kontrolle:** du hesch die volle Kontrolle über den `cloudflared`-Agenten, einschliesslich seiner Version, Kommandozeilenargumente u seines Lebenszyklus.
-*   **Integration in bestehende Setups:** Perfekt, wenn bereits ein `cloudflared`-Agent für andere Zwecke bei dir läuft.
-*   **Entkopplung:** Entkoppelt den Lebenszyklus von DockFlare vom Lebenszyklus des `cloudflared`-Agenten.
+Das heisst:
 
-### Nachteile
-*   **Komplexität:** du bisch dafür verantwortlich, sicherzustellen, dass der `cloudflared`-Agent läuft, richtig konfiguriert u mit dem richtigen Tunnel verbunden isch.
-*   **Konfigurationsaufwand:** du muesch DockFlare konfigurieren, um diesen externen Agenten zu nutzen.
+* DockFlare erstellt **kei** eigete `cloudflared`-Container
+* Du muesch sälber luege, dass `cloudflared` louft
+* Du verwaltsch Version, Flags u Lifecycle vo `cloudflared` sälber
 
-### So aktivier den externen Modus
-Um den externen Modus zu aktivieren, muesch die folgenden Umgebungsvariablen für den DockFlare-Container setzen:
+Das isch e **fortgschrittne Modus** für spezielli Aaforderige oder bestehendi Setups.
 
-*   `USE_EXTERNAL_CLOUDFLARED=true`: Aktiviert den externen Modus.
-*   `EXTERNAL_TUNNEL_ID`: Muss auf die UUID des Tunnels gesetzt wärde, auf die din externer `cloudflared`-Agent konfiguriert isch.
+### Vorteil
 
-Wenn diese Variablen gesetzt si, überspringt DockFlare die interne Agentenverwaltung u sendet stattdessen alle Ingress-Regelkonfigurationen an den Tunnel, der durch `EXTERNAL_TUNNEL_ID` angegeben isch.
+* **Maximali Kontroll** – Du bestimmsch Version, Kommandozeile u Laufzyklus
+* **Gueti Integrationsmöglichkeit** – Praktisch, wänn du scho es separates `cloudflared`-Setup hesch
+
+### Nachteil
+
+* **Meh Komplexität** – Du muesch sälber sicherstelle, dass dr Agent louft, richtig konfiguriert isch u am richtige Tunnel hängt
+
+## Wänn bruuchsch welä Modus?
+
+### Interne Modus isch besser, wänn ...
+
+* du e möglichst eifachi Iirichtig wotsch
+* DockFlare d Tunnel komplett söll verwalte
+* du nid sälber no zusätzlich `cloudflared` pflege wotsch
+
+### Externe Modus isch sinnvoll, wänn ...
+
+* du scho es bestehends `cloudflared`-Setup hesch
+* du spezielli Argument oder e eigeti Prozessverwaltig bruchsch
+* du ganz genau kontrolliere wotsch, wie `cloudflared` deployt wird
+
+## Externe Modus aktiviere
+
+Zum externe Modus z aktiviere, muesch d entsprächende Umgebigsvariable für dr DockFlare-Container setze. D genoue Werte u d Bereitstellig si i dr Doku zum externe Modus beschribe:
+
+* [Externe `cloudflared`-Modus](External-cloudflared-Mode.md)
+* [Zwüsche Modis wächsle](Switching-Between-Modes.md)
+
+## Kurzfazit
+
+Für d meischte Setups isch dr **interne Modus** dr richtigi Wäg. Dr **externe Modus** lohnt sech vor allem de, wänn du bewusst meh Kontroll oder e vorhandeni `cloudflared`-Infrastruktur iibinde wotsch.

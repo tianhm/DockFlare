@@ -35,7 +35,7 @@ services:
 ## 它在实践中是如何运作的
 
 1. **容器已停止：** 您运行 `docker stop my-app`。
-2. **待删除：** DockFlare 检测到停止事件。在 Web UI 中，`my-app.example.com` 的规则现在将显示其状态为 **“pending_deletion”** 并显示计划删除的时间。
+2. **待删除：** DockFlare 检测到停止事件。在网页管理界面中，`my-app.example.com` 的规则会显示其状态为 **“pending_deletion”**，并标出计划删除的时间。
 3. **两种情况：**
     * **场景 A：宽限期到期：** 如果容器保持停止状态并且宽限期（例如 10 分钟）到期，DockFlare 的后台清理任务将运行。它将从您的 Cloudflare 隧道中删除入口规则并删除 CNAME DNS 记录。
     * **场景 B：容器重新启动：** 如果您再次启动容器 (`docker start my-app`) **在宽限期到期之前**，DockFlare 将检测启动事件。它将看到该规则正在等待删除，取消删除，并将其状态更改回 **“活动”**。您的服务将继续无缝运行。

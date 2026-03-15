@@ -47,15 +47,15 @@ Cuando implementes esto, DockFlare:
 
 Ambos nombres de host se agregarán como reglas ingress al mismo túnel de Cloudflare.
 
-## Ver registros DNS en la Web UI
+## Ver registros DNS en la interfaz web
 
-La Web UI de DockFlare tiene una función en la página **Settings** que le permite ver todos los túneles de Cloudflare en su cuenta y los registros DNS que apuntan a ellos.
+La interfaz web de DockFlare tiene una función en la página **Settings** que le permite ver todos los túneles de Cloudflare en su cuenta y los registros DNS que apuntan a ellos.
 
-Para asegurarse de que la Web UI pueda encontrar registros DNS en todas sus diferentes zonas, puede utilizar la variable de entorno `TUNNEL_DNS_SCAN_ZONE_NAMES`.
+Para asegurarse de que la interfaz web pueda encontrar registros DNS en todas sus zonas, puede utilizar la variable de entorno `TUNNEL_DNS_SCAN_ZONE_NAMES`.
 
 ### `TUNNEL_DNS_SCAN_ZONE_NAMES`
 
-Esta variable de entorno acepta una lista separada por comas de nombres de zonas que la Web UI debe escanear cuando busca registros DNS.
+Esta variable de entorno acepta una lista separada por comas de nombres de zonas que la interfaz web debe escanear cuando busca registros DNS.
 
 **Ejemplo `docker-compose.yml`:**
 ```yaml
@@ -64,8 +64,8 @@ services:
     image: alplat/dockflare:stable
     # ... other settings
     environment:
-      # Tell the UI to scan these zones in addition to the default one
+      # Indica a la interfaz que escanee también estas zonas además de la predeterminada
       - TUNNEL_DNS_SCAN_ZONE_NAMES=media.io,another-domain.org
 ```
 
-Esto garantizará que el visor de registros DNS en la Web UI proporcione una imagen completa de todos los dominios que apuntan a sus túneles.
+Esto garantizará que el visor de registros DNS en la interfaz web ofrezca una visión completa de todos los dominios que apuntan a sus túneles.

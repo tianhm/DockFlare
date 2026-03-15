@@ -16,7 +16,7 @@ Kluczową cechą etykiet indeksowanych jest mechanizm awaryjny. Jeśli nie podas
 
 Umożliwia to zdefiniowanie wspólnych ustawień raz na poziomie podstawowym i zastąpienie tylko określonych wartości, które należy zmienić dla każdej indeksowanej reguły.
 
-## Przykład: udostępnianie Web UI i API
+## Przykład: udostępnianie interfejsu WWW i API
 
 Załóżmy, że masz pojedynczy kontener, który obsługuje zarówno aplikację internetową na porcie `80`, jak i oddzielne API na porcie `3000`. Chcesz je udostępnić odpowiednio w `app.example.com` i `api.example.com`. Chcesz także zabezpieczyć interfejs API określoną grupą dostępu, podczas gdy główna aplikacja pozostaje publiczna.
 
@@ -36,7 +36,7 @@ services:
       # This service is used by rule 0, as it's not specified there.
       - "dockflare.service=http://my-app:80" 
 
-      # --- Rule 0: The Web UI ---
+      # --- Rule 0: Główny interfejs WWW ---
       - "dockflare.0.hostname=app.example.com"
       # No 'service' label here, so it falls back to the base one.
       # No 'access.group' label, so it's public.

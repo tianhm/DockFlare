@@ -43,7 +43,7 @@ services:
       - cloudflare-net
     labels:
       - "dockflare.enable=true"
-      # Use the wildcard hostname here
+      # Tutaj użyj nazwy hosta z wildcardem
       - "dockflare.hostname=*.plex.example.com"
       - "dockflare.service=http://my-proxy-manager:81"
 ```
@@ -52,6 +52,6 @@ services:
 
 1. Zapisz plik `docker-compose.yml` i uruchom `docker compose up -d`.
 2. DockFlare wykryje kontener i utworzy regułę ingress w Cloudflare Tunnel dla nazwy hosta `*.plex.example.com`.
-3. Możesz to sprawdzić w Web UI DockFlare oraz w konfiguracji tunelu w panelu Cloudflare.
+3. Możesz to sprawdzić w panelu administracyjnym DockFlare oraz w konfiguracji tunelu w panelu Cloudflare.
 
 Teraz każde żądanie kierowane do subdomeny, takiej jak `sonarr.plex.example.com` lub `radarr.plex.example.com`, będzie kierowane przez tunel Cloudflare do kontenera `my-proxy-manager`, który następnie będzie mógł odpowiednio obsłużyć ruch.

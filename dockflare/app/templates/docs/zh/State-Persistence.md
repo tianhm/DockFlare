@@ -1,6 +1,6 @@
 # 状态持久化
 
-DockFlare 是一个有状态的应用。它需要跟踪自己管理的服务、UI 覆盖以及其他配置细节。为了避免在重启或重建 DockFlare 容器时丢失配置，这些状态会持久写入磁盘。
+DockFlare 是一个有状态的应用。它需要跟踪自己管理的服务、界面覆盖以及其他配置细节。为了避免在重启或重建 DockFlare 容器时丢失配置，这些状态会持久写入磁盘。
 
 ## 状态如何存储
 
@@ -8,22 +8,22 @@ DockFlare 会将状态保存在容器内 `/app/data` 目录下的三个关键文
 
 1. `dockflare_config.dat`：这是最关键的文件。它以**加密**形式保存所有核心设置和敏感信息，包括：
     * 您的 Cloudflare API 令牌和账户 ID
-    * DockFlare UI 的密码哈希
-    * 通过 UI 配置的核心设置，例如 Tunnel Name 和 Zone IDs
+    * DockFlare 管理界面的密码哈希
+    * 通过管理界面配置的核心设置，例如隧道名称和区域 ID
 
 2. `agent_keys.dat`：这是一个加密存储，用于保存所有 Agent API 密钥及其元数据（所有者、状态、时间戳）。妥善保护这个文件可以防止旧密钥被重新利用。
 
 3. `state.json`：这个文件以明文 JSON 形式保存托管服务的动态状态，包括：
-    * DockFlare 正在管理的所有 ingress 规则，无论它们来自 Docker labels 还是在 UI 中手动创建
-    * 应用于 Access Policies 的所有 UI 覆盖
-    * 您创建的全部 Access Groups
+    * DockFlare 正在管理的所有入口规则，无论它们来自 Docker 标签还是在管理界面中手动创建
+    * 应用于 Access Policies 的所有界面覆盖
+    * 您创建的全部访问组
     * 已停止但仍处于宽限期内服务的 `pending deletion` 状态
 
 ## 持久卷的重要性
 
 由于所有配置都保存在 `/app/data` 目录中，因此将该目录映射到宿主机上的持久卷**非常关键**。
 
-如果不使用持久卷，那么每次删除并重新创建 DockFlare 容器时（例如更新镜像时），**您的所有设置、UI 密码和规则配置都会丢失**。
+如果不使用持久卷，那么每次删除并重新创建 DockFlare 容器时（例如更新镜像时），**您的所有设置、界面密码和规则配置都会丢失**。
 
 ### 推荐的 Docker Compose 配置
 

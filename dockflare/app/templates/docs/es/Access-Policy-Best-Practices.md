@@ -1,22 +1,22 @@
 # Mejores prácticas y ejemplos de políticas de acceso
 
-La característica de seguridad más poderosa de DockFlare es **Grupos de acceso**. Proporcionan una forma centralizada, reutilizable y fácil de mantener de proteger sus servicios mediante Cloudflare Zero Trust.
+La función de seguridad más potente de DockFlare son los **Grupos de acceso**. Proporcionan una forma centralizada, reutilizable y fácil de mantener para proteger sus servicios con Cloudflare Zero Trust.
 
 ## La "regla de oro": utilice grupos de acceso
 
-La mejor práctica más importante es **utilizar grupos de acceso para todas sus políticas de acceso comunes**.
+La recomendación más importante es **utilizar grupos de acceso para todas sus políticas de acceso habituales**.
 
-Los grupos de acceso son plantillas de políticas que usted crea en la Web UI de DockFlare. En lugar de definir reglas complejas con varias etiquetas en cada contenedor, se crea una política una vez y se aplica con una etiqueta única y limpia. DockFlare v3.0.3 ahora sincroniza cada grupo con una política de acceso de Cloudflare reutilizable para que el mismo conjunto de decisiones pueda servir a múltiples aplicaciones.
+Los grupos de acceso son plantillas de políticas que usted crea en la interfaz web de DockFlare. En lugar de definir reglas complejas con varias etiquetas en cada contenedor, crea una política una vez y la aplica con una etiqueta sencilla y clara. DockFlare v3.0.3 sincroniza cada grupo con una política de acceso reutilizable de Cloudflare para que el mismo conjunto de decisiones pueda servir a varias aplicaciones.
 
 ---
 
 ## Cómo crear y utilizar grupos de acceso
 
-Crear un grupo de acceso es un proceso simple que se realiza completamente dentro de la Web UI de DockFlare.
+Crear un grupo de acceso es un proceso sencillo que se realiza completamente dentro de la interfaz web de DockFlare.
 
 ### Paso 1: crear el grupo de acceso
 
-1. Navegue a la página **Access Policies** desde la barra de navegación principal en la Web UI de DockFlare.
+1. Vaya a la página **Access Policies** desde la barra de navegación principal en la interfaz web de DockFlare.
 2. Haga clic en el botón **"Add Access Group"**.
 3. Asigne a su grupo un **ID único y descriptivo**. Este ID es el que usará en sus etiquetas de Docker. Por ejemplo: `admin-users`, `home-network`, `geo-block`.
 4. Elija el **Access Mode** en las pestañas en la parte superior del modal:
@@ -57,7 +57,7 @@ DockFlare proporciona dos políticas de sistema integradas que están disponible
 
 Estas políticas del sistema no se pueden eliminar y sirven como base para la protección de zonas y la migración de etiquetas heredadas.
 
-#### B) A través de la Web UI (para reglas manuales o overrides)
+#### B) A través de la interfaz web (para reglas manuales o ajustes)
 
 También puede aplicar un grupo de acceso a cualquier regla directamente desde el panel:
 1. Busque la regla ingress que desea modificar en el panel principal.
@@ -65,7 +65,7 @@ También puede aplicar un grupo de acceso a cualquier regla directamente desde e
 3. En el modo de edición, seleccione los grupos de acceso que desee en el menú desplegable "Access Groups".
 4. Guarde los cambios.
 
-Esto es perfecto para aplicar políticas a reglas creadas manualmente (para servicios que no son de Docker) o para anular temporalmente una política definida por etiquetas de Docker.
+Esto es ideal para aplicar políticas a reglas creadas manualmente, por ejemplo para servicios que no se ejecutan en Docker, o para sustituir temporalmente una política definida por etiquetas de Docker.
 
 ---
 
@@ -119,7 +119,7 @@ Las políticas predeterminadas de zona son aplicaciones de acceso comodín `*.do
 
 **El problema:** Si olvida agregar una política de acceso a un servicio, se expone públicamente de forma predeterminada.
 
-**La solución:** Una política comodín a nivel de zona actúa como una red de seguridad. Incluso si olvida configurar `forgotten-service.yourdomain.com`, la política `*.yourdomain.com` lo detectará.
+**La solución:** Una política comodín a nivel de zona actúa como red de seguridad. Incluso si olvida configurar `forgotten-service.yourdomain.com`, la política `*.yourdomain.com` seguirá protegiéndolo.
 
 ### Cómo configurarlos
 
@@ -136,7 +136,7 @@ Las políticas predeterminadas de zona son aplicaciones de acceso comodín `*.do
 
 - ✅ **Crear siempre políticas de zona** para dominios de producción
 - ✅ **Usar políticas de autenticación** para zonas internas/privadas
-- ✅ **Utilice circunvalación pública** solo para zonas verdaderamente públicas
+- ✅ **Use acceso público por omisión** solo para zonas verdaderamente públicas
 - ✅ **Revisar periódicamente** - comprobar el estado de protección de la zona mensualmente
 - ⚠️ **Recordar prioridad** - Las políticas de nombres de host específicas anulan las políticas de comodines
 
@@ -188,7 +188,7 @@ Las políticas externas aparecerán con una insignia violeta **"Externa"**.
 
 ### Organización de sus políticas
 
-**Consejo profesional:** Cambie el nombre de las políticas externas en Cloudflare para usar el prefijo `DockFlare-`
+**Consejo:** Cambie el nombre de las políticas externas en Cloudflare para usar el prefijo `DockFlare-`
 
 Puede organizar políticas externas cambiándoles el nombre en el panel de Cloudflare:
 

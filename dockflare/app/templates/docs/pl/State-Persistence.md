@@ -8,14 +8,14 @@ DockFlare przechowuje swój stan w trzech kluczowych plikach znajdujących się 
 
 1. `dockflare_config.dat`: To jest najbardziej krytyczny plik. Zawiera wszystkie podstawowe ustawienia i poufne informacje w **zaszyfrowanym** formacie. Obejmuje to:
     * Twój token API Cloudflare i identyfikator konta.
-    * Twój skrót hasła Web UI DockFlare.
-    * Podstawowe ustawienia konfigurowane za pomocą interfejsu użytkownika, takie jak nazwa tunelu i identyfikatory stref.
+    * Skrót hasła do panelu administracyjnego DockFlare.
+    * Podstawowe ustawienia konfigurowane w panelu, takie jak nazwa tunelu i identyfikatory stref.
 
 2. `agent_keys.dat`: Zaszyfrowany magazyn zawierający wszystkie klucze API agenta i ich metadane (właściciel, status, znaczniki czasu). Dbanie o bezpieczeństwo tego pliku zapobiega ponownemu użyciu nieaktualnych kluczy.
 
 3. `state.json`: Ten plik przechowuje dynamiczny stan usług zarządzanych w zwykłym formacie JSON. Obejmuje to:
-    * Lista wszystkich reguł ingress, którymi zarządza DockFlare, niezależnie od tego, czy pochodzą one z etykiet Dockera, czy zostały utworzone ręcznie w Web UI.
-    * Wszelkie zastąpienia interfejsu użytkownika zastosowane do zasad dostępu.
+    * Lista wszystkich reguł ingress zarządzanych przez DockFlare, niezależnie od tego, czy pochodzą z etykiet Dockera, czy zostały utworzone ręcznie w panelu administracyjnym.
+    * Wszelkie nadpisania interfejsu zastosowane do zasad dostępu.
     * Wszystkie utworzone przez Ciebie grupy dostępu.
     * Status `pending_deletion` dla usług, które zostały zatrzymane, ale nadal są w okresie karencji.
 
@@ -23,7 +23,7 @@ DockFlare przechowuje swój stan w trzech kluczowych plikach znajdujących się 
 
 Ponieważ cała konfiguracja jest przechowywana w katalogu `/app/data`, **absolutnie istotne** jest zamapowanie tego katalogu na stały wolumin na komputerze hosta.
 
-Jeśli nie używasz woluminu stałego, **wszystkie ustawienia, hasło Web UI i konfiguracje reguł zostaną utracone** za każdym razem, gdy kontener DockFlare zostanie usunięty i ponownie utworzony (np. podczas aktualizacji obrazu).
+Jeśli nie używasz trwałego woluminu, **wszystkie ustawienia, hasło do panelu administracyjnego i konfiguracje reguł zostaną utracone** za każdym razem, gdy kontener DockFlare zostanie usunięty i utworzony ponownie.
 
 ### Zalecana konfiguracja Docker Compose
 

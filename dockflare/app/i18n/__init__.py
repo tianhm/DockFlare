@@ -29,13 +29,9 @@ def t(key, **kwargs):
 
 def get_js_translations():
     lang = session.get('lang', _fallback_lang)
-    all_keys = _translations.get(lang, {})
     fallback = _translations.get(_fallback_lang, {})
-    js_keys = {}
-    for k, v in fallback.items():
-        if k.startswith('js.'):
-            js_keys[k] = all_keys.get(k, v)
-    return js_keys
+    all_keys = _translations.get(lang, {})
+    return {k: all_keys.get(k, v) for k, v in fallback.items()}
 
 def init_app(app):
     i18n_dir = os.path.dirname(__file__)

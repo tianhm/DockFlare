@@ -49,7 +49,7 @@ Les deux noms d'hôte seront ajoutés en tant que règles d'entrée au même tun
 
 ## Affichage des enregistrements DNS dans l'interface utilisateur
 
-L'interface utilisateur Web de DockFlare dispose d'une fonctionnalité sur la page **Paramètres** qui vous permet d'afficher tous les tunnels Cloudflare de votre compte et les enregistrements DNS pointant vers eux.
+L'interface web de DockFlare dispose d'une fonctionnalité sur la page **Paramètres** qui vous permet d'afficher tous les tunnels Cloudflare de votre compte et les enregistrements DNS pointant vers eux.
 
 Pour garantir que l'interface utilisateur peut trouver les enregistrements DNS dans toutes vos différentes zones, vous pouvez utiliser la variable d'environnement `TUNNEL_DNS_SCAN_ZONE_NAMES`.
 
@@ -64,7 +64,7 @@ services:
     image: alplat/dockflare:stable
     # ... other settings
     environment:
-      # Tell the UI to scan these zones in addition to the default one
+      # Indiquez à l'interface de scanner aussi ces zones en plus de la zone par défaut
       - TUNNEL_DNS_SCAN_ZONE_NAMES=media.io,another-domain.org
 ```
 

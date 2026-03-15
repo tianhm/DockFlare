@@ -87,7 +87,7 @@
                                     <td class="px-4 py-3 cell-top"><code class="badge badge-sm badge-outline">{{ group_id }}</code></td>
                                     <td class="px-4 py-3 text-xs opacity-80 cell-top">
                                         {% if details.policies %}
-                                            {{ details.policies | length }} rule(s) defined
+                                            {{ t('policies.rules_defined', count=details.policies | length) }}
                                         {% else %}
                                             <span class="italic opacity-60">{{ t('policies.no_rules') }}</span>
                                         {% endif %}

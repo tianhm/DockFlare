@@ -225,7 +225,7 @@ Zapewnia to domyślnie większe bezpieczeństwo.
 ## Powiązana dokumentacja
 
 - [Sprawdzone praktyki dotyczące zasad dostępu](Access-Policy-Best-Practices.md)
-- [Korzystanie z Web UI](Using-the-Web-UI.md)
+- [Korzystanie z panelu administracyjnego](Using-the-Web-UI.md)
 - [Etykiety kontenerów](Container-Labels.md)
 - [Jak działa DockFlare](How-DockFlare-Works.md)
 - [Architektura bezpieczeństwa](Security-Architecture.md)

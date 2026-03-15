@@ -4,19 +4,19 @@ Najpotężniejszą funkcją zabezpieczeń DockFlare są **Grupy dostępu**. Zape
 
 ## „Złota zasada”: używaj grup dostępu
 
-Najważniejszą najlepszą praktyką jest **używanie grup dostępu do wszystkich typowych zasad dostępu**.
+Najważniejsza zasada brzmi: **wszystkie typowe reguły dostępu warto zamknąć w grupach dostępu**.
 
-Grupy dostępu to szablony zasad tworzone w Web UI DockFlare. Zamiast definiować złożone reguły z wieloma etykietami na każdym kontenerze, tworzysz politykę raz i stosujesz ją z pojedynczą, czystą etykietą. DockFlare v3.0.3 synchronizuje teraz każdą grupę z polityką dostępu Cloudflare wielokrotnego użytku, dzięki czemu ten sam zestaw decyzji może obsługiwać wiele aplikacji.
+Grupy dostępu to szablony zasad tworzone w panelu administracyjnym DockFlare. Zamiast definiować na każdym kontenerze złożony zestaw etykiet, tworzysz zasadę raz i przypisujesz ją pojedynczą, czytelną etykietą. W DockFlare v3.0.3 każda grupa synchronizuje się z zasadą Cloudflare Access wielokrotnego użytku, więc ten sam zestaw reguł może obsługiwać wiele aplikacji.
 
 ---
 
 ## Jak tworzyć i używać grup dostępu
 
-Tworzenie grupy dostępu to prosty proces wykonywany w całości w Web UI DockFlare.
+Tworzenie grupy dostępu to prosty proces wykonywany w całości w panelu administracyjnym DockFlare.
 
 ### Krok 1: Utwórz grupę dostępu
 
-1. Przejdź do strony **Zasady dostępu** z głównego paska nawigacji w Web UI DockFlare.
+1. Przejdź do strony **Zasady dostępu** z głównego menu w panelu DockFlare.
 2. Kliknij przycisk **„Dodaj grupę dostępu”**.
 3. Nadaj swojej grupie **unikalny i opisowy identyfikator**. Ten identyfikator będzie używany w etykietach platformy Docker. Na przykład: `admin-users`, `home-network`, `geo-block`.
 4. Wybierz **Tryb dostępu** z zakładek u góry modułu:
@@ -57,10 +57,10 @@ DockFlare udostępnia dwie wbudowane polityki systemowe, które są automatyczni
 
 Tych zasad systemowych nie można usunąć i służą one jako podstawa ochrony stref i migracji starszych etykiet.
 
-#### B) Przez Web UI (w przypadku reguł ręcznych lub nadpisań)
+#### B) Z poziomu panelu administracyjnego (dla reguł ręcznych lub nadpisań)
 
 Możesz także zastosować grupę dostępu do dowolnej reguły bezpośrednio z pulpitu nawigacyjnego:
-1. Znajdź regułę ingress, którą chcesz zmodyfikować na głównym pulpicie nawigacyjnym.
+1. Znajdź regułę ingress, którą chcesz zmodyfikować, na głównym pulpicie.
 2. Kliknij przycisk **„Zarządzaj regułą”**.
 3. W trybie edycji wybierz żądane grupy dostępu z menu rozwijanego „Grupy dostępu”.
 4. Zapisz zmiany.
@@ -113,7 +113,7 @@ Wynikająca z tego polityka wielokrotnego użytku wydaje decyzję Cloudflare `by
 
 ### Jakie są domyślne zasady stref?
 
-Domyślne zasady strefy to aplikacje Access z wildcard `*.domain.com`, które chronią WSZYSTKIE subdomeny strefy DNS, łącznie z tymi, które nie zostały jeszcze jawnie skonfigurowane.
+Domyślne zasady strefy to aplikacje Access z wzorcem `*.domain.com`, które chronią wszystkie subdomeny strefy DNS, także te, które nie zostały jeszcze jawnie skonfigurowane.
 
 ### Dlaczego ich potrzebujesz
 
@@ -188,7 +188,7 @@ Zasady zewnętrzne będą oznaczone fioletową plakietką **„Zewnętrzne”**.
 
 ### Organizowanie zasad
 
-**Wskazówka dla profesjonalistów:** Zmień nazwę zasad zewnętrznych w Cloudflare, aby używać prefiksu `DockFlare-`
+**Wskazówka:** Zmień nazwy zasad zewnętrznych w Cloudflare tak, aby używały prefiksu `DockFlare-`
 
 Możesz uporządkować polityki zewnętrzne, zmieniając ich nazwy w panelu Cloudflare:
 
@@ -221,7 +221,7 @@ Podczas usuwania lub edytowania polityk zewnętrznych DockFlare wyświetla ostrz
 >
 > Modyfikacja tej polityki może mieć wpływ na usługi poza DockFlare.
 >
-> Jesteś tego całkowicie pewien?
+> Czy na pewno chcesz to zrobić?
 
 Zapobiega to przypadkowym zmianom zasad zarządzanych za pomocą innych narzędzi lub konfiguracji ręcznych.
 

@@ -4,7 +4,7 @@ DockFlare 3.0 incorpora un archivo de copia de seguridad completo para que pueda
 
 ## Lo que se guarda
 - `dockflare.key`: la clave Fernet que permite descifrar todos los archivos protegidos.
-- `dockflare_config.dat`: credenciales cifradas de Cloudflare, cuentas de la Web UI y ajustes de tiempo de ejecución.
+- `dockflare_config.dat`: credenciales cifradas de Cloudflare, cuentas de la interfaz web y ajustes de tiempo de ejecución.
 - `agent_keys.dat`: claves API de los agentes cifradas y metadatos de auditoría.
 - `state.json`: una copia JSON en texto claro de reglas, agentes y grupos de acceso.
 - `manifest.json`: sumas de verificación e información de versión del archivo, generadas automáticamente.
@@ -12,7 +12,7 @@ DockFlare 3.0 incorpora un archivo de copia de seguridad completo para que pueda
 Todos estos archivos se agrupan en un único `dockflare_backup_YYYYMMDD_HHMMSS.zip`. Conserve juntos el ZIP y los archivos extraídos; sin `dockflare.key`, los artefactos cifrados no se pueden utilizar.
 
 ## Crear una copia de seguridad
-1. Abra **Settings → Backup & Restore** en la Web UI del Master.
+1. Abra **Settings → Backup & Restore** en la interfaz web del Master.
 2. Haga clic en **Download Backup (.zip)**.
 3. Guarde el archivo en un lugar seguro. Trátelo como una credencial sensible: contiene todo lo necesario para administrar su cuenta de Cloudflare mediante DockFlare.
 

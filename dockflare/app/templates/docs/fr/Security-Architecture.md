@@ -6,7 +6,7 @@ Ce document explique comment DockFlare protège à la fois le nœud Master et le
 
 - **Le Master comme source de vérité** – Le DockFlare Master détient toutes les informations d'identification Cloudflare et toutes les définitions de politiques. Les agents ne gèrent jamais directement les jetons API ; ils exécutent uniquement des instructions reçues via un canal authentifié.
 - **Clés API par agent** – L'inscription nécessite une clé API unique émise par le Master. Ces clés sont stockées dans le magasin chiffré `agent_keys.dat` avec leurs métadonnées (propriétaire, horodatages, statut), ce qui permet de les faire tourner ou de les révoquer à tout moment.
-- **Protection de l'API du Master** – Les endpoints administratifs, y compris la Web UI et `/api/v2/*`, nécessitent soit une session valide, soit la clé API du Master. Les jetons sont masqués dans les réponses et les logs, et peuvent être renouvelés sans redémarrer la stack.
+- **Protection de l'API du Master** – Les endpoints administratifs, y compris l'interface web et `/api/v2/*`, nécessitent soit une session valide, soit la clé API du Master. Les jetons sont masqués dans les réponses et les logs, et peuvent être renouvelés sans redémarrer la stack.
 
 ## 2. Configuration chiffrée et gestion des clés
 
@@ -25,14 +25,14 @@ Ce document explique comment DockFlare protège à la fois le nœud Master et le
 
 - **Transport via Cloudflare Tunnel** – Les agents n'exposent aucun port entrant. Tout le trafic passe par le tunnel Cloudflare géré par le Master, ce qui réduit la surface d'attaque sur les hôtes distants.
 - **Appels d'agents authentifiés** – Les appels REST des agents incluent leur clé API et sont liés à leur identifiant enregistré. Les tokens non valides ou révoqués sont refusés.
-- **Backplane Redis** – DockFlare s'appuie sur Redis pour le cache, le streaming de logs et la signalisation inter-threads. La stack Compose recommandée maintient Redis sur un réseau `dockflare-internal` dédié, afin que les workloads présents sur `cloudflare-net` ne puissent pas l'atteindre directement. Si vous utilisez un Redis externe, sécurisez-le avec authentification et TLS.
+- **Couche Redis partagée** – DockFlare s'appuie sur Redis pour le cache, le streaming des logs et la signalisation inter-threads. La stack Compose recommandée maintient Redis sur un réseau `dockflare-internal` dédié, afin que les workloads présents sur `cloudflare-net` ne puissent pas l'atteindre directement. Si vous utilisez un Redis externe, sécurisez-le avec authentification et TLS.
 - **Exécution au moindre privilège** – Le Master comme les agents s'exécutent sous l'utilisateur `dockflare` (UID/GID 65532) et n'accèdent à Docker qu'au travers du socket proxy fourni, ce qui limite fortement la surface d'API exposée.
 
 ## 5. Authentification et autorisation
 
-- **Connexion renforcée à la Web UI** – L'assistant de configuration initiale impose la création d'un compte administrateur pour la Web UI. La connexion par mot de passe peut être désactivée, mais **cela est fortement déconseillé** en raison des implications de sécurité sur le réseau Docker.
+- **Connexion renforcée à l'interface web** – L'assistant de configuration initiale impose la création d'un compte administrateur pour l'interface web. La connexion par mot de passe peut être désactivée, mais **cela est fortement déconseillé** en raison des implications de sécurité sur le réseau Docker.
 - **Gestion des sessions** – Les sessions Flask-Login sont liées à la configuration chiffrée. Restaurer une sauvegarde ou faire tourner les identifiants invalide automatiquement les sessions existantes.
-- **ACL des agents** – Chaque fiche agent enregistre l'affectation du tunnel, les horodatages de heartbeat et les commandes en attente. Le Master n'envoie des commandes qu'aux agents présentant le bon token et un statut d'inscription valide.
+- **ACL des agents** – Chaque fiche agent enregistre l'affectation du tunnel, les horodatages de heartbeat et les commandes en attente. Le Master n'envoie des commandes qu'aux agents présentant le bon jeton et un statut d'inscription valide.
 
 ### ⚠️ Important : avertissement de sécurité « Disable Password Login »
 

@@ -35,7 +35,7 @@
 
 **解決策:**
 1. **API トークンの権限を確認する:** API トークンに `Account:Access: Apps and Policies:Edit` 権限があることを確認してください。
-2. **UI Override を確認する:** DockFlare ダッシュボードで、そのルールに `UI Override` ステータスが付いていないか確認してください。UI Override はラベルより優先されます。
+2. **管理画面のオーバーライドを確認する:** DockFlare ダッシュボードで、そのルールに `UI Override` ステータスが付いていないか確認してください。この状態では、管理画面側の設定がラベルより優先されます。
 3. **Access Group ID を確認する:** `dockflare.access.group` を使っている場合は、ラベルに指定した ID が **完全一致** で Access Policies ページの Access Group ID と一致している必要があります。
 4. **Cloudflare ダッシュボードを確認する:** Cloudflare Zero Trust ダッシュボードで **Access -> Applications** を開き、Access Application が作成されているか確認してください。API レスポンスには出てこないエラーが Cloudflare 側に表示されることがあります。
 

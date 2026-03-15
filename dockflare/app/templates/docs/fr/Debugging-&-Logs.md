@@ -23,7 +23,7 @@ docker logs dockflare
 docker logs -f dockflare
 ```
 
-## 2. Utilisation des journaux en temps réel de l'interface utilisateur Web
+## 2. Utilisation des journaux en temps réel de l'interface web
 
 Pour plus de commodité, le tableau de bord DockFlare comprend une **visionneuse de journaux en temps réel** au bas de la page principale.
 

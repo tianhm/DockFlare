@@ -4,7 +4,7 @@ DockFlare 3.0 wprowadza pełne archiwum kopii zapasowej, dzięki czemu możesz p
 
 ## Co zostanie zapisane
 - `dockflare.key` – klucz Fernet, który odblokowuje każdy zaszyfrowany plik.
-- `dockflare_config.dat` – zaszyfrowane poświadczenia Cloudflare, konto Web UI i ustawienia środowiska wykonawczego.
+- `dockflare_config.dat` – zaszyfrowane poświadczenia Cloudflare, konto panelu administracyjnego i ustawienia środowiska wykonawczego.
 - `agent_keys.dat` – zaszyfrowane klucze API agenta i metadane audytu.
 - `state.json` – zwykła kopia lustrzana JSON reguł, agentów i grup dostępu.
 - `manifest.json` – sumy kontrolne i informacje o wersji archiwum (generowane automatycznie).
@@ -12,7 +12,7 @@ DockFlare 3.0 wprowadza pełne archiwum kopii zapasowej, dzięki czemu możesz p
 Wszystkie te pliki są zebrane w jeden `dockflare_backup_YYYYMMDD_HHMMSS.zip`. Zachowaj ZIP i wyodrębnione pliki razem; bez `dockflare.key` zaszyfrowane artefakty są bezużyteczne.
 
 ## Tworzenie kopii zapasowej
-1. Otwórz **Ustawienia → Kopia zapasowa i przywracanie** w Web UI.
+1. Otwórz **Ustawienia → Kopia zapasowa i przywracanie** w panelu administracyjnym.
 2. Kliknij **Pobierz kopię zapasową (.zip)**.
 3. Przechowuj archiwum w bezpiecznym miejscu. Traktuj to jak dane uwierzytelniające — zawiera wszystko, co potrzebne do kontrolowania konta Cloudflare za pośrednictwem DockFlare.
 
@@ -23,7 +23,7 @@ Kopie zapasowe można wykonywać, gdy Master jest uruchomiony. Każde archiwum z
 2. Prześlij `.zip` poprzez **Przywróć z kopii zapasowej**.
 3. Potwierdź ostrzeżenie: przywracanie powoduje nadpisanie konfiguracji, kluczy agentów i reguł.
 
-DockFlare odtwarza zaszyfrowane pliki, ponownie ładuje `state.json` i, jeśli to konieczne, zapisuje flagę ponownego uruchomienia. Kontener zakończy pracę kilka sekund później, aby Docker mógł uruchomić go ponownie z nową konfiguracją. Web UI będzie dostępny ponownie z przywróconymi poświadczeniami.
+DockFlare odtwarza zaszyfrowane pliki, ponownie ładuje `state.json` i, jeśli to konieczne, zapisuje flagę ponownego uruchomienia. Kontener zakończy pracę kilka sekund później, aby Docker mógł uruchomić go ponownie z nową konfiguracją. Panel administracyjny będzie ponownie dostępny z przywróconymi poświadczeniami.
 
 Starsze pliki `state.json` są nadal akceptowane w przypadku częściowego przywracania. Przesłanie czystego pliku JSON zastępuje jedynie reguły i pomija zaszyfrowaną konfigurację.
 

@@ -1,15 +1,15 @@
-# Web UI の使用
+# 管理画面の使い方
 
-DockFlare Web UI は、サービスの管理、監視、設定を行うための中核ツールです。単純な Docker ラベル設定だけでは扱いにくい作業も、わかりやすいインターフェースで操作できます。
+DockFlare の管理画面は、サービスの管理、監視、設定を行うための中核ツールです。単純な Docker ラベル設定だけでは扱いにくい作業も、わかりやすいインターフェースで操作できます。
 
 ## ダッシュボード（メインページ）
 
 ログイン後に最初に表示されるのがメインダッシュボードです。ここでは、管理中のすべてのサービスの状態をまとめて確認できます。
 
-* **「Managed Ingress Rules」テーブル:** Docker コンテナ由来のルールでも、手動で追加したルールでも、DockFlare が管理しているすべての ingress ルールが表示されます。
+* **「Managed Ingress Rules」テーブル:** Docker コンテナ由来のルールでも、手動で追加したルールでも、DockFlare が管理しているすべての入口ルールが表示されます。
     * **Hostname:** 公開ホスト名
     * **Service:** 内部の接続先 URL
-    * **Source:** ルールが `Docker` 由来か、UI で `Manually` 作成されたかを示します
+    * **Source:** ルールが `Docker` 由来か、管理画面で `Manually` 作成されたかを示します
     * **Status:** `active`、`pending_deletion`、`UI Override` などの状態を表示します
     * **Access:** 適用されている Access Group とモードバッジを表示します。再利用可能なポリシーが同期されると、`Public` や `Authenticated` のラベル、継承されたグループ名、Cloudflare ダッシュボードへのクイックリンクも表示されます
     * **Manage Rule:** 任意のルールを編集できます
@@ -17,10 +17,10 @@ DockFlare Web UI は、サービスの管理、監視、設定を行うための
 
 ## ルールの管理
 
-UI を使うと、ingress ルールを細かく管理できます。
+管理画面を使うと、入口ルールを細かく管理できます。
 
-* **「Add Manual Rule」:** このボタンを使うと、Docker で動いていないサービス（たとえば LAN 内の別ホスト上のサービス）向けに ingress ルールを作成できます。フォームでは hostname、service URL、必要に応じて Access Group を指定できます。
-* **「Edit any Rule」:** 各ルールの横にある **Manage Rule** をクリックすると、設定を変更できるモーダルが開きます。Docker ラベルから作られたルールに UI Override を適用する場合もここで行います。
+* **「Add Manual Rule」:** このボタンを使うと、Docker で動いていないサービス（たとえば LAN 内の別ホスト上のサービス）向けに入口ルールを作成できます。フォームでは hostname、service URL、必要に応じて Access Group を指定できます。
+* **「Edit any Rule」:** 各ルールの横にある **Manage Rule** をクリックすると、設定を変更できるモーダルが開きます。Docker ラベルから作られたルールに管理画面オーバーライドを適用する場合もここで行います。
 * **「Revert to Labels」:** Docker 由来のルールに UI Override がある場合、**Revert to Labels** ボタンが表示されます。これを使うと手動変更を破棄し、再び Docker ラベル側の設定に戻せます。
 
 ## アクセス ポリシー ページ
@@ -55,10 +55,10 @@ Access Groups セクションでは、次の操作ができます。
 
 設定ページには、さまざまな管理オプションと構成項目があります。
 
-* **Cloudflare Tunnels:** アカウント内で見つかった Cloudflare Tunnel、その状態、接続されている `cloudflared` Agent の一覧を表示します。任意のトンネルを向いている CNAME レコードも確認できます。
-* **Backup & Restore:** 暗号化設定、Agent キー、状態を含む完全な DockFlare バックアップアーカイブ（`.zip`）をダウンロードしたり、過去にエクスポートしたアーカイブをアップロードして復元したりできます。
+* **Cloudflare Tunnels:** アカウント内で見つかった Cloudflare Tunnel、その状態、接続されている `cloudflared` エージェントの一覧を表示します。任意のトンネルを向いている CNAME レコードも確認できます。
+* **Backup & Restore:** 暗号化設定、エージェントキー、状態を含む完全な DockFlare バックアップアーカイブ（`.zip`）をダウンロードしたり、過去にエクスポートしたアーカイブをアップロードして復元したりできます。
 * **セキュリティ:**
-    * **Change Password:** Web UI のパスワードを変更します。
-    * **Disable Password Login:** DockFlare を別の認証プロキシの背後に置く高度な構成向けです。**⚠️ 警告:** これは Docker ネットワーク露出によるセキュリティリスクを生みます。同じ Docker ネットワーク上のコンテナは外部認証を迂回し、DockFlare API に直接アクセスできる可能性があります。シングルサインオンが必要な場合は、代わりに OAuth/OIDC プロバイダーの利用を強く推奨します。詳細は [Web UI へのアクセス](Accessing-the-Web-UI.md) を参照してください。
+    * **Change Password:** 管理画面のパスワードを変更します。
+    * **Disable Password Login:** DockFlare を別の認証プロキシの背後に置く高度な構成向けです。**⚠️ 警告:** これは Docker ネットワーク露出によるセキュリティリスクを生みます。同じ Docker ネットワーク上のコンテナは外部認証を迂回し、DockFlare API に直接アクセスできる可能性があります。シングルサインオンが必要な場合は、代わりに OAuth/OIDC プロバイダーの利用を強く推奨します。詳細は [管理画面へのアクセス](Accessing-the-Web-UI.md) を参照してください。
 * **Cloudflare Credentials:** 初期設定後でも Cloudflare Account ID と API Token を更新できます。
 * **Core Configuration:** Tunnel Name や Rule Grace Period などの設定を変更できます。

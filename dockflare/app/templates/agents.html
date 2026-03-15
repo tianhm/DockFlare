@@ -558,7 +558,7 @@
   const renderAgentsTable = (agents) => {
     agentsTableBody.innerHTML = '';
     if (!agents || Object.keys(agents).length === 0) {
-      agentsTableBody.innerHTML = '<tr><td colspan="10" class="text-center p-4">No agents have registered yet.</td></tr>';
+      agentsTableBody.innerHTML = '<tr><td colspan="10" class="text-center p-4">{{ t("agents.no_agents_registered") }}</td></tr>';
       return;
     }
     for (const [agentId, agent] of Object.entries(agents)) {

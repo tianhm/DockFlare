@@ -35,7 +35,7 @@ services:
 ## Come funziona nella pratica
 
 1. **Contenitore arrestato:** esegui `docker stop my-app`.
-2. **In attesa di eliminazione:** DockFlare rileva l'evento di interruzione. Nella Web UI, la regola per `my-app.example.com` ora mostrerà il suo stato come **"pending_deletion"** e visualizzerà l'ora in cui è prevista l'eliminazione.
+2. **In attesa di eliminazione:** DockFlare rileva l'evento di interruzione. Nell'interfaccia web, la regola per `my-app.example.com` mostrerà ora lo stato **"pending_deletion"** insieme all'orario previsto per l'eliminazione.
 3. **I due scenari:**
     * **Scenario A: il periodo di tolleranza scade:** se il container rimane fermo e il periodo di tolleranza (ad esempio, 10 minuti) scade, verrà eseguita l'attività di pulizia in background di DockFlare. Eliminerà la regola ingress dal tuo tunnel Cloudflare e rimuoverà il record DNS CNAME.
     * **Scenario B: riavvio del container:** se si avvia nuovamente il container (`docker start my-app`) **prima** della scadenza del periodo di grazia, DockFlare rileverà l'evento di avvio. Vedrà che la regola è in attesa di eliminazione, annullerà l'eliminazione e modificherà il suo stato nuovamente in **"attiva"**. Il tuo servizio continua a funzionare senza problemi.

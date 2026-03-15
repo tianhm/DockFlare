@@ -52,6 +52,6 @@ services:
 
 1. Enregistrez votre fichier `docker-compose.yml` et exécutez `docker compose up -d`.
 2. DockFlare détectera le conteneur et créera une règle d'entrée dans votre tunnel Cloudflare pour le nom d'hôte `*.plex.example.com`.
-3. Vous pouvez le vérifier dans l'interface utilisateur Web de DockFlare et dans la configuration de votre tunnel dans le tableau de bord Cloudflare.
+3. Vous pouvez le vérifier dans l'interface web de DockFlare et dans la configuration de votre tunnel dans le tableau de bord Cloudflare.
 
 Désormais, toute requête adressée à un sous-domaine tel que `sonarr.plex.example.com` ou `radarr.plex.example.com` sera acheminée via votre tunnel Cloudflare vers votre conteneur `my-proxy-manager`, qui pourra ensuite gérer le trafic en conséquence.

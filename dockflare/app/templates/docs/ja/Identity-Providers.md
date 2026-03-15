@@ -1,6 +1,6 @@
 # アイデンティティプロバイダー
 
-> **📌 重要:** このガイドは、サービスやアプリケーションを保護するために **Cloudflare Access ポリシー用のアイデンティティプロバイダー** を構成するためのものです。**DockFlare Web UI へのログイン**用に OAuth/OIDC を設定したい場合は、代わりに [OAuth プロバイダーのセットアップ](OAuth-Provider-Setup.md) を参照してください。
+> **📌 重要:** このガイドは、サービスやアプリケーションを保護するために **Cloudflare Access ポリシー用のアイデンティティプロバイダー** を構成するためのものです。**DockFlare 管理画面へのログイン**用に OAuth/OIDC を設定したい場合は、代わりに [OAuth プロバイダーのセットアップ](OAuth-Provider-Setup.md) を参照してください。
 
 アイデンティティプロバイダー（IdP）を使うと、Cloudflare Zero Trust で保護されたアプリケーションに OAuth/OIDC 認証を導入できます。DockFlare では、IdP の管理や Access ポリシーへの統合を簡単に行えます。
 

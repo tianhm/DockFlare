@@ -225,7 +225,7 @@ Cela garantit une meilleure sécurité par défaut.
 ## Documentation connexe
 
 - [Bonnes pratiques en matière de politique d'accès](Access-Policy-Best-Practices.md)
-- [Utilisation de l'interface utilisateur Web](Using-the-Web-UI.md)
+- [Utilisation de l'interface web](Using-the-Web-UI.md)
 - [Étiquettes des conteneurs](Container-Labels.md)
 - [Comment fonctionne DockFlare](How-DockFlare-Works.md)
 - [Architecture de sécurité](Security-Architecture.md)

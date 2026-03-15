@@ -1,23 +1,23 @@
 # Content Security Policy (CSP)
 
-## Was isch eine Content Security Policy?
+## Was isch e Content Security Policy?
 
-Eine Content Security Policy (CSP - Inhaltssicherheitsrichtlinie) isch ein Websicherheitsstandard, der hilft, bestimmte Arten von Angriffen zu verhindern, insbesondere Cross-Site Scripting (XSS) u Data-Injection-Angriffe. Das funktioniert so, dass sie dem Browser mitteilt, welche Inhaltsquellen (Skripte, Styles, Bilder usw.) vertrauenswürdig si u auf einer Webseite geladen wärde dürfen.
+E Content Security Policy, kurz CSP, isch e Web-Sicherheitsstandard. Si seit em Browser, weli Quelle für Skript, Styles, Bilder u angeri Inhalte erlaubt si. So chasch du Angrif wie Cross-Site Scripting (XSS) oder ähnlechi Injections besser verhindere.
 
 ## Die CSP von DockFlare
 
-DockFlare bringt e Web UI mit. Damit die UI sauber abgsicheret isch, setzt DockFlare für sini eigeni UI e strengi Content Security Policy.
+DockFlare bringt e Web UI mit. Damit die UI sauber abgsicheret isch, setzt DockFlare für sini eigeti Oberfläche e strengi CSP.
 
-Das isch ein wichtiges internes Sicherheitsmerkmal, das du, den Administrator, vor potenziellen browserbasierten Schwachstellen schützen soll, während du das DockFlare-Dashboard nutzen.
+Das isch es wichtigs Sicherheitsmerkmal, wo di bim Schaffe i dr UI vor browserbasierte Schwachstelle schützt.
 
 ## Geltungsbereich der CSP
 
-Es isch wichtig zu verstehen, dass die CSP von DockFlare **nur für die DockFlare Web UI selbst gilt**.
+Wichtig isch: D CSP vo DockFlare gilt **nume für d DockFlare Web UI sälber**.
 
-Du hesch **kener** Auswirkungen auf den Datenverkehr, der über dini Cloudflare Tunnel an dini eigenen Anwendungen geleitet wird, noch modifiziert oder fügt sie diesem Verkehr CSP-Header hinzu. Wänn du eine CSP für dini eigenen Anwendungen implementieren wotsch, muesch diese innerhalb der Anwendungen selbst konfigurieren (z. B. durch Setzen des HTTP-Headers `Content-Security-Policy` in dim Webserver oder Anwendungscode).
+Dr Traffic, wo über dini Cloudflare Tunnel zu dine eigete Aawändige geit, wird vo DockFlare weder veränderet no mit zusätzliche CSP-Headers ergänzt. Wänn du für dini eigete App e CSP wotsch, muesch du die i dim Webserver oder App-Code sälber setze.
 
 ## Konfiguration
 
-Die CSP von DockFlare isch ein wesentlicher Bestandteil seiner Sicherheitsarchitektur u **cha nid vom Benutzer konfiguriert wärde**. Die Richtlinie wurde sorgfältig so ausgearbeitet, dass sie so restriktiv wie möglich isch, während die UI weiterhin korrekt funktioniert.
+D CSP vo DockFlare isch Teil vo dr Sicherheitsarchitektur u **cha nid vom Benutzer aagpasst wärde**. Si isch so gstaltet, dass d UI mögli streng abgsicheret isch u glych no korrekt funktioniert.
 
-Wänn du di eingehender darüber informieren wotsch, wie Content Security Policies im Allgemeinen funktionieren, si die [MDN Web Docs über CSP](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP) eine hervorragende Ressource.
+Wänn du meh drüber wotsch wüsse, si d [MDN Web Docs über CSP](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP) e gueti Quelle.

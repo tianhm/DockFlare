@@ -35,7 +35,7 @@ services:
 ## Cómo funciona en la práctica
 
 1. **Contenedor detenido:** Ejecutas `docker stop my-app`.
-2. **Pendiente de eliminación:** DockFlare detecta el evento de detención. En la Web UI, la regla para `my-app.example.com` ahora mostrará su estado como **"pending_deletion"** y mostrará la hora a la que está programada su eliminación.
+2. **Pendiente de eliminación:** DockFlare detecta el evento de detención. En la interfaz web, la regla para `my-app.example.com` ahora mostrará su estado como **"pending_deletion"** y mostrará la hora a la que está programada su eliminación.
 3. **Los dos escenarios:**
     * **Escenario A: El período de gracia vence:** Si el contenedor permanece detenido y el período de gracia (por ejemplo, 10 minutos) expira, se ejecutará la tarea de limpieza en segundo plano de DockFlare. Eliminará la regla ingress de su túnel Cloudflare y eliminará el registro DNS CNAME.
     * **Escenario B: Reinicios del contenedor:** Si inicia el contenedor nuevamente (`docker start my-app`) **antes** de que expire el período de gracia, DockFlare detectará el evento de inicio. Verá que la regla está pendiente de eliminación, cancelará la eliminación y cambiará su estado nuevamente a **"activo"**. Su servicio continúa funcionando sin problemas.

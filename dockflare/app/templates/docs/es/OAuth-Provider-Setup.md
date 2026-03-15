@@ -1,8 +1,8 @@
 ## Configuración del proveedor OAuth
 
-> **📌 Importante:** Esta guía es para configurar la **autenticación de la Web UI de DockFlare** (inicio de sesión en DockFlare). Si desea configurar OAuth/OIDC para **políticas de acceso de Cloudflare** para proteger sus servicios, consulte [Proveedores de identidad](Identity-Providers.md).
+> **📌 Importante:** Esta guía es para configurar la **autenticación de la interfaz web de DockFlare**. Si desea configurar OAuth/OIDC para **políticas de acceso de Cloudflare** que protejan sus servicios, consulte [Proveedores de identidad](Identity-Providers.md).
 
-DockFlare le permite delegar la autenticación de usuarios en proveedores externos mediante el estándar OpenID Connect (OIDC). Esto habilita el inicio de sesión único (SSO) para la Web UI de DockFlare y facilita la integración con proveedores de identidad como Google, Authentik, Okta y otros.
+DockFlare le permite delegar la autenticación de usuarios en proveedores externos mediante el estándar OpenID Connect (OIDC). Esto habilita el inicio de sesión único (SSO) para la interfaz web de DockFlare y facilita la integración con proveedores de identidad como Google, Authentik, Okta y otros.
 
 ### Agregar un nuevo proveedor
 
@@ -58,7 +58,7 @@ Guarde el proveedor en DockFlare y ya podrá iniciar sesión con su cuenta de Go
 
 ### Configurar DockFlare con OAuth y políticas de acceso
 
-Si usa autenticación OAuth, probablemente quiera proteger la Web UI de DockFlare con políticas de acceso y, al mismo tiempo, permitir que las devoluciones de llamada de OAuth funcionen correctamente. Esto es especialmente importante si su instancia de DockFlare tiene restricciones por IP u otros controles de acceso.
+Si usa autenticación OAuth, probablemente quiera proteger la interfaz web de DockFlare con políticas de acceso y, al mismo tiempo, permitir que las devoluciones de llamada de OAuth funcionen correctamente. Esto es especialmente importante si su instancia de DockFlare tiene restricciones por IP u otros controles de acceso.
 
 #### **Buena práctica: política de bypass para devoluciones de llamada OAuth**
 

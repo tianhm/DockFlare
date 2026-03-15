@@ -1,10 +1,10 @@
-# Accesso alla Web UI
+# Accesso all'interfaccia web
 
-Una volta avviato correttamente il container DockFlare, puoi accedere alla Web UI per gestire le impostazioni, controllare lo stato dei tunnel e configurare manualmente le regole ingress.
+Una volta avviato correttamente il container DockFlare, puoi accedere all'interfaccia web per gestire le impostazioni, controllare lo stato dei tunnel e configurare manualmente le regole ingress.
 
 ## URL predefinito
 
-Per impostazione predefinita, la Web UI di DockFlare è disponibile sulla porta `5000`. Per accedervi, apri il browser e vai al seguente URL:
+Per impostazione predefinita, l'interfaccia web di DockFlare è disponibile sulla porta `5000`. Per accedervi, apri il browser e vai a questo URL:
 
 ```
 http://<your-server-ip>:5000
@@ -14,16 +14,16 @@ Sostituisci `<your-server-ip>` con l'indirizzo IP del server su cui è in esecuz
 
 ## Configurazione iniziale
 
-La prima volta che accedi alla Web UI, verrai guidato dall'**assistente di configurazione iniziale**. L'assistente ti aiuta a:
+La prima volta che accedi all'interfaccia web, verrai guidato dall'**assistente di configurazione iniziale**. L'assistente ti aiuta a:
 
 1. Ripristinare un archivio di backup DockFlare esistente (`dockflare_backup_*.zip`). Se scegli questa opzione, il sistema importa la configurazione cifrata, lo stato e le chiavi degli agenti, quindi riavvia automaticamente il container per applicarli.
-2. Creare un account amministratore e una password per la Web UI.
+2. Creare un account amministratore e una password per l'interfaccia web.
 3. Inserire l'ID account Cloudflare, l'ID zona (facoltativo) e il token API.
 4. Confermare le impostazioni del tunnel e completare i passaggi iniziali.
 
 ## Accesso
 
-Dopo la configurazione iniziale, ogni volta che apri la Web UI ti verrà mostrata la schermata di login. Usa la password creata durante la configurazione per accedere.
+Dopo la configurazione iniziale, ogni volta che apri l'interfaccia web ti verrà mostrata la schermata di login. Usa la password creata durante la configurazione per accedere.
 
 ## Disabilitare l'accesso con password
 

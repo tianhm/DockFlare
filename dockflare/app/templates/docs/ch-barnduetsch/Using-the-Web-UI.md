@@ -1,64 +1,68 @@
-# Verwendung der Web UI
+# Web UI bruuche
 
-Die DockFlare Web UI isch ein mächtiges Werkzeug zur Verwaltung, Überwachung u Konfiguration dinere Dienste. Si bietet eine benutzerfreundliche Oberfläche für Aufgaben, die über einfache Docker-Label-Konfigurationen hinausgehen.
+D DockFlare Web UI git dr d volle Kontroll über dini Ingress-Regle, Zuegriffsrichtlinie, Tunnel u Systemiistellige. S meischte chasch zwar über Docker-Labels steuere, aber i dr Web UI chasch Sache prüefe, manuell aapasse u Problem schnäll analysiere.
 
-## Das Dashboard (Hauptseite)
+## Ds Dashboard
 
-Die erste Seite nach dem Einloggen isch das Haupt-Dashboard. Das isch die zentrale Anlaufstelle zur Ansicht des Zustands all dinere verwalteten Dienste.
+Nach em Aamälde landisch uf em Dashboard. Das isch d zentrali Übersichts-Syte für dini verwaltete Dienscht.
 
-*   **Tabelle der verwalteten Ingress-Regeln:** Diese Tabelle listet jede Ingress-Regel auf, die von DockFlare gemanagt wird, unabhängig davon, öb sie aus einem Docker-Container stammt oder manuell angelegt wurde.
-    *   **Hostname:** Der öffentlich zugängliche Name des Dienstes.
-    *   **Service:** Die interne Ziel-URL.
-    *   **Source:** Gibt an, öb die Regel von `Docker` stammt oder `Manually` in der UI angelegt wurde.
-    *   **Status:** Zeigt an, öb die Regel `active`, `pending_deletion` (ausstehende Löschung) isch oder einen `UI Override` (Überschreibung) besitzt.
-    *   **Access:** Zeigt die angewandte Access Group u den Modus-Badge an. Erwart `Public`- oder `Authenticated`-Plaketten, Gruppennamen u Schnelllinks zum Cloudflare-Dashboard, falls die Richtlinien synchronisiert si.
-    *   **Manage Rule:** Mit diesem Button chasch jede Regel direkt bearbeiten.
-*   **Echtzeit-Logs:** Unter der Tabelle findsch eine Echtzeit-Log-Ansicht, die Ausgaben des DockFlare-Backends streamt, was zur Fehlersuche von unschätzbarem Wert isch.
+* **Verwalteti Ingress-Regle**: I dr Tabelle gsehsch aui Regle, wo DockFlare verwaltet, egal ob si us Docker chöme oder manuell aagleit worde sy.
+  * **Hostname**: Dr öffentlechi Hostname vom Dienscht.
+  * **Service**: Ds interne Ziel, wo Cloudflare dr Traffic häreschickt.
+  * **Source**: Zeigt, ob d Regle us `Docker` chunnt oder `Manually` i dr UI aagleit worde isch.
+  * **Status**: Zeigt, ob e Regle `active`, `pending_deletion` oder mit eme `UI Override` verseh isch.
+  * **Access**: Zeigt d zuegwieseni Access Group, dr Modus u je nach Fall direkti Links zu Cloudflare.
+  * **Manage Rule**: Öffnet d Bearbeitig vo dr jeweilige Regle.
+* **Echtzyt-Logs**: Under dr Tabelle gsehsch e Log-Ansicht, wo d Usgabe vom DockFlare-Backend live streamt. Das isch bsunders nützlich für Debugging.
 
-## Regeln verwalten
+## Regle verwalte
 
-Die UI gibt dir volle Kontrolle über dini Ingress-Regeln.
+I dr Web UI chasch Regle nid nume aaluege, sondern ou diräkt verwalte.
 
-*   **Manuelle Regel hinzufügen:** Über den Button "Add Manual Rule" chasch Ingress-Regeln für Dienste erstellen, die nid in Docker laufen (z.B. e Dienst uf eme angere PC i dim LAN). Im Formular gisch du de Hostname, d'Service-URL u optional e Access Group aa.
-*   **Jede Regel bearbeiten:** Ein Klick auf "Manage Rule" neben einer beliebigen Regel öffnet es Fenster für d'Konfiguration. So chasch Docker-Labels über d'UI übersteuere.
-*   **Auf Labels zurücksetzen:** Hat eine von Docker stammende Regel einen UI-Override, erscheint der Button "Revert to Labels" (Auf Labels zurücksetzen). Ein Klick verwirft die manuellen Änderungen, sodass die Regel wieder ihren Docker-Labels folgt.
+* **Manuelli Regle derzue tue**: Mit em Button **Add Manual Rule** chasch Regle für Dienscht aalege, wo nid i Docker loufe, zum Bispiel e Dienst uf eme angere Server oder eme Grät im LAN.
+* **Regle bearbeite**: Mit **Manage Rule** chasch e einzelni Regle aapasse. Das isch vor allem praktisch, wänn du Docker-Labels temporär oder dauerhaft via UI überschrybe wotsch.
+* **Uf Labels zrüggsetze**: Wänn e us Docker stammendi Regle e UI-Override het, chasch si mit **Revert to Labels** wieder uf dr Docker-Zuestand zrüggsetze.
 
-## Access Policies Seite
+## Access Policies
 
-Die Siite isch der zentrale Ort zur Verwaltung dinere wiederverwendbaren **Access Groups** u zur Absicherung dinere DNS-Zonen mitsamt Wildcard-Richtlinien.
+D Syte **Access Policies** isch dr Ort für wiederverwendbari **Access Groups**, **Identity Providers** u **Zone Default Policies**.
 
-### Advanced Access Policies (Erweiterte Zugriffsrichtlinien)
+### Access Groups
 
-Aus dem Bereich der Access Groups chasch:
-*   Neue Access Groups **erstellen** (Modal mit zwei Tabs: Authenticated vs. Public). Hinweisbanner helfen dabei zu verstehen, wann DockFlare eine Cloudflare-Entscheidung `allow` oder `bypass` erzeugt.
-*   Bestehende Access Groups **bearbeiten**. Die UI erzwingt modusabhängige Validierung (z.B. E-Mails si bei Authenticated nötig).
-*   Access Groups, die kener Verwendung mehr finden, **löschen** (Systemrichtlinien wie `public-default-bypass` bleiben unveränderlich).
-*   **Sync from Cloudflare** ausführen, um bestehende DockFlare-Policies aus dim Cloudflare-Account zu importieren.
-*   Über das Aktionsmenü neben einem Eintrag die zugehörige Policy im Cloudflare-Dashboard ufmache (Cloudflare-Icon).
+Mit Access Groups chasch Richtlinie zentral verwalte u über Labels oder d UI mehfach wiederverwände.
 
-**Hinweis:** Die Systemrichtlinie `public-default-bypass` wird automatisch erstellt u von DockFlare verwaltet.
+I däm Bereich chasch:
 
-### Zone Default Policies (*.tld Wildcards)
+* nöii Access Groups erstelle
+* vorhande Access Groups bearbeite
+* nid meh bruuchti Groups lösche
+* über **Sync from Cloudflare** vorhandeni Richtlinie importiere
+* Richtlinie diräkt im Cloudflare-Dashboard ufmache
 
-Die zweite Sektion zeigt **Zone Default Policies**: ein Sicherheits-Best-Practice-Feature, das alle Subdomains einer Zone per Wildcard-Policy schützt:
+**Wichtig:** D Systemrichtlinie `public-default-bypass` wird automatisch vo DockFlare erstellt u verwaltet.
 
-*   **Schutzstatus:** Badges weisen hin, welche Zonen `*.domain.com` Wildcard Policies innehaben (Protected 🛡️) u welche nid (Not Protected ⚠️).
-*   **Zonenrichtlinie erstellen:** "Create Policy" erzeugt für ungeschützte Zonen eine Wildcard-Access-Application.
-*   **Policy auswählen:** Leg fest, welche Access Group alle Subdomains schützen soll (Public Bypass, Authenticated oder eigene Policy).
-*   **Sicherheitsnetz:** Selbst wenn du für einen einzelnen Service kener Policy setzen, greift die Zonen-Wildcard u verhindert unbeabsichtigte Exponierung.
+### Zone Default Policies
 
-**Best Practice:** Erstell Zonen-Standardrichtlinien für alle Domains. Für öffentliche Domains bruuchsch `public-default-bypass`, für interne/private Domains eine Authentifizierungs-Policy. So bleibt kener Subdomain versehentlich ungeschützt.
+Mit **Zone Default Policies** chasch ganzi Zonen mit ere Wildcard-Policy absichere, zum Bispiel `*.example.com`.
 
-Weitere Details unter [Best Practices & Beispiele für Zugriffsrichtlinien](Access-Policy-Best-Practices.md).
+Das git dr:
 
-## Einstellungsseite
+* e schnälle Überblick, weli Zonen scho gschützt sy
+* e One-Click-Möglichkeit, Wildcard-Policies z erstelle
+* e Sicherheitsnetz, falls e einzelni Subdomain nid explizit konfiguriert isch
 
-Die Seite **Settings** (Istellige) enthält administrative u zentrale Konfigurationsoptionen:
+**Empfohlni Vorgah:** Erstell für alli Domains e Zonen-Standardrichtlinie. Für öffentlechi Domains passt häufig `public-default-bypass`, für interni oder sensitivi Domains söttsch e authentifizieri Richtlinie bruuchen.
 
-*   **Cloudflare Tunnels:** Listet alle Cloudflare Tunnels in dim Account, deren Status u die verbundenen `cloudflared` Agents. Ausserdem gsehsch CNAME-DNS-Records, die auf dini Tunnels zeigen.
-*   **Backup & Restore:** Download eines vollständigen DockFlare-Backups (`.zip` mit verschlüsselter Konfiguration, Agent Keys u State) oder Upload eines zuvor exportierten Archivs zur Wiederherstellung.
-*   **Sicherheit:**
-    *   **Change Password (Passwort ändern):** Tausch hier din Zugriffskennwort zur UI.
-    *   **Disable Password Login (Passwort-Login deaktivieren):** Für fortgschrittni Setups, in denen DockFlare hinter einer externen Authentifizierungsschicht läuft. **⚠️ Warnung:** Das erzeugt ein Risiko durch Docker-Netzwerk-Exposure: Container im selben Netzwerk chöi externe Authentifizierung umgehen u direkt auf die DockFlare-API zugreifen. Bruuch stattdessen nach Möglichkeit OAuth/OIDC für SSO. Details siehe [Zugriff auf die Web UI](Accessing-the-Web-UI.md).
-*   **Cloudflare Credentials:** Dient dem Wechsel der Account ID u des API Tokens, falls notwendig.
-*   **Core Configuration:** Grundeinstellungen wie Tunnel-Name u Rule Grace Period.
+Witeri Detail fingsch i [Best Practices & Bispiel für Zuegriffsrichtlinie](Access-Policy-Best-Practices.md).
+
+## Iistellige
+
+Uf dr Syte **Settings** fingsch d zentralen Administrative- u Systemiistellige.
+
+* **Cloudflare Tunnels**: Zeigt aui Tunnel uf dim Account, derzue dr Status u d verbundene `cloudflared`-Agente.
+* **Backup & Restore**: Do chasch es vollständigs DockFlare-Backup abelade oder es bestehends Archiv wiederhärstelle.
+* **Sicherhäit**:
+  * **Change Password**: Ändert ds Passwort für dr Zuegriff uf d Web UI.
+  * **Disable Password Login**: Nur für sehr spezifischi Setups sinnvoll. Wänn du das aktiviersch, muesch ganz genau wüsse, wie dini vorglagereti Authentifizierig u dini Netzwerktrennig funktioniere.
+* **Cloudflare Credentials**: Aktualisiert Account-ID u API-Token.
+* **Core Configuration**: Enthaltet Grundiistellige wie Tunnelname oder d Grace Period.

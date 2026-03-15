@@ -1,10 +1,10 @@
-# Accéder à l'interface utilisateur Web
+# Accéder à l'interface web
 
-Une fois que vous avez démarré avec succès le conteneur DockFlare, vous pouvez accéder à l'interface utilisateur Web pour gérer vos paramètres, afficher l'état de vos tunnels et configurer manuellement les règles d'entrée.
+Une fois le conteneur DockFlare démarré correctement, vous pouvez accéder à l'interface web pour gérer vos paramètres, consulter l'état de vos tunnels et configurer manuellement les règles d'ingress.
 
 ## URL par défaut
 
-Par défaut, l'interface utilisateur Web de DockFlare est accessible sur le port `5000`. Pour y accéder, ouvrez votre navigateur Web et accédez à l'URL suivante :
+Par défaut, l'interface web de DockFlare est accessible sur le port `5000`. Pour y accéder, ouvrez votre navigateur et rendez-vous à l'adresse suivante :
 
 ```
 http://<your-server-ip>:5000
@@ -14,16 +14,16 @@ Remplacez `<your-server-ip>` par l'adresse IP du serveur sur lequel DockFlare es
 
 ## Première configuration
 
-La première fois que vous accédez à l'interface utilisateur Web, vous serez guidé par l'**assistant de configuration initiale**. Cet assistant vous aide à :
+La première fois que vous ouvrez l'interface web, vous serez guidé par l'**assistant de configuration initiale**. Cet assistant vous aide à :
 
 1. Restaurer une archive de sauvegarde DockFlare existante (`dockflare_backup_*.zip`). Si vous choisissez cette option, le système importe vos clés chiffrées de configuration, d'état et d'agent, puis redémarre automatiquement le conteneur pour les appliquer.
-2. Créer un compte administrateur et un mot de passe pour l'interface utilisateur Web.
+2. Créer un compte administrateur et un mot de passe pour l'interface web.
 3. Fournir votre identifiant de compte Cloudflare, votre identifiant de zone (facultatif) et votre jeton API.
 4. Confirmer les paramètres du tunnel et terminer les étapes d'intégration.
 
 ## Connexion
 
-Après la configuration initiale, un écran de connexion vous sera présenté à chaque fois que vous accédez à l'interface utilisateur Web. Utilisez le mot de passe que vous avez créé lors du processus de configuration pour vous connecter.
+Après la configuration initiale, un écran de connexion s'affichera chaque fois que vous accéderez à l'interface web. Utilisez le mot de passe défini pendant l'installation pour vous connecter.
 
 ## Désactivation de la connexion par mot de passe
 
@@ -35,9 +35,9 @@ Si vous exécutez DockFlare derrière Cloudflare Access ou un autre proxy d'auth
 
 ### Risques de sécurité lorsqu'il est activé
 
-- ⚠️ **Tous les points de terminaison de l'API deviennent accessibles sans authentification** lorsque ce paramètre est activé
-- ⚠️ **Exposition du réseau Docker :** Même si DockFlare est derrière Cloudflare Access sur l'Internet public, les conteneurs sur le même réseau Docker peuvent contourner l'authentification externe et accéder directement à l'API de DockFlare
-- ⚠️ **Aucune application d'authentification :** L'application suppose que l'authentification externe gère la sécurité
+- ⚠️ **Tous les endpoints API deviennent accessibles sans authentification** lorsque ce paramètre est activé
+- ⚠️ **Exposition du réseau Docker :** même si DockFlare est protégé par Cloudflare Access sur Internet, les conteneurs présents sur le même réseau Docker peuvent contourner cette authentification externe et accéder directement à l'API de DockFlare
+- ⚠️ **Aucun contrôle d'authentification côté application :** l'application part du principe que l'authentification externe assure toute la sécurité
 
 ### Exemple de vecteur d'attaque
 

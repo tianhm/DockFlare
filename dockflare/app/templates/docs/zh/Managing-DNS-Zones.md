@@ -47,15 +47,15 @@ services:
 
 两个主机名都将作为入口规则添加到同一 Cloudflare 隧道。
 
-## 在 UI 中查看 DNS 记录
+## 在管理界面中查看 DNS 记录
 
-DockFlare Web UI 的 **设置** 页面上有一项功能，允许您查看帐户上的所有 Cloudflare 隧道以及指向它们的 DNS 记录。
+DockFlare 网页管理界面的 **设置** 页面上有一项功能，允许您查看账户中的所有 Cloudflare 隧道以及指向它们的 DNS 记录。
 
-为了确保 UI 可以找到所有不同区域的 DNS 记录，您可以使用 `TUNNEL_DNS_SCAN_ZONE_NAMES` 环境变量。
+为了确保管理界面可以找到不同区域中的 DNS 记录，您可以使用 `TUNNEL_DNS_SCAN_ZONE_NAMES` 环境变量。
 
 ### `TUNNEL_DNS_SCAN_ZONE_NAMES`
 
-此环境变量接受 UI 在查找 DNS 记录时应扫描的以逗号分隔的区域名称列表。
+此环境变量接受一个以逗号分隔的区域名称列表，管理界面会按此列表扫描 DNS 记录。
 
 **示例 `docker-compose.yml`:**
 ```yaml
@@ -68,4 +68,4 @@ services:
       - TUNNEL_DNS_SCAN_ZONE_NAMES=media.io,another-domain.org
 ```
 
-这将确保 UI 中的 DNS 记录查看器提供指向您的隧道的所有域的完整图片。
+这样一来，界面中的 DNS 记录查看器就能更完整地展示所有指向您隧道的域名记录。

@@ -35,7 +35,7 @@ services:
 ## Comment ça marche en pratique
 
 1. **Conteneur arrêté :** Vous exécutez `docker stop my-app`.
-2. **En attente de suppression :** DockFlare détecte l'événement d'arrêt. Dans l'interface utilisateur Web, la règle pour `my-app.example.com` affichera désormais son statut comme **"ending_deletion"** et affichera l'heure à laquelle sa suppression est planifiée.
+2. **En attente de suppression :** DockFlare détecte l'événement d'arrêt. Dans l'interface web, la règle pour `my-app.example.com` affichera désormais son statut comme **"ending_deletion"** et affichera l'heure à laquelle sa suppression est planifiée.
 3. **Les deux scénarios :**
     * **Scénario A : expiration du délai de grâce :** Si le conteneur reste arrêté et que le délai de grâce (par exemple 10 minutes) expire, la tâche de nettoyage en arrière-plan de DockFlare s'exécutera. Cela supprimera la règle d'entrée de votre tunnel Cloudflare et supprimera l'enregistrement DNS CNAME.
     * **Scénario B : redémarrage du conteneur :** Si vous redémarrez le conteneur (`docker start my-app`) **avant** l'expiration du délai de grâce, DockFlare détectera l'événement de démarrage. Il verra que la règle est en attente de suppression, annulera la suppression et redéfinira son statut sur **"active"**. Votre service continue de fonctionner de manière transparente.

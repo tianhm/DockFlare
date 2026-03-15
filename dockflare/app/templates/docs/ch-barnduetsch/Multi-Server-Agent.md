@@ -1,56 +1,56 @@
 # DockFlare-Agent u Multi-Server-Architektur
 
-DockFlare 3.0 führt ein verteiltes Ausführungsmodell ein, mit dem du Cloudflare-Tunnel über mehrere Docker-Hosts hinweg verwalten chöi. Der DockFlare **Master** koordiniert die Konfiguration, während leichtgewichtige **Agenten** neben dini Workloads laufen u ihre lokale `cloudflared`-Instanz mit dem Master synchron halten.
+Mit DockFlare 3.0 chasch Cloudflare-Tunnel über mehri Docker-Hosts verwalte. Dr **Master** übernimmt d Steuerig, während liechti **Agente** neb de Workloads loufe u ihri lokal `cloudflared`-Instanz mit em Master synchron halte.
 
-Dieser Leitfaden erklärt die Architektur, das Sicherheitsmodell u den schrittweisen Workflow für die Bereitstellige von Agenten.
-
----
-
-## Warum Agenten?
-
-* **Compute von der Ingress-Steuerung entkoppeln** – halt dini Workloads in der Nähe der Benutzer, während du eine einzige Kontrollebene beibehalten.
-* **Sichtbarkeit pro Host** – überwach Heartbeat, Tunnelstatus u Befehlshistorie für jeden Agenten.
-* **Token mit geringsten Rechten** – kompromittierte Agenten chöi widerrufen wärde, ohne den Master oder andere Hosts anzutasten.
-* **Erhöhte Ausfallsicherheit** – Agenten bedienen den Verkehr weiterhin mit ihrer zuletzt bekannten Konfiguration, wenn der Master vorübergehend nid erreichbar sein sollte.
+Die Aaleitig erklärt Architektur, Sicherheitsmodell u dr typische Ablauf für d Bereitstellig vo Agente.
 
 ---
 
-## Komponenten im Überblick
+## Warum Agente?
 
-| Komponente | Verantwortlichkeit |
-|-----------|----------------|
-| **Master (DockFlare)** | Hostet die Web UI, speichert den Status, gleicht gewünschte Ingress-Regeln ab u erteilt Befehle. |
-| **Redis** | Backplane für Caching, Agenten-Heartbeats u anstehende Befehle in der Warteschlange. |
-| **DockFlare Agent** | Headless-Container, der lokale Docker-Ereignisse beobachtet, Befehle ausführt u `cloudflared` betreibt. |
-| **cloudflared** | Behandelt die eigentliche Tunnelverbindung zu Cloudflare pro Agent. |
+* **Compute u Ingress-Steuerig trenne** – Dini Workloads chöi nöcher bi de Benutzer laufe, während d Steuerig zentral blybt.
+* **Sichtbarkeit pro Host** – Du gsehsch Heartbeat, Tunnelstatus u Befehlsverlauf pro Agent.
+* **Token mit wenig Rächte** – Kompromittierti Agente chöi einzelni widerruefe wärde, ohni dr Master oder angeri Hosts z tangiere.
+* **Besseri Uusfallsicherhäit** – Wänn dr Master churz offline isch, chöi Agente mit dr letschte bekannte Konfiguration wyterloufe.
 
-Master u Redis laufen typischerweise zusammen, während Agenten neben Workloads laufen (möglicherweise in anderen Netzwerken).
+---
+
+## Komponente im Überblick
+
+| Komponente | Ufgaab |
+|-----------|--------|
+| **Master (DockFlare)** | Hostet d Web UI, speichert dr Status, gleicht d Soll-Konfiguration ab u schickt Befähl an d Agente. |
+| **Redis** | Backplane für Cache, Agent-Heartbeats u wartendi Befähl. |
+| **DockFlare Agent** | Headless-Container, wo lokal Docker-Events überwacht, Befähl usführt u `cloudflared` betreibt. |
+| **cloudflared** | Baut pro Agent d eigentlechi Tunnelverbindig zu Cloudflare uuf. |
+
+Meischt loufe Master u Redis zäme, während d Agente bi de Workloads platziert sy, je nach Fall ou in angerne Netzwerch.
 
 ---
 
 ## Voraussetzige
 
-* DockFlare Master ≥ v3.0 mit konfiguriertem Redis (`REDIS_URL` gesetzt). Optional chasch `REDIS_DB_INDEX` festlegen, um Daten von anderen Containern zu isolieren, die dieselbe Redis-Instanz bruuche.
-* Cloudflare API-Token mit Tunnel- + Access-Berechtigungen (gleich wie in früheren Versionen).
-* Docker-Laufzeit auf jedem Host, den du verwalten wotsch.
-* (Optional) Spezielles Netzwerksegment oder VPN zwischen Master u Agenten, wenn du den Master nid öffentlich zugänglich machen.
+* DockFlare Master ab v3.0 mit konfiguriertem Redis (`REDIS_URL` gsetzt)
+* E Cloudflare API-Token mit Tunnel- u Access-Rächt
+* E Docker-Runtime uf jedem Host, wo du verwalte wotsch
+* Optional es separates Netz oder VPN zwüsche Master u Agent, wänn dr Master nid öffentlich söll sy
 
 ---
 
-## Workflow-Überblick
+## Typische Ablauf
 
-1. **Agenten-API-Schlüssel generieren** in der DockFlare UI (`Agents → Generate Key`).
-2. **DockFlare Agent-Container ausrollen** auf dem Remote-Host, wobei Master-URL u Schlüssel übergeben wärde.
-3. Der Agent **registriert** sich beim Master u erscheint mit dem Status *Ausstehend (Pending)*.
-4. In der Master-UI **enrol den Agenten** (freischalten) – wiis ihm einen Cloudflare Tunnel zu oder erstell einen neuen Tunnel für diesen Host.
-5. Der Master reiht Befehle ein; der Agent **ruft diese ab (polls)**, wendet die Konfiguration an u meldet Status/Heartbeat. DockFlare erkennt die Zielzone für jeden Hostnamen automatisch (u fällt nur auf die Standardzone zurück, wenn die Erkennung fehlschlägt).
-6. Wenn Container auf dem Host des Agenten gestartet oder gestoppt wärde, streamt der Agent Ereignisse an den Master zurück, der wiederum DNS, Zugriffsrichtlinien u Tunnel-Eingangsregeln aktualisiert.
+1. I dr DockFlare UI e **Agenten-API-Schlüssu** generiere (`Agents → Generate Key`)
+2. Dr **DockFlare-Agent-Container** uf em Zielhost usrolle u Master-URL plus API-Schlüssu übergäh
+3. Dr Agent **registriert** sech bim Master u erscheint mit em Status *Pending*
+4. I dr Master-UI dr Agent **freischalte** u ihm e Cloudflare-Tunnel zuewyse oder grad e nöie erstelle
+5. Dr Master stellt Befähl i d Warteschlange; dr Agent holt si ab, setzt d Konfiguration um u meldet Status u Heartbeat zrügg
+6. Wänn uf em Agent-Host Container starte oder stoppe, streamt dr Agent d Ereignis zrügg a dr Master, wo DNS, Access-Richtlinie u Tunnel-Ingress aktualisiert
 
 ---
 
-## Bereitstellige des DockFlare Agenten
+## DockFlare Agent deploye
 
-> ℹ️ Der Agent wird als `alplat/dockflare-agent` veröffentlicht. Solange das öffentliche Repository noch nid online isch, chasch ihn aus dem `DockFlare-agent` Source-Tree erstellen, der in DockFlare 3.0 enthalten isch.
+> ℹ️ Dr Agent wird als `alplat/dockflare-agent` publiziert. Solang ds öffentleche Repository no nid online isch, chasch ihn us em `DockFlare-agent`-Source-Tree boue, wo i DockFlare 3.0 drbi isch.
 
 ```bash
 # Example environment file used by the agent container
@@ -63,7 +63,7 @@ LOG_LEVEL=info
 TZ=Europe/Zurich
 ```
 
-Minimale `docker-compose.yml` auf dem Agenten-Host:
+Minimali `docker-compose.yml` uf em Agent-Host:
 
 ```yaml
 version: '3.8'
@@ -86,7 +86,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - dockflare-internal
-      
+
   dockflare-agent:
     image: alplat/dockflare-agent:latest
     container_name: dockflare-agent
@@ -116,45 +116,45 @@ networks:
     name: dockflare-internal
 ```
 
-- Führ `docker network create cloudflare-net` einmal aus, um das gemeinsame Netzwerk für Master u Agenten bereitzustellen.
-- Der Socket-Proxy begrenzt die Docker-API-Oberfläche, die der Agent erreichen cha; nur die auf `1` gesetzten Fähigkeiten si erreichbar.
-- Das Agenten-Image läuft als unprivilegierte `dockflare`-Benutzer (UID/GID 65532). lueg dass gemounteti Verzeichnisse wie `/app/data` für dä User schriibbar si, oder bau s'Image so, dass es zu dine Host-Berechtige passt.
-- Füll eine `.env`-Datei mit `DOCKFLARE_MASTER_URL` u `DOCKFLARE_API_KEY` aus; optionale Overrides (zum Biispil `LOG_LEVEL` oder `DOCKER_HOST`) chasch auf die gleiche Weise setzen.
+* Führ `docker network create cloudflare-net` einisch uus, zum s gmeinsame Netz für Master u Agente bereitzstelle.
+* Dr Socket-Proxy schränkt d Docker-API i uf genau die Fähigkeite, wo dr Agent würklech brucht.
+* S Agent-Image louft als unprivilegierte Benutzer `dockflare` (UID/GID 65532). Lueg, dass gemounteti Verzeichnis wie `/app/data` für dä User schriibbar sy, oder bau s Image mit passende UID/GID neu.
+* Füll e `.env`-Datei mit `DOCKFLARE_MASTER_URL` u `DOCKFLARE_API_KEY`; optional chasch `LOG_LEVEL` oder `DOCKER_HOST` genau glych überschrybe.
 
 ---
 
 ## Sicherheitsmodell
 
-* **Master API Key** – schützt d'administrativi API. D'UI zeigt ne erscht a, nachdem du uf *Show master API key* klickt hesch.
-* **Agent API Keys** – eindeutig pro Agent. Ein Widerruf sperrt sofort weitere Registrierungen u Befehle von diesem Host.
-* **Redis** – wird für Queues u Caches verwendet; sicher dr Redis ab (Passwort + Network ACLs), wänn er ausserhalb vo mene vertrouenswürdige LAN lauft.
-* **Transport** – betriib den Master hinter HTTPS (zum Biispil via Cloudflare Access), damit der Agent-Traffic verschlüsselt isch.
-* **Least-Privilege Runtime** – der Agent-Container läuft als `dockflare`-User (UID/GID 65532) u verwendet den Socket-Proxy, um Docker-Zugriff auf Container-Inspection u Lifecycle-Operationen zu begrenzen.
+* **Master API Key** – schützt d administrativi API. I dr UI wird er ersch azeigt, wänn du uf *Show master API key* klicksch.
+* **Agent API Keys** – pro Agent eindeutig. E Widerruef sperrt wiiteri Registrierige u Befähl vo däm Host sofort.
+* **Redis** – wird für Queue u Cache bruucht; sicher Redis ab, vor allem wänn er usserhalb vo dim vertrouenswürdige Netz lauft.
+* **Transport** – Betriib dr Master hinder HTTPS, zum Bispil mit Cloudflare Access, damit dr Agent-Traffic verschlüsslet isch.
+* **Least-Privilege Runtime** – Dr Agent-Container louft als `dockflare`-User (UID/GID 65532) u bruucht e Socket-Proxy, damit dr Docker-Zuegriff uf ds Nötigste beschränkt blybt.
 
-### Empfohlene Härtung
+### Empfohlni Härtig
 
-1. Bhalt Agent Keys in einem Vault/Passwortmanager auf u rotier sie regelmässig.
-2. **Deaktivier das Passwort-Login nid**: Bruuch stattdessen OAuth/OIDC-Anbieter für SSO, ohne Sicherheitsrisiken zu erzeugen. Wänn du Passwort-Login unbedingt deaktivieren müesse, beacht, dass Container im selben Docker-Netzwerk externe Authentifizierung umgehen u direkt auf die DockFlare-API zugreifen chöi. Details siehe [Zugriff auf die Web UI](Accessing-the-Web-UI.md).
-3. Bruuch nach Möglichkeit einen eigenen Tunnel pro Agent, um Privilegien sauber zu isolieren.
-4. Überwach in der UI unter `Agents` Heartbeat-Lücken; offline Nodes chöi direkt aus der UI entfernt wärde.
+1. Agent-Keys i mene Vault oder Passwortmanager ufbewahre u regelmässig rotiere
+2. Wenn möglich pro Agent e eigete Tunnel bruuche, zum d Privilegie sauber z trenne
+3. I dr UI under `Agents` Heartbeat-Lücke beobachte; offline Hosts chöi diräkt entfernt wärde
+4. Für d Master-UI lieber OAuth/OIDC oder e guet abgesicherte Passwort-Aamäldig statt riskanti Netzwerch-Abchürzige
 
 ---
 
 ## Problem löse
 
-| Symptom | Lösung |
-|---------|--------|
-| Agent bleibt in `pending` | lueg dass er mit dem richtigen API Key registriert isch, u enrol ihn in der UI. |
-| Commands wärde nie abgearbeitet | Prüef die Redis-Konnektivität u dass die Container-Uhren (Clock) synchron si. |
-| DNS wird nid aktualisiert | Der Master mues Cloudflare erreichen chöi u der Agent mues Container-Events senden; prüef `docker logs dockflare-agent`. |
-| Heartbeat isch offline | Prüef den Network Path zwischen Agent u Master; häufige Ursachen si Firewall- oder TLS-Probleme. |
+| Symptom | Lösig |
+|---------|-------|
+| Agent blybt uf `pending` | Prüef, ob dr richtig API-Key verwendet wird, u schalt dr Agent i dr UI frei. |
+| Commands wärde nie abgschafft | Prüef d Redis-Verbindig u lueg, dass d Container-Uhre synchron sy. |
+| DNS wird nid aktualisiert | Dr Master muess Cloudflare erreiche chönne, u dr Agent muess Container-Events zrüggschicke; prüef `docker logs dockflare-agent`. |
+| Heartbeat isch offline | Prüef d Verbindig zwüsche Agent u Master; tüüfischi Ursach sy oft Firewall- oder TLS-Problem. |
 
 ---
 
-## Nächste Schritte
+## Nächschti Schritt
 
-* Lueg dr aktualisiert Schnellstart im README aa, demit du sicher bisch dass Redis iigrichtet isch.
-* Prüef das Changelog auf Breaking Changes u Migrationshinweise.
-* Abonnier das öffentliche DockFlare-Agent-Repository, sobald es veröffentlicht isch, um Releases nid zu verpassen.
+* Lueg dr aktualisiert Schnellstart im README aa, zum sicher z sy, dass Redis sauber iigrichtet isch
+* Prüef ds Changelog uf Breaking Changes u Migrationshinwys
+* Beobacht ds öffentliche DockFlare-Agent-Repository, sobald es veröffentlecht isch, damit du Releases nid verpassisch
 
 Viu Spass bim Tunnelbaue.

@@ -56,17 +56,17 @@ Para escenarios de acceso complejos (autenticación de correo electrónico/domin
 1. Cree un grupo de acceso en la página **Políticas de acceso**
 2. Referenciarlo con `dockflare.access.group=your-group-id`
 
-Se eliminaron las opciones de creación rápida de la Web UI para fomentar este flujo de trabajo de mejores prácticas.
+Se eliminaron las opciones de creación rápida de la interfaz web para fomentar este flujo de trabajo recomendado.
 
 #### Etiqueta de política predeterminada de zona
 
 La etiqueta `dockflare.access.policy=default_tld` aún funciona y heredará la protección de la política de comodines `*.domain.com` de su zona. Si no existe una política de zona, el servicio será público (sin aplicación Access).
 
-**Recomendación:** Cree políticas de zona predeterminadas para todos sus dominios en la Web UI para una mejor seguridad.
+**Recomendación:** Cree políticas de zona predeterminadas para todos sus dominios en la interfaz web para mejorar la seguridad.
 
 | Etiqueta | Descripción | Ejemplo |
 | :--- | :--- | :--- |
-| `dockflare.access.group` | El ID de un único grupo de acceso preconfigurado para aplicar a este servicio. La identificación se puede encontrar en la página "Access Policies" en la Web UI de DockFlare. | `dockflare.access.group=internal-tools-policy` |
+| `dockflare.access.group` | El ID de un único grupo de acceso preconfigurado para aplicar a este servicio. Puede encontrar ese identificador en la página "Access Policies" de la interfaz web de DockFlare. | `dockflare.access.group=internal-tools-policy` |
 | `dockflare.access.groups` | Una lista separada por comas de ID de grupo de acceso que se aplicarán. Esto le permite superponer varias políticas en un solo servicio. | `dockflare.access.groups=allow-team-a,allow-admins` |
 | `dockflare.access.policy` | El tipo de política principal. Puede ser `bypass` (público), `authenticate` (requiere inicio de sesión) o `default_tld` (hereda de una política `*.domain.com`). Si no se configura, el servicio será público. Prefiera grupos de acceso para políticas reutilizables; estas etiquetas son para anulaciones especializadas. | `dockflare.access.policy=authenticate` |
 | `dockflare.access.name` | Un nombre personalizado para la aplicación Cloudflare Access. El valor predeterminado es `DockFlare-{hostname}`. | `dockflare.access.name=My Web App Access` |
@@ -91,7 +91,7 @@ Para utilizar etiquetas indexadas, anteponga la etiqueta con un número entero, 
 ### Ejemplo
 
 Este ejemplo expone dos nombres de host de un único contenedor:
-1. `app.example.com` enruta a la Web UI principal en el puerto `80`.
+1. `app.example.com` enruta a la interfaz web principal en el puerto `80`.
 2. `api.example.com` enruta a la API en el puerto `3000` y está protegido con un grupo de acceso específico.
 
 ```yaml

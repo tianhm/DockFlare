@@ -6,11 +6,11 @@ Este documento explica cómo DockFlare protege tanto el nodo Master como los age
 
 - **El Master como fuente de verdad**: DockFlare Master almacena todas las credenciales de Cloudflare y las definiciones de políticas. Los agentes nunca gestionan tokens API por su cuenta; solo ejecutan instrucciones recibidas a través de un canal autenticado.
 - **Claves API por agente**: la inscripción requiere una clave API única emitida por el Master. Las claves se almacenan en el almacén cifrado `agent_keys.dat` junto con metadatos como propietario, marcas temporales y estado, de modo que puedan rotarse o revocarse en cualquier momento.
-- **Protección de la API del Master**: los endpoints administrativos, incluida la Web UI y `/api/v2/*`, requieren una sesión válida o la clave API del Master. Los tokens se ocultan en respuestas y logs, y pueden rotarse sin reiniciar la stack.
+- **Protección de la API del Master**: los endpoints administrativos, incluida la interfaz web y `/api/v2/*`, requieren una sesión válida o la clave API del Master. Los tokens se ocultan en respuestas y logs, y pueden rotarse sin reiniciar la stack.
 
 ## 2. Configuración cifrada y gestión de claves
 
-- **`dockflare_config.dat` cifrado**: las credenciales de Cloudflare, las cuentas de la Web UI, los valores predeterminados del túnel y la clave del Master se guardan en un blob cifrado protegido por `dockflare.key`.
+- **`dockflare_config.dat` cifrado**: las credenciales de Cloudflare, las cuentas de la interfaz web, los valores predeterminados del túnel y la clave del Master se guardan en un blob cifrado protegido por `dockflare.key`.
 - **Registro de agentes cifrado**: las claves API de los agentes y sus metadatos de auditoría viven en `agent_keys.dat`, cifrados con la misma clave Fernet. El material sensible ya no aparece en `state.json`.
 - **Reinicio automático al restaurar**: cuando se restaura un archivo de respaldo, DockFlare escribe los artefactos cifrados, recarga el estado de ejecución, deja una marca de reinicio y termina. La política de reinicio de Docker vuelve a levantar el contenedor inmediatamente con la nueva configuración.
 - **`state.json` en texto plano para observabilidad**: `state.json` se mantiene en texto plano para que los operadores puedan inspeccionar reglas y agentes. Los archivos cifrados siguen siendo la fuente autorizada para los secretos.
@@ -25,12 +25,12 @@ Este documento explica cómo DockFlare protege tanto el nodo Master como los age
 
 - **Transporte por Cloudflare Tunnel**: los agentes no exponen puertos de entrada. Todo el tráfico pasa por el túnel de Cloudflare administrado por el Master, lo que reduce la superficie de ataque en hosts remotos.
 - **Llamadas autenticadas de agentes**: las llamadas REST de los agentes incluyen su clave API y están vinculadas al ID de agente registrado. Cualquier token incorrecto o revocado se rechaza.
-- **Backplane Redis**: DockFlare depende de Redis para caché, streaming de logs y señalización entre hilos. La stack Compose recomendada mantiene Redis en una red `dockflare-internal` dedicada, de modo que las cargas de trabajo en `cloudflare-net` no puedan alcanzarlo directamente. Si usa un Redis externo, protéjalo con autenticación y TLS.
+- **Capa Redis compartida**: DockFlare depende de Redis para caché, streaming de logs y señalización entre hilos. La stack Compose recomendada mantiene Redis en una red `dockflare-internal` dedicada, de modo que las cargas de trabajo en `cloudflare-net` no puedan alcanzarlo directamente. Si usa un Redis externo, protéjalo con autenticación y TLS.
 - **Ejecución de mínimo privilegio**: tanto el Master como los agentes se ejecutan como el usuario `dockflare` (UID/GID 65532) y se comunican con Docker exclusivamente a través del socket proxy incluido, manteniendo al mínimo la superficie expuesta de la API.
 
 ## 5. Autenticación y autorización
 
-- **Login reforzado en la Web UI**: el asistente de configuración inicial obliga a crear una cuenta de administrador para la Web UI. Es posible desactivar el acceso con contraseña, pero **se desaconseja firmemente** debido a las implicaciones de seguridad en la red Docker.
+- **Inicio de sesión reforzado en la interfaz web**: el asistente de configuración inicial obliga a crear una cuenta de administrador para la interfaz web. Es posible desactivar el acceso con contraseña, pero **se desaconseja firmemente** debido a las implicaciones de seguridad en la red Docker.
 - **Gestión de sesiones**: las sesiones de Flask-Login están ligadas a la configuración cifrada. Restaurar un backup o rotar credenciales invalida automáticamente las sesiones existentes.
 - **ACL de agentes**: cada registro de agente rastrea la asignación de túnel, las marcas temporales de heartbeat y los comandos pendientes. El Master solo entrega comandos a agentes que presentan el token correcto y un estado de inscripción válido.
 

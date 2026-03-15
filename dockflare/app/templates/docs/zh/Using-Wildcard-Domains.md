@@ -52,6 +52,6 @@ services:
 
 1. 保存 `docker-compose.yml` 文件并运行 `docker compose up -d`。
 2. DockFlare 将检测容器并在 Cloudflare 隧道中为主机名 `*.plex.example.com` 创建入口规则。
-3. 您可以在 DockFlare Web UI 和 Cloudflare 仪表板中的隧道配置中验证这一点。
+3. 您可以在 DockFlare 网页管理界面以及 Cloudflare 仪表板中的隧道配置里验证这一点。
 
 现在，对 `sonarr.plex.example.com` 或 `radarr.plex.example.com` 等子域的任何请求都将通过您的 Cloudflare 隧道路由到您的 `my-proxy-manager` 容器，然后该容器可以相应地处理流量。

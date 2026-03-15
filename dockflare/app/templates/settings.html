@@ -57,7 +57,7 @@
 
                     <div class="form-control w-full">
                         <label class="label" for="cf_zone_id">
-                            <span class="label-text">{{ settings_form.cf_zone_id.label.text }}</span>
+                            <span class="label-text">{{ t('settings.cf_zone_id_label') }}</span>
                         </label>
                         {{ settings_form.cf_zone_id(class="input input-bordered w-full", **{'id': 'cf_zone_id'}) }}
                         <label class="label">
@@ -67,11 +67,11 @@
 
                     <div class="form-control w-full">
                         <label class="label" for="tunnel_dns_scan_zone_names">
-                            <span class="label-text">{{ settings_form.tunnel_dns_scan_zone_names.label.text }}</span>
+                            <span class="label-text">{{ t('settings.zone_scan_label') }}</span>
                         </label>
                         {{ settings_form.tunnel_dns_scan_zone_names(class="input input-bordered w-full", **{'id': 'tunnel_dns_scan_zone_names'}) }}
                         <label class="label">
-                            <span class="label-text-alt">{{ settings_form.tunnel_dns_scan_zone_names.description }}</span>
+                            <span class="label-text-alt">{{ t('settings.zone_scan_description') }}</span>
                         </label>
                     </div>
 
@@ -98,7 +98,7 @@
                     </div>
                     
                     <div class="card-actions pt-4">
-                        {{ settings_form.submit_settings(class="btn btn-primary") }}
+                        <button type="submit" name="submit_settings" class="btn btn-primary">{{ t('form.settings.save_general') }}</button>
                     </div>
                 </form>
                 <div class="border-t border-base-300 mt-8 pt-8">
@@ -136,7 +136,7 @@
                             {% endfor %}
                         </div>
                         <div class="card-actions">
-                            {{ cf_credentials_form.submit_cloudflare_credentials(class="btn btn-primary") }}
+                            <button type="submit" name="submit_cloudflare_credentials" class="btn btn-primary">{{ t('form.cloudflare.submit') }}</button>
                         </div>
                     </form>
                 </div>
@@ -151,7 +151,7 @@
                     <p class="mb-4 text-sm opacity-70">
                         {{ t('settings.displaying_tunnels_for') }} <code class="badge badge-ghost">{{ ACCOUNT_ID_FOR_DISPLAY | e }}</code>.
                         <br>
-                        <em class="text-xs opacity-60">This list shows all tunnels on the account, not just the one managed by DockFlare. Click '+' to view associated DNS records.</em>
+                        <em class="text-xs opacity-60">{{ t('settings.tunnel_list_hint') }}</em>
                     </p>
                     {% if all_account_tunnels is defined and all_account_tunnels %}
                         <div class="overflow-x-auto -mx-6 sm:-mx-8">
@@ -255,7 +255,7 @@
                     <div>
                         <h3 class="font-semibold text-lg mb-2">{{ t('settings.create_backup') }}</h3>
                         <p class="text-sm opacity-80 mb-4">
-                            Download a full DockFlare backup archive (`.zip`) containing your encrypted configuration, agent keys, and state file. Store it safely with the `dockflare.key` included in the archive.
+                            {{ t('settings.backup_description') }}
                         </p>
                         <a href="{{ url_for('web.download_state_backup') }}" class="btn btn-primary">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -277,9 +277,9 @@
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="file" name="backup_file" class="file-input file-input-bordered w-full" accept=".zip,.json" required />
                             <label class="label">
-                                <span class="label-text-alt text-sm">Upload a DockFlare backup archive (`.zip`). Legacy `state.json` files are still accepted but only restore rules/groups.</span>
+                                <span class="label-text-alt text-sm">{{ t('settings.restore_upload_hint') }}</span>
                             </label>
-                            <button type="submit" class="btn btn-error w-full" onclick="event.preventDefault(); dfConfirm('Are you sure you want to overwrite your current settings with this backup? This cannot be undone.', 'Restore Backup').then(ok => { if(ok) this.closest('form').submit(); })">
+                            <button type="submit" class="btn btn-error w-full" onclick="event.preventDefault(); dfConfirm('{{ t('settings.restore_confirm') }}', '{{ t('settings.restore_from_backup') }}').then(ok => { if(ok) this.closest('form').submit(); })">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                   <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                                 </svg>
@@ -343,7 +343,7 @@
                             </div>
 
                             <div class="card-actions">
-                                 {{ security_settings_form.submit_security_settings(class="btn btn-warning") }}
+                                 <button type="submit" name="submit_security_settings" class="btn btn-warning">{{ t('form.security.save') }}</button>
                             </div>
                         </form>
                         <div class="mt-6">

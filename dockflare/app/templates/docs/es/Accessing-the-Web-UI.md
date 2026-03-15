@@ -1,10 +1,10 @@
-# Acceso a la Web UI
+# Acceso a la interfaz web
 
-Una vez que haya iniciado con éxito el contenedor DockFlare, podrá acceder a la Web UI para administrar su configuración, ver el estado de sus túneles y configurar manualmente reglas ingress.
+Una vez que el contenedor DockFlare se haya iniciado correctamente, podrá acceder a la interfaz web para administrar su configuración, ver el estado de sus túneles y configurar manualmente reglas ingress.
 
 ## URL predeterminada
 
-De forma predeterminada, se puede acceder a la Web UI de DockFlare en el puerto `5000`. Para acceder, abra su navegador y navegue hasta la siguiente URL:
+De forma predeterminada, se puede acceder a la interfaz web de DockFlare en el puerto `5000`. Para entrar, abra el navegador y vaya a la siguiente URL:
 
 ```
 http://<your-server-ip>:5000
@@ -14,16 +14,16 @@ Reemplace `<your-server-ip>` con la dirección IP del servidor donde se ejecuta 
 
 ## Configuración por primera vez
 
-La primera vez que acceda a la Web UI, el **Pre-Flight Setup Wizard** lo guiará. Este asistente le ayuda a:
+La primera vez que acceda a la interfaz web, el **asistente de configuración inicial** lo guiará. Este asistente le ayuda a:
 
 1. Restaurar desde un archivo de copia de seguridad de DockFlare existente (`dockflare_backup_*.zip`). Si elige esta opción, el sistema importa sus claves cifradas de configuración, estado y agente y luego reinicia automáticamente el contenedor para aplicarlas.
-2. Cree una cuenta de administrador y una contraseña para la Web UI.
+2. Crear una cuenta de administrador y una contraseña para la interfaz web.
 3. Proporcione su ID de cuenta de Cloudflare, ID de zona (opcional) y token de API.
 4. Confirme la configuración del túnel y complete los pasos de incorporación.
 
 ## Iniciar sesión
 
-Después de la configuración inicial, verá una pantalla de inicio de sesión cada vez que acceda a la Web UI. Utilice la contraseña que creó durante el proceso de configuración para iniciar sesión.
+Después de la configuración inicial, verá una pantalla de inicio de sesión cada vez que acceda a la interfaz web. Utilice la contraseña que creó durante el proceso de configuración para iniciar sesión.
 
 ## Deshabilitar el inicio de sesión con contraseña
 
