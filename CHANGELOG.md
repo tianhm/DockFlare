@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Performance / Waitress Connection Exhaustion:** Resolved a critical bug resulting in UI 30-second delays or stalling connections after clicking through ~5 pages. 
 
+### Security
+- **Dependency Security Refresh:** Updated frontend and Python dependencies to address known vulnerabilities identified by `npm audit` and `pip-audit`.
+  - **Frontend lockfile updates:** Refreshed transitive npm dependencies to patched versions, including `glob` `10.5.0` and `minimatch` `9.0.9`, resulting in a clean `npm audit`.
+  - **Python dependency updates:** Rebuilt `requirements.txt` from a new `requirements.in` source file and upgraded key packages to patched releases, including `Authlib` `1.6.9`, `cryptography` `46.0.5`, `Flask` `3.1.3`, `Markdown` `3.8.1`, `urllib3` `2.6.3`, and `Werkzeug` `3.1.6`.
+  - **Audit result:** Verified both dependency sets after the update with no known vulnerabilities remaining in the current lockfiles.
+
 ---
 
 ## [v3.0.7] - 2026-03-01
