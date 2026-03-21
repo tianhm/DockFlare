@@ -41,8 +41,8 @@ services:
     labels: # -- Cloudflare Tunnel Configuration (via DockFlare) OPTIONAL --
       # Main DockFlare with access policy
       - dockflare.enable=true
-      - dockflare.hostname=dftest.dataverse.icu
-      - dockflare.service=http://192.168.0.42:5001
+      #- dockflare.hostname=dockflare.example.tld
+      #- dockflare.service=http://dockflare:5000
       #- dockflare.access.group=YOUR-ACCESS-GROUP-ID  # your custom access policy
       # -- OAuth Callback Path (Bypass Access Policy) OPTIONAL --
       # Required if using OAuth authentication with access policies on main interface
