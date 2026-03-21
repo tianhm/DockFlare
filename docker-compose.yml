@@ -40,7 +40,7 @@ services:
       - "5000:5000"
     labels: # -- Cloudflare Tunnel Configuration (via DockFlare) OPTIONAL --
       # Main DockFlare with access policy
-      - dockflare.enable=true
+      #- dockflare.enable=true
       #- dockflare.hostname=dockflare.example.tld
       #- dockflare.service=http://dockflare:5000
       #- dockflare.access.group=YOUR-ACCESS-GROUP-ID  # your custom access policy
