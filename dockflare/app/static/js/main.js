@@ -1593,8 +1593,8 @@ function renderIdPTable(idps) {
     };
 
     let tableHTML = `
-        <table class="table table-zebra table-sm policy-table w-full">
-            <colgroup>
+        <table class="table table-zebra table-sm policy-table w-full table-responsive">
+            <colgroup class="hidden md:table-column-group">
                 <col class="col-primary">
                 <col class="col-secondary">
                 <col class="col-tertiary">
@@ -1621,18 +1621,18 @@ function renderIdPTable(idps) {
 
         tableHTML += `
             <tr>
-                <td class="p-3">
+                <td class="p-3" data-label="${t('js.table.provider')}">
                     <div class="flex items-center gap-3">
                         <span class="inline-flex items-center justify-center">${icon}</span>
                         <div class="font-medium">${idpData.name}</div>
                     </div>
                 </td>
-                <td class="p-3 text-xs opacity-70">
+                <td class="p-3 text-xs opacity-70" data-label="${t('js.table.cloudflare_id')}">
                     ${idpData.cloudflare_id ? `<span class="tooltip" data-tip="${idpData.cloudflare_id}"><code>${idpData.cloudflare_id.slice(0, 8)}...</code></span>` : '-'}
                 </td>
-                <td class="p-3 text-sm opacity-80">${idpData.type}</td>
-                <td class="p-3">${statusBadge}</td>
-                <td class="p-3 text-right">
+                <td class="p-3 text-sm opacity-80" data-label="${t('js.table.connector')}">${idpData.type}</td>
+                <td class="p-3" data-label="${t('js.table.status')}">${statusBadge}</td>
+                <td class="p-3 text-right" data-label="${t('js.table.actions')}">
                     <div class="dropdown dropdown-end">
                         <label tabindex="0" class="btn btn-ghost btn-sm">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">

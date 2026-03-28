@@ -913,8 +913,8 @@
                     return;
                 }
 
-                let html = '<div class="overflow-x-auto table-container"><table class="table table-zebra policy-table w-full">';
-                html += '<colgroup>';
+                let html = '<div class="overflow-x-auto table-container"><table class="table table-zebra policy-table w-full table-responsive">';
+                html += '<colgroup class="hidden md:table-column-group">';
                 html += '<col class="col-primary">';
                 html += '<col class="col-secondary">';
                 html += '<col class="col-tertiary">';
@@ -931,14 +931,14 @@
 
                 zonePolicies.forEach(zone => {
                     html += '<tr>';
-                    html += `<td class="px-4 py-3 font-medium">${zone.zone_name}</td>`;
+                    html += `<td class="px-4 py-3 font-medium" data-label="{{ t('policies.zone_name') }}">${zone.zone_name}</td>`;
                     if (zone.zone_id) {
-                        html += `<td class="px-4 py-3 text-xs opacity-70"><span class=\"tooltip\" data-tip=\"${zone.zone_id}\"><code>${zone.zone_id.slice(0, 8)}...</code></span></td>`;
+                        html += `<td class="px-4 py-3 text-xs opacity-70" data-label="{{ t('policies.zone_id') }}"><span class=\"tooltip\" data-tip=\"${zone.zone_id}\"><code>${zone.zone_id.slice(0, 8)}...</code></span></td>`;
                     } else {
-                        html += '<td class="px-4 py-3 text-xs opacity-70">-</td>';
+                        html += '<td class="px-4 py-3 text-xs opacity-70" data-label="{{ t('policies.zone_id') }}">-</td>';
                     }
-                    html += `<td class="px-4 py-3"><code class="text-sm">*.${zone.zone_name}</code></td>`;
-                    html += '<td class="px-4 py-3">';
+                    html += `<td class="px-4 py-3" data-label="{{ t('policies.wildcard_hostname') }}"><code class="text-sm">*.${zone.zone_name}</code></td>`;
+                    html += '<td class="px-4 py-3" data-label="{{ t('common.status') }}">';
 
                     if (zone.has_default_policy) {
                         html += '<span class="badge badge-sm badge-success df-badge">';
@@ -948,7 +948,7 @@
                         html += '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>{{ t('policies.not_protected') }}</span>';
                     }
 
-                    html += '</td><td class="px-4 py-3 text-right">';
+                    html += '</td><td class="px-4 py-3 text-right" data-label="{{ t('common.actions') }}">';
 
                     if (!zone.has_default_policy) {
                         html += `<div class="dropdown dropdown-end">
