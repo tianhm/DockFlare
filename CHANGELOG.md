@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 
 ## [v3.0.9] - 2026-03-21
- 
+
 ### Added
 - **Cloudflare Zero Trust — Secure Agent Communication:** DockFlare Master can now automatically provision a Cloudflare Service Token and a scoped Access Application for the agent API (`/api/v2/agents/`). Once configured, all agent traffic is authenticated at the Cloudflare edge before reaching the server, eliminating the need for a separate private network (Tailscale, VPN, etc.).
   - One-click setup and removal from the Agents page — no Cloudflare dashboard visit required.
@@ -23,6 +23,7 @@ All notable changes to this project will be documented in this file.
 - **Agents Table — Visual Polish:** Refreshed header style (uppercase, muted, semibold), consistent cell padding, and a muted `—` dash for missing values.
 - **Cloudflared Version Display:** The Cloudflared Version column now shows live data (version + platform sub-line) instead of a hardcoded fallback value.
 - **Multi-Server-Agent.md:** Updated the agent deployment guide — `cloudflared` image tag changed from pinned `2025.9.0` to `latest`; one-liner deploy is clearly marked as opt-in; Option A (one-liner) and Option B (manual compose) are presented as distinct paths; removed stale pre-publication note.
+- **Mobile UI Optimization:** Converted fixed-width tables across the web UI to responsive card-style layouts on small screens using a CSS `data-label` pattern. Affected pages include the dashboard, settings, access policies, identity providers, and zone policies. Thanks to [@nguyenhuy158](https://github.com/nguyenhuy158) ([#337](https://github.com/ChrispyBacon-dev/DockFlare/pull/337)) — *2026-03-28*
  
 ### Fixed
 - **Agent `thread_health_status` NameError:** Fixed a crash in the DockFlare Agent where `thread_health_status` and `last_successful_master_contact` were referenced before being declared at module level.
