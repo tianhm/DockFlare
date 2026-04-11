@@ -111,11 +111,23 @@ def _safe_create_dns(zone_id, type, name, content, priority=None):
             raise
 
 def setup_email_dns_records(zone_id, zone_name):
-    _safe_create_dns(zone_id, 'MX', zone_name, 'route1.mx.cloudflare.net', priority=14)
-    _safe_create_dns(zone_id, 'MX', zone_name, 'route2.mx.cloudflare.net', priority=36)
-    _safe_create_dns(zone_id, 'MX', zone_name, 'route3.mx.cloudflare.net', priority=88)
-    _safe_create_dns(zone_id, 'TXT', zone_name, 'v=spf1 include:_spf.mx.cloudflare.net ~all')
-    _safe_create_dns(zone_id, 'TXT', f'_dmarc.{zone_name}', f'v=DMARC1; p=quarantine; rua=mailto:dmarc@{zone_name}')
+    try:
+        res = cf_api_request('GET', f'/zones/{zone_id}/email/routing/dns')
+        required = res.get('result', [])
+        for record in required:
+            rtype = record.get('type')
+            rname = record.get('name')
+            rcontent = record.get('content')
+            rpriority = record.get('priority')
+            if rtype and rname and rcontent:
+                _safe_create_dns(zone_id, rtype, rname, rcontent, priority=rpriority)
+    except Exception as e:
+        logging.warning(f"Could not fetch required email routing DNS records from CF API: {e}, falling back to defaults")
+        _safe_create_dns(zone_id, 'MX', zone_name, 'route1.mx.cloudflare.net', priority=14)
+        _safe_create_dns(zone_id, 'MX', zone_name, 'route2.mx.cloudflare.net', priority=36)
+        _safe_create_dns(zone_id, 'MX', zone_name, 'route3.mx.cloudflare.net', priority=88)
+        _safe_create_dns(zone_id, 'TXT', zone_name, 'v=spf1 include:_spf.mx.cloudflare.net ~all')
+        _safe_create_dns(zone_id, 'TXT', f'_dmarc.{zone_name}', f'v=DMARC1; p=quarantine; rua=mailto:dmarc@{zone_name}')
 
 def verify_email_dns_records(zone_id, zone_name):
     res = cf_api_request('GET', f'/zones/{zone_id}/dns_records')

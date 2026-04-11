@@ -103,7 +103,8 @@ def setup_email_domain():
             {"type": "r2_bucket", "name": "EMAIL_BUCKET", "bucket_name": bucket_name},
             {"type": "plain_text", "name": "WEBHOOK_URL", "text": webhook_url},
             {"type": "secret_text", "name": "WEBHOOK_SECRET", "text": webhook_secret},
-            {"type": "plain_text", "name": "ALLOWED_RECIPIENTS", "text": "[]"}
+            {"type": "plain_text", "name": "ALLOWED_RECIPIENTS", "text": "[]"},
+            {"type": "plain_text", "name": "DOMAIN_NAME", "text": zone_name}
         ]
         email_manager.deploy_worker(inbound_worker_name, _read_worker_template('inbound_worker.js'), inbound_bindings)
         email_manager.set_worker_cron(inbound_worker_name, ['*/5 * * * *'])
@@ -141,6 +142,22 @@ def setup_email_domain():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@email_bp.route('/repair-dns', methods=['POST'])
+@login_required
+def repair_dns():
+    data = request.get_json(force=True, silent=True) or {}
+    zone_name = data.get('zone_name')
+    email_cfg = config.EMAIL_CONFIG
+    if not zone_name or zone_name not in email_cfg.get('domains', {}):
+        return jsonify({'success': False, 'error': 'Domain not found'}), 404
+    try:
+        zone_id = email_cfg['domains'][zone_name]['zone_id']
+        email_manager.setup_email_dns_records(zone_id, zone_name)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @email_bp.route('/teardown-domain', methods=['POST'])
 @login_required
 def teardown_domain():
@@ -170,7 +187,8 @@ def _redeploy_inbound_worker(email_cfg, domain):
         {"type": "r2_bucket", "name": "EMAIL_BUCKET", "bucket_name": d['r2_bucket']},
         {"type": "plain_text", "name": "WEBHOOK_URL", "text": webhook_url},
         {"type": "secret_text", "name": "WEBHOOK_SECRET", "text": d['webhook_secret']},
-        {"type": "plain_text", "name": "ALLOWED_RECIPIENTS", "text": json.dumps(all_addresses)}
+        {"type": "plain_text", "name": "ALLOWED_RECIPIENTS", "text": json.dumps(all_addresses)},
+        {"type": "plain_text", "name": "DOMAIN_NAME", "text": domain}
     ]
     email_manager.deploy_worker(d['inbound_worker_name'], _read_worker_template('inbound_worker.js'), inbound_bindings)
     email_manager.set_worker_cron(d['inbound_worker_name'], ['*/5 * * * *'])

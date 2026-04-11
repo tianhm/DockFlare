@@ -15,9 +15,14 @@ log = logging.getLogger(__name__)
 webhook_bp = Blueprint('webhook', __name__)
 
 
-def _verify_signature(req):
+def _get_domain_config(domain):
+    db = get_db()
+    cur = db.execute("SELECT * FROM domain_configs WHERE domain_name=?", (domain,))
+    return cur.fetchone()
+
+
+def _verify_signature(req, secret):
     signature = req.headers.get('X-DockFlare-Signature')
-    secret = config.WEBHOOK_SECRET
     if not signature or not secret:
         return False
     body = req.get_data()
@@ -27,7 +32,21 @@ def _verify_signature(req):
 
 @webhook_bp.route('/inbound', methods=['POST'])
 def inbound():
-    if not _verify_signature(request):
+    domain = request.headers.get('X-DockFlare-Domain', '').strip()
+
+    if domain and domain != 'undefined':
+        domain_cfg = _get_domain_config(domain)
+        if domain_cfg is None:
+            log.warning("Inbound webhook: unknown domain '%s'", domain)
+            return jsonify({"error": "unknown domain"}), 401
+        secret = domain_cfg['webhook_secret']
+    else:
+        cur = get_db().execute("SELECT webhook_secret FROM domain_configs LIMIT 1")
+        row = cur.fetchone()
+        secret = row['webhook_secret'] if row else config.WEBHOOK_SECRET
+        domain_cfg = None
+
+    if not _verify_signature(request, secret):
         return jsonify({"error": "invalid signature"}), 401
 
     data = request.json
@@ -39,11 +58,11 @@ def inbound():
         return jsonify({"error": "missing r2_key"}), 400
 
     msg_uuid = request.headers.get('X-DockFlare-Message-Id', '')
-    log.info("Inbound webhook: message=%s from=%s to=%s",
-             msg_uuid, data.get('from', ''), data.get('to', ''))
+    log.info("Inbound webhook: message=%s domain=%s from=%s to=%s",
+             msg_uuid, domain or 'legacy', data.get('from', ''), data.get('to', ''))
 
     try:
-        eml_bytes = fetch_email_from_r2(r2_key)
+        eml_bytes = fetch_email_from_r2(r2_key, domain_cfg)
         parsed = parse_eml(eml_bytes)
 
         db = get_db()
@@ -116,19 +135,16 @@ def inbound():
             ))
 
         db.commit()
-        delete_from_r2(r2_key)
+        delete_from_r2(r2_key, domain_cfg)
 
         log.info("Inbound delivered: message=%s to=%s db_id=%s",
                  msg_uuid, to_address, msg_id)
         return jsonify({"status": "success"})
 
     except sqlite3.IntegrityError:
-        # Duplicate message_id — already delivered (e.g. cron retried a message
-        # that was actually processed successfully). Clean up R2 and return 200
-        # so the cron does not keep retrying this email.
         log.info("Inbound duplicate (already delivered): message=%s — cleaning R2", msg_uuid)
         try:
-            delete_from_r2(r2_key)
+            delete_from_r2(r2_key, domain_cfg)
         except Exception:
             pass
         return jsonify({"status": "already_delivered"}), 200

@@ -37,15 +37,8 @@ def bootstrap():
                     os.environ['JWT_ISSUER'] = data.get('jwt_issuer', 'dockflare-master')
                     os.environ['JWT_AUDIENCE'] = data.get('jwt_audience', 'dockflare-mail')
                     domains = data.get('domains', {})
-                    if domains:
-                        d = next(iter(domains.values()))
-                        os.environ['WEBHOOK_SECRET'] = d.get('webhook_secret', '')
-                        os.environ['R2_ACCESS_KEY_ID'] = d.get('r2_access_key_id', '')
-                        os.environ['R2_SECRET_ACCESS_KEY'] = d.get('r2_secret_access_key', '')
-                        os.environ['R2_ENDPOINT_URL'] = d.get('r2_endpoint_url', '')
-                        os.environ['R2_BUCKET_NAME'] = d.get('r2_bucket', '')
-                        os.environ['OUTBOUND_WORKER_URL'] = d.get('outbound_worker_url', '')
-                        os.environ['OUTBOUND_AUTH_SECRET'] = d.get('outbound_auth_secret', '')
+                    if not domains:
+                        log.warning("No domains in bootstrap config")
                     log.info("Config bootstrapped from DockFlare Master")
                 else:
                     log.info("DockFlare Master has no email config yet, starting unconfigured")
@@ -96,13 +89,64 @@ def _sync_mailboxes(bootstrap_data):
         conn.close()
 
 
+def _sync_domains(bootstrap_data):
+    if not bootstrap_data or not bootstrap_data.get('configured'):
+        return
+
+    import sqlite3
+    from datetime import datetime, timezone
+
+    mail_data_path = os.environ.get('MAIL_DATA_PATH', '/data')
+    db_path = os.path.join(mail_data_path, 'db', 'mail.db')
+    if not os.path.exists(db_path):
+        log.warning("DB not found during domain sync, skipping")
+        return
+
+    conn = sqlite3.connect(db_path)
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        for zone_name, d in bootstrap_data.get('domains', {}).items():
+            conn.execute("""
+                INSERT INTO domain_configs (
+                    domain_name, webhook_secret, r2_bucket, r2_access_key_id,
+                    r2_secret_access_key, r2_endpoint_url, outbound_worker_url,
+                    outbound_auth_secret, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(domain_name) DO UPDATE SET
+                    webhook_secret=excluded.webhook_secret,
+                    r2_bucket=excluded.r2_bucket,
+                    r2_access_key_id=excluded.r2_access_key_id,
+                    r2_secret_access_key=excluded.r2_secret_access_key,
+                    r2_endpoint_url=excluded.r2_endpoint_url,
+                    outbound_worker_url=excluded.outbound_worker_url,
+                    outbound_auth_secret=excluded.outbound_auth_secret,
+                    updated_at=excluded.updated_at
+            """, (
+                zone_name,
+                d.get('webhook_secret', ''),
+                d.get('r2_bucket', ''),
+                d.get('r2_access_key_id', ''),
+                d.get('r2_secret_access_key', ''),
+                d.get('r2_endpoint_url', ''),
+                d.get('outbound_worker_url', ''),
+                d.get('outbound_auth_secret', ''),
+                now,
+            ))
+        conn.commit()
+        log.info("Domain config sync complete (%d domains)", len(bootstrap_data.get('domains', {})))
+    except Exception as e:
+        log.error("Domain config sync failed: %s", e)
+    finally:
+        conn.close()
+
+
 bootstrap_data = bootstrap()
 
 from waitress import serve
 from app import create_app
 
-_sync_mailboxes(bootstrap_data)
-
 app = create_app()
+_sync_mailboxes(bootstrap_data)
+_sync_domains(bootstrap_data)
 log.info("Starting mail-manager on port 8025")
 serve(app, host='0.0.0.0', port=8025)

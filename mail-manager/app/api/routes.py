@@ -562,7 +562,6 @@ def _dispatch_send(address, data):
 
     db = get_db()
 
-    # Split recipients: local mailboxes get direct delivery, external go via CF worker
     local_recipients = []
     external_recipients = []
     for recipient in to_field:
@@ -577,7 +576,19 @@ def _dispatch_send(address, data):
     error_msg = None
     worker_resp = None
 
+    sender_domain = address.split('@')[-1] if '@' in address else ''
     outbound_url = config.OUTBOUND_WORKER_URL
+    outbound_auth = config.OUTBOUND_AUTH_SECRET
+
+    if sender_domain:
+        db_cfg = db.execute(
+            "SELECT outbound_worker_url, outbound_auth_secret FROM domain_configs WHERE domain_name=?",
+            (sender_domain,)
+        ).fetchone()
+        if db_cfg and db_cfg['outbound_worker_url']:
+            outbound_url = db_cfg['outbound_worker_url']
+            outbound_auth = db_cfg['outbound_auth_secret']
+
     if external_recipients:
         worker_payload = {
             "from": address,
@@ -598,7 +609,7 @@ def _dispatch_send(address, data):
                 resp = http_requests.post(
                     outbound_url,
                     json=worker_payload,
-                    headers={"Authorization": f"Bearer {config.OUTBOUND_AUTH_SECRET}"},
+                    headers={"Authorization": f"Bearer {outbound_auth}"},
                     timeout=30,
                 )
                 worker_resp = resp.text

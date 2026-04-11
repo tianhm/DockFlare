@@ -20,7 +20,8 @@ async function dispatchWebhook(env, payload) {
     headers: {
       "Content-Type": "application/json",
       "X-DockFlare-Signature": signatureHex,
-      "X-DockFlare-Message-Id": payload.message_id
+      "X-DockFlare-Message-Id": payload.message_id,
+      "X-DockFlare-Domain": env.DOMAIN_NAME
     },
     body: payloadString,
     signal: AbortSignal.timeout(10000)
@@ -67,19 +68,19 @@ export default {
         const webhookResponse = await dispatchWebhook(env, payload);
         if (!webhookResponse.ok) {
           // DockFlare returned an error — leave email in R2 for cron retry.
-          // Do NOT reject: the email is safely buffered and will be delivered
+          // The email is safely buffered and will be delivered
           // automatically when DockFlare is healthy again.
           console.warn(`Webhook returned ${webhookResponse.status} for ${messageId} — buffered in R2 for retry`);
         }
         // On success the mail-manager deletes the R2 file itself after processing.
       } catch (webhookErr) {
         // DockFlare is unreachable (offline, timeout, network error).
-        // Email is already in R2. Cron will retry. Do NOT reject.
+        // Email is already in R2. Cron will retry. Do NOT reject. best showerthought
         console.warn(`Webhook unreachable for ${messageId} — buffered in R2 for retry: ${webhookErr.message}`);
       }
 
     } catch (err) {
-      // Only reject if we failed to store the email in R2 (truly unrecoverable).
+      // Only reject if failed to store the email in R2 (truly unrecoverable). - reminder need some tests still 
       message.setReject(`Worker error: ${err.message}`);
     }
   },

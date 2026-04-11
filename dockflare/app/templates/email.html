@@ -5,7 +5,10 @@
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold">{{ t('email.title') }}</h1>
         {% if email_enabled %}
-        <button class="btn btn-primary" onclick="emailOpenWebmail()">{{ t('email.webmail_link') }}</button>
+        <div class="flex gap-2">
+            <button class="btn btn-outline" onclick="emailRedeployWorkers()">Redeploy Workers</button>
+            <button class="btn btn-primary" onclick="emailOpenWebmail()">{{ t('email.webmail_link') }}</button>
+        </div>
         {% endif %}
     </div>
 
@@ -57,6 +60,7 @@
                             <td><div class="badge badge-success">{{ t('email.setup_complete') }}</div></td>
                             <td>
                                 <button class="btn btn-sm btn-outline" onclick="emailVerifyDns('{{ domain }}')">{{ t('email.dns_verify') }}</button>
+                                <button class="btn btn-sm btn-outline" onclick="emailRepairDns('{{ domain }}')">Repair DNS</button>
                                 <button class="btn btn-sm btn-warning" onclick="emailUpdateR2('{{ domain }}')">R2 Credentials</button>
                                 <button class="btn btn-sm btn-error" onclick="emailTeardownDomain('{{ domain }}')">{{ t('email.teardown') }}</button>
                             </td>

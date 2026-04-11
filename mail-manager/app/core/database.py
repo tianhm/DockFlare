@@ -83,6 +83,18 @@ _SCHEMA = """
         reason TEXT,
         received_at TEXT
     );
+    CREATE TABLE IF NOT EXISTS domain_configs (
+        domain_name TEXT PRIMARY KEY,
+        webhook_secret TEXT NOT NULL,
+        r2_bucket TEXT NOT NULL,
+        r2_access_key_id TEXT NOT NULL,
+        r2_secret_access_key TEXT NOT NULL,
+        r2_endpoint_url TEXT NOT NULL,
+        outbound_worker_url TEXT NOT NULL,
+        outbound_auth_secret TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_domain_configs_name ON domain_configs(domain_name);
     CREATE INDEX IF NOT EXISTS idx_messages_mailbox ON messages(mailbox_address);
     CREATE INDEX IF NOT EXISTS idx_messages_folder ON messages(folder_id);
     CREATE INDEX IF NOT EXISTS idx_messages_received ON messages(received_at DESC);
@@ -132,8 +144,7 @@ def get_standalone_db():
     return _connect()
 
 
-def _migrate(conn):
-    # Add columns introduced after initial schema — safe to run on every start
+def _migrate(conn):    
     migrations = [
         "ALTER TABLE folders ADD COLUMN color TEXT",
     ]
@@ -141,7 +152,7 @@ def _migrate(conn):
         try:
             conn.execute(sql)
         except Exception:
-            pass  # column already exists
+            pass  
 
 
 def init_db():

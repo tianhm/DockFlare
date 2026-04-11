@@ -2043,3 +2043,40 @@ async function emailUpdateR2(domain) {
 function emailOpenWebmail() {
     window.location.href = '/email/sso/callback';
 }
+
+async function emailRepairDns(domain) {
+    if (!confirm(`Re-apply all required DNS records for ${domain}? Missing records (including DKIM) will be added.`)) return;
+    try {
+        const response = await fetch('/email/repair-dns', {
+            method: 'POST',
+            headers: buildApiHeaders({'Content-Type': 'application/json'}),
+            body: JSON.stringify({ zone_name: domain })
+        });
+        const data = await response.json();
+        if (data.success) {
+            await dfAlert(`DNS records repaired for ${domain}.`, 'Success');
+        } else {
+            await dfAlert('Error: ' + (data.error || 'Unknown'), 'Failed');
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function emailRedeployWorkers() {
+    if (!confirm('Redeploy all inbound and outbound workers? This will push the latest worker code and bindings to Cloudflare.')) return;
+    try {
+        const response = await fetch('/email/redeploy-workers', {
+            method: 'POST',
+            headers: buildApiHeaders({'Content-Type': 'application/json'})
+        });
+        const data = await response.json();
+        if (data.success) {
+            await dfAlert('Workers redeployed for: ' + (data.domains || []).join(', '), 'Success');
+        } else {
+            await dfAlert('Error: ' + (data.error || 'Unknown'), 'Failed');
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
