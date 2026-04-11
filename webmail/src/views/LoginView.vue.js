@@ -11,8 +11,17 @@ onMounted(() => {
         login(token);
     }
 });
-const redirectToMaster = () => {
-    const masterUrl = import.meta.env.VITE_MASTER_URL || window.location.origin.replace('mail.', '');
+const redirectToMaster = async () => {
+    let masterUrl = import.meta.env.VITE_MASTER_URL;
+    if (!masterUrl) {
+        try {
+            const cfg = await fetch('/config.json').then(r => r.json());
+            masterUrl = cfg.masterUrl;
+        }
+        catch { }
+    }
+    if (!masterUrl)
+        masterUrl = window.location.origin.replace('mail.', '');
     window.location.href = `${masterUrl}/email/sso/callback?return_to=${window.location.hostname}`;
 };
 debugger; /* PartiallyEnd: #3632/scriptSetup.vue */

@@ -30,6 +30,8 @@ const getIcon = (name: string): Component => iconMap[name] || Folder
 
 const selectFolder = (name: string) => {
   store.currentFolder = name
+  store.currentMessage = null
+  store.viewMode = 'split'
 }
 
 // ── New folder creation ──────────────────────────────────────────────
@@ -143,8 +145,9 @@ const confirmEdit = async () => {
               class="z-50 rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md flex items-center gap-4"
             >
               {{ f.name }}
-              <span v-if="f.unread_count" class="ml-auto text-muted-foreground">
-                {{ f.unread_count }}
+              <span class="ml-auto text-muted-foreground flex gap-1">
+                <span v-if="f.unread_count" class="font-bold">{{ f.unread_count }} /</span>
+                <span>{{ f.total_count || 0 }}</span>
               </span>
             </TooltipContent>
           </TooltipPortal>
@@ -197,13 +200,13 @@ const confirmEdit = async () => {
             <component v-else :is="getIcon(f.name)" class="size-4 flex-shrink-0" />
             <span class="truncate">{{ f.name }}</span>
             <span
-              v-if="f.unread_count"
               :class="cn(
-                'ml-auto text-xs flex-shrink-0',
+                'ml-auto text-xs flex-shrink-0 flex gap-1',
                 store.currentFolder === f.name ? 'text-primary-foreground' : 'text-muted-foreground',
               )"
             >
-              {{ f.unread_count }}
+              <span v-if="f.unread_count" class="font-bold">{{ f.unread_count }} /</span>
+              <span>{{ f.total_count || 0 }}</span>
             </span>
           </button>
           <!-- Custom folder actions (on hover) -->

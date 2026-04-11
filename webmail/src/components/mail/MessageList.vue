@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Search, ArrowDownUp } from 'lucide-vue-next'
+import { Search, ArrowDownUp, Trash2 } from 'lucide-vue-next'
 import {
   TabsRoot, TabsList, TabsTrigger, TabsContent,
 } from 'radix-vue'
@@ -8,12 +8,16 @@ import {
   ScrollAreaRoot, ScrollAreaViewport, ScrollAreaScrollbar, ScrollAreaThumb,
 } from 'radix-vue'
 import { useMailStore } from '../../stores/mail'
+import { mailApi } from '../../api/mail'
 import MessageListItem from './MessageListItem.vue'
 import Separator from '../ui/Separator.vue'
 import Input from '../ui/Input.vue'
+import Dialog from '../ui/Dialog.vue'
+import Button from '../ui/Button.vue'
 
 const store = useMailStore()
 const searchValue = ref('')
+const showTrashConfirm = ref(false)
 
 const folderColor = computed(() => store.currentFolderObj?.color || '')
 
@@ -37,9 +41,15 @@ const starredMessages = computed(() =>
 )
 
 const displayMessages = computed(() => {
-  if (store.activeTab === 'unread') return unreadMessages.value
-  if (store.activeTab === 'starred') return starredMessages.value
-  return filteredMessages.value
+  let msgs = filteredMessages.value
+  if (store.activeTab === 'unread') msgs = unreadMessages.value
+  else if (store.activeTab === 'starred') msgs = starredMessages.value
+
+  return [...msgs].sort((a: any, b: any) => {
+    const tA = new Date(a.received_at || a.sent_at || 0).getTime()
+    const tB = new Date(b.received_at || b.sent_at || 0).getTime()
+    return store.sortOrder === 'desc' ? tB - tA : tA - tB
+  })
 })
 
 const toggleSort = () => {
@@ -49,6 +59,25 @@ const toggleSort = () => {
 const selectMessage = (msg: any) => {
   store.currentMessage = msg
 }
+
+const emptyTrash = () => {
+  if (store.currentFolderObj && store.currentFolderObj.name === 'Trash') {
+    showTrashConfirm.value = true
+  }
+}
+
+const performEmptyTrash = async () => {
+  if (store.currentFolderObj) {
+    try {
+      await mailApi.emptyFolder(store.currentMailbox, store.currentFolderObj.id)
+      store.messages = []
+      store.currentMessage = null
+    } catch (e) {
+    } finally {
+      showTrashConfirm.value = false
+    }
+  }
+}
 </script>
 
 <template>
@@ -56,6 +85,14 @@ const selectMessage = (msg: any) => {
     <div class="h-[52px] flex items-center px-4 flex-shrink-0">
       <h1 class="text-xl font-bold">{{ store.currentFolder || 'Inbox' }}</h1>
       <div class="ml-auto flex items-center gap-1">
+        <button
+          v-if="store.currentFolder === 'Trash' && store.messages.length > 0"
+          class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+          title="Empty Trash"
+          @click="emptyTrash"
+        >
+          <Trash2 class="size-4" />
+        </button>
         <button
           class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
           :title="store.sortOrder === 'desc' ? 'Oldest first' : 'Newest first'"
@@ -168,6 +205,19 @@ const selectMessage = (msg: any) => {
       </ScrollAreaRoot>
     </TabsContent>
   </TabsRoot>
+
+  <Dialog v-model:open="showTrashConfirm">
+    <div class="space-y-4">
+      <h3 class="text-lg font-semibold leading-none tracking-tight">Empty Trash</h3>
+      <p class="text-sm text-muted-foreground">
+        Are you sure you want to empty the trash? All messages inside will be permanently deleted.
+      </p>
+      <div class="flex justify-end gap-2 pt-4">
+        <Button variant="outline" @click="showTrashConfirm = false">Cancel</Button>
+        <Button variant="destructive" @click="performEmptyTrash">Empty Trash</Button>
+      </div>
+    </div>
+  </Dialog>
 </template>
 
 <style scoped>

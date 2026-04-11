@@ -328,6 +328,13 @@ def get_folders(address):
             (f['id'],),
         )
         f['unread_count'] = cur.fetchone()[0]
+
+        cur = db.execute(
+            "SELECT COUNT(*) FROM messages WHERE folder_id=?",
+            (f['id'],),
+        )
+        f['total_count'] = cur.fetchone()[0]
+
     return jsonify(folders)
 
 
@@ -421,6 +428,29 @@ def delete_folder(address, fid):
     )
     db.commit()
     return jsonify({"status": "deleted"})
+
+
+@api_bp.route('/mailboxes/<address>/folders/<int:fid>/empty', methods=['DELETE'])
+@jwt_required
+def empty_folder(address, fid):
+    if not _check_mailbox_access(address):
+        return jsonify({"error": "forbidden"}), 403
+
+    db = get_db()
+    cur = db.execute(
+        "SELECT name FROM folders WHERE id=? AND mailbox_address=?",
+        (fid, address),
+    )
+    row = cur.fetchone()
+    if not row:
+        return jsonify({"error": "not found"}), 404
+
+    if row['name'] != 'Trash':
+        return jsonify({"error": "can only empty Trash folder"}), 400
+
+    db.execute("DELETE FROM messages WHERE folder_id=? AND mailbox_address=?", (fid, address))
+    db.commit()
+    return jsonify({"status": "emptied"})
 
 
 @api_bp.route('/mailboxes/<address>/search', methods=['GET'])

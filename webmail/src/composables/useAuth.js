@@ -1,3 +1,4 @@
+import { computed } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useRouter } from 'vue-router';
 export function useAuth() {
@@ -11,10 +12,11 @@ export function useAuth() {
         authStore.logout();
         router.push('/login');
     };
+    const user = computed(() => authStore.decodeToken());
     return {
         isAuthenticated: authStore.isAuthenticated,
         token: authStore.token,
-        user: authStore.decodeToken(),
+        user,
         login,
         logout
     };

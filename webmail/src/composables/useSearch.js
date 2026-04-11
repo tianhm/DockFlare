@@ -12,7 +12,8 @@ export function useSearch() {
         loading.value = true;
         try {
             const res = await mailApi.searchMessages(address, { q });
-            results.value = res.data;
+            const payload = res.data;
+            results.value = Array.isArray(payload) ? payload : payload.items || [];
         }
         catch (e) {
             console.error(e);

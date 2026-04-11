@@ -7,6 +7,8 @@ export const mailApi = {
     apiClient.post(`/mailboxes/${address}/folders`, { name, color }),
   deleteFolder: (address: string, id: number) =>
     apiClient.delete(`/mailboxes/${address}/folders/${id}`),
+  emptyFolder: (address: string, id: number) =>
+    apiClient.delete(`/mailboxes/${address}/folders/${id}/empty`),
   renameFolder: (address: string, id: number, name: string, color?: string) =>
     apiClient.patch(`/mailboxes/${address}/folders/${id}`, { name, color }),
   getMessages: (address: string, params: any) => apiClient.get(`/mailboxes/${address}/messages`, { params }),

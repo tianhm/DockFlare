@@ -59,12 +59,24 @@
 }
 
 @media print {
-  /* Hide everything except the message content */
-  body > * { display: none !important; }
-  #print-message-area { display: flex !important; flex-direction: column; width: 100%; }
-  .print-hide { display: none !important; }
-  /* Show the print header block */
-  .print\:block { display: block !important; }
-  /* Expand message body */
-  #print-message-area .flex-1 { overflow: visible !important; }
+  body * {
+    visibility: hidden;
+  }
+  #print-message-area, #print-message-area * {
+    visibility: visible;
+  }
+  #print-message-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  .print-hide, .print-hide * {
+    display: none !important;
+  }
+  #print-message-area .flex-1 { 
+    overflow: visible !important; 
+  }
 }

@@ -4,7 +4,8 @@ const props = defineProps({
     variant: { type: String, default: 'default' },
     size: { type: String, default: 'default' },
     class: { type: String, default: '' },
-    disabled: { type: Boolean, default: false }
+    disabled: { type: Boolean, default: false },
+    as: { type: String, default: 'button' }
 });
 const baseClass = "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
 const variants = {
@@ -28,13 +29,23 @@ debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};
 let __VLS_components;
 let __VLS_directives;
-__VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
-    ...{ class: (__VLS_ctx.computedClass) },
-    disabled: (__VLS_ctx.disabled),
-});
-var __VLS_0 = {};
+const __VLS_0 = ((__VLS_ctx.as));
 // @ts-ignore
-var __VLS_1 = __VLS_0;
+const __VLS_1 = __VLS_asFunctionalComponent(__VLS_0, new __VLS_0({
+    ...{ class: (__VLS_ctx.computedClass) },
+    disabled: (__VLS_ctx.as === 'button' ? __VLS_ctx.disabled : undefined),
+}));
+const __VLS_2 = __VLS_1({
+    ...{ class: (__VLS_ctx.computedClass) },
+    disabled: (__VLS_ctx.as === 'button' ? __VLS_ctx.disabled : undefined),
+}, ...__VLS_functionalComponentArgsRest(__VLS_1));
+var __VLS_4 = {};
+__VLS_3.slots.default;
+var __VLS_5 = {};
+var __VLS_3;
+// @ts-ignore
+var __VLS_6 = __VLS_5;
+[__VLS_dollars.$attrs,];
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
@@ -46,7 +57,8 @@ const __VLS_self = (await import('vue')).defineComponent({
         variant: { type: String, default: 'default' },
         size: { type: String, default: 'default' },
         class: { type: String, default: '' },
-        disabled: { type: Boolean, default: false }
+        disabled: { type: Boolean, default: false },
+        as: { type: String, default: 'button' }
     },
 });
 const __VLS_component = (await import('vue')).defineComponent({
@@ -57,7 +69,8 @@ const __VLS_component = (await import('vue')).defineComponent({
         variant: { type: String, default: 'default' },
         size: { type: String, default: 'default' },
         class: { type: String, default: '' },
-        disabled: { type: Boolean, default: false }
+        disabled: { type: Boolean, default: false },
+        as: { type: String, default: 'button' }
     },
 });
 export default {};

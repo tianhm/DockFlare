@@ -18,7 +18,7 @@ if (__VLS_ctx.open) {
     });
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ onClick: () => { } },
-        ...{ class: "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg" },
+        ...{ class: "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg max-h-[90vh] overflow-y-auto" },
     });
     var __VLS_0 = {};
 }
@@ -39,24 +39,16 @@ if (__VLS_ctx.open) {
 /** @type {__VLS_StyleScopedClasses['w-full']} */ ;
 /** @type {__VLS_StyleScopedClasses['max-w-lg']} */ ;
 /** @type {__VLS_StyleScopedClasses['translate-x-[-50%]']} */ ;
-/** @type {__VLS_StyleScopedClasses['translate-y-[50%]']} */ ;
+/** @type {__VLS_StyleScopedClasses['translate-y-[-50%]']} */ ;
 /** @type {__VLS_StyleScopedClasses['gap-4']} */ ;
 /** @type {__VLS_StyleScopedClasses['border']} */ ;
 /** @type {__VLS_StyleScopedClasses['bg-background']} */ ;
 /** @type {__VLS_StyleScopedClasses['p-6']} */ ;
 /** @type {__VLS_StyleScopedClasses['shadow-lg']} */ ;
 /** @type {__VLS_StyleScopedClasses['duration-200']} */ ;
-/** @type {__VLS_StyleScopedClasses['data-[state=open]:animate-in']} */ ;
-/** @type {__VLS_StyleScopedClasses['data-[state=closed]:animate-out']} */ ;
-/** @type {__VLS_StyleScopedClasses['data-[state=closed]:fade-out-0']} */ ;
-/** @type {__VLS_StyleScopedClasses['data-[state=open]:fade-in-0']} */ ;
-/** @type {__VLS_StyleScopedClasses['data-[state=closed]:zoom-out-95']} */ ;
-/** @type {__VLS_StyleScopedClasses['data-[state=open]:zoom-in-95']} */ ;
-/** @type {__VLS_StyleScopedClasses['data-[state=closed]:slide-out-to-left-1/2']} */ ;
-/** @type {__VLS_StyleScopedClasses['data-[state=closed]:slide-out-to-top-[48%]']} */ ;
-/** @type {__VLS_StyleScopedClasses['data-[state=open]:slide-in-from-left-1/2']} */ ;
-/** @type {__VLS_StyleScopedClasses['data-[state=open]:slide-in-from-top-[48%]']} */ ;
 /** @type {__VLS_StyleScopedClasses['sm:rounded-lg']} */ ;
+/** @type {__VLS_StyleScopedClasses['max-h-[90vh]']} */ ;
+/** @type {__VLS_StyleScopedClasses['overflow-y-auto']} */ ;
 // @ts-ignore
 var __VLS_1 = __VLS_0;
 var __VLS_dollars;

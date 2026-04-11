@@ -15,6 +15,7 @@ export const useMailStore = defineStore('mail', () => {
   const isCollapsed = ref(false)
   const sortOrder = ref<'asc' | 'desc'>('desc')
   const isDark = ref(localStorage.getItem('theme') === 'dark')
+  const viewMode = ref<'split' | 'full'>((localStorage.getItem('viewMode') as 'split' | 'full') || 'split')
 
   const unreadMessages = computed(() =>
     messages.value.filter((m: any) => !m.is_read)
@@ -39,6 +40,11 @@ export const useMailStore = defineStore('mail', () => {
     }
   }
 
+  function toggleViewMode() {
+    viewMode.value = viewMode.value === 'split' ? 'full' : 'split'
+    localStorage.setItem('viewMode', viewMode.value)
+  }
+
   return {
     mailboxes, currentMailbox,
     folders, currentFolder, currentFolderObj,
@@ -46,6 +52,7 @@ export const useMailStore = defineStore('mail', () => {
     isComposeOpen, composeDefaults, composeBody,
     activeTab, isCollapsed,
     sortOrder, isDark, toggleTheme,
+    viewMode, toggleViewMode,
     unreadMessages, starredMessages,
   }
 })

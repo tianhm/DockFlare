@@ -71,6 +71,23 @@ const compose = () => {
                 </button>
               </TooltipTrigger>
             </TooltipRoot>
+            <!-- View Mode toggle -->
+            <TooltipRoot :delay-duration="0">
+              <TooltipTrigger as-child>
+                <button
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors flex-shrink-0"
+                  @click="store.toggleViewMode()"
+                >
+                  <Columns v-if="store.viewMode === 'full'" class="size-4" />
+                  <Maximize v-else class="size-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipPortal>
+                <TooltipContent side="bottom" class="z-50 rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
+                  {{ store.viewMode === 'full' ? 'Split view' : 'Full view' }}
+                </TooltipContent>
+              </TooltipPortal>
+            </TooltipRoot>
             <!-- Theme toggle -->
             <TooltipRoot :delay-duration="0">
               <TooltipTrigger as-child>
@@ -152,28 +169,42 @@ const compose = () => {
         class="w-[3px] bg-border hover:bg-primary/50 active:bg-primary/70 transition-colors"
       />
 
-      <SplitterPanel
-        id="mail-list"
-        :default-size="35"
-        :min-size="25"
-        class="flex flex-col overflow-hidden"
-      >
-        <MessageList />
-      </SplitterPanel>
+      <template v-if="store.viewMode === 'split'">
+        <SplitterPanel
+          id="mail-list"
+          :default-size="35"
+          :min-size="25"
+          class="flex flex-col overflow-hidden"
+        >
+          <MessageList />
+        </SplitterPanel>
 
-      <SplitterResizeHandle
-        id="display-handle"
-        class="w-[3px] bg-border hover:bg-primary/50 active:bg-primary/70 transition-colors"
-      />
+        <SplitterResizeHandle
+          id="display-handle"
+          class="w-[3px] bg-border hover:bg-primary/50 active:bg-primary/70 transition-colors"
+        />
 
-      <SplitterPanel
-        id="mail-display"
-        :default-size="45"
-        :min-size="30"
-        class="flex flex-col overflow-hidden"
-      >
-        <MessageDisplay :message="store.currentMessage" />
-      </SplitterPanel>
+        <SplitterPanel
+          id="mail-display"
+          :default-size="45"
+          :min-size="30"
+          class="flex flex-col overflow-hidden"
+        >
+          <MessageDisplay :message="store.currentMessage" />
+        </SplitterPanel>
+      </template>
+
+      <template v-else>
+        <SplitterPanel
+          id="mail-content"
+          :default-size="80"
+          :min-size="30"
+          class="flex flex-col overflow-hidden"
+        >
+          <MessageList v-if="!store.currentMessage" />
+          <MessageDisplay v-else :message="store.currentMessage" />
+        </SplitterPanel>
+      </template>
     </SplitterGroup>
 
     <ComposeDialog />

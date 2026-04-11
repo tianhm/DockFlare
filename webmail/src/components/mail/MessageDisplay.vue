@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import {
   Archive, Trash2, Reply, ReplyAll, Forward,
   MoreVertical, MailOpen, Star, Printer, FolderInput,
+  ArrowLeft, Columns, Maximize
 } from 'lucide-vue-next'
 import {
   TooltipRoot, TooltipTrigger, TooltipContent, TooltipPortal,
@@ -139,6 +140,10 @@ const forwardMsg = () => {
   store.isComposeOpen = true
 }
 
+const backToList = () => {
+  store.currentMessage = null
+}
+
 const trash = async () => {
   if (!props.message || !store.currentMailbox) return
   try {
@@ -189,7 +194,70 @@ const moveToFolder = async (targetFolder: any) => {
   }
 }
 
-const printMessage = () => window.print()
+const printMessage = () => {
+  if (!props.message) return
+  
+  const from = props.message.from_name ? `${props.message.from_name} <${props.message.from_address}>` : props.message.from_address
+  const toRaw = JSON.parse(props.message.to_addresses || '[]')
+  const to = Array.isArray(toRaw) ? toRaw.join(', ') : toRaw
+  const date = displayTimestamp.value
+  const subject = props.message.subject || '(No Subject)'
+  
+  let content = ''
+  if (props.message.html_body) {
+    content = emailIframe.value?.contentDocument?.body.innerHTML || props.message.html_body
+  } else {
+    content = `<pre style="white-space: pre-wrap; font-family: inherit;">${props.message.text_body || ''}</pre>`
+  }
+
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) return
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>${subject} - DockFlare Mail</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 40px; line-height: 1.5; color: #000; }
+          .header { border-bottom: 1px solid #ccc; padding-bottom: 15px; margin-bottom: 25px; }
+          .subject { font-size: 24px; font-weight: bold; margin: 0 0 15px 0; }
+          .meta { font-size: 14px; color: #444; margin: 4px 0; display: flex; }
+          .label { font-weight: bold; color: #666; width: 60px; flex-shrink: 0; }
+          .val { flex: 1; }
+          .content { margin-top: 20px; font-size: 14px; }
+          img { max-width: 100%; height: auto; }
+          a { color: #2563eb; text-decoration: none; }
+          @media print {
+            body { padding: 0; }
+            @page { margin: 1cm; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1 class="subject">${subject}</h1>
+          <div class="meta"><div class="label">From:</div><div class="val">${from.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div></div>
+          <div class="meta"><div class="label">To:</div><div class="val">${to.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div></div>
+          <div class="meta"><div class="label">Date:</div><div class="val">${date}</div></div>
+        </div>
+        <div class="content">
+          ${content}
+        </div>
+      </body>
+    </html>
+  `)
+  printWindow.document.close()
+  
+  setTimeout(() => {
+    printWindow.focus()
+    printWindow.print()
+  }, 500)
+
+  printWindow.onafterprint = () => {
+    printWindow.close()
+  }
+}
 
 const sendInlineReply = async () => {
   if (!props.message || !store.currentMailbox || !replyText.value.trim()) return
@@ -219,6 +287,21 @@ const sendInlineReply = async () => {
       <div class="flex items-center gap-2">
         <TooltipRoot :delay-duration="0">
           <TooltipTrigger as-child>
+            <Button variant="ghost" size="icon" @click="backToList">
+              <ArrowLeft class="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent class="z-50 rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
+              Back to list
+            </TooltipContent>
+          </TooltipPortal>
+        </TooltipRoot>
+
+        <Separator orientation="vertical" class="mx-1 h-6" />
+
+        <TooltipRoot :delay-duration="0">
+          <TooltipTrigger as-child>
             <Button variant="ghost" size="icon" :disabled="!message" @click="trash">
               <Trash2 class="size-4" />
             </Button>
@@ -239,6 +322,20 @@ const sendInlineReply = async () => {
           <TooltipPortal>
             <TooltipContent class="z-50 rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
               Print
+            </TooltipContent>
+          </TooltipPortal>
+        </TooltipRoot>
+
+        <TooltipRoot :delay-duration="0">
+          <TooltipTrigger as-child>
+            <Button variant="ghost" size="icon" @click="store.toggleViewMode()">
+              <Columns v-if="store.viewMode === 'full'" class="size-4" />
+              <Maximize v-else class="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipPortal>
+            <TooltipContent class="z-50 rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
+              {{ store.viewMode === 'full' ? 'Split view' : 'Full view' }}
             </TooltipContent>
           </TooltipPortal>
         </TooltipRoot>
