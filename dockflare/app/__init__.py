@@ -47,7 +47,7 @@ oauth = None
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=[],
-    storage_uri="memory://"
+    storage_uri=os.environ.get('REDIS_URL', 'memory://')
 )
 
 class QueueLogHandler(logging.Handler):

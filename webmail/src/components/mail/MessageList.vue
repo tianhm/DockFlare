@@ -150,7 +150,7 @@ const performEmptyTrash = async () => {
           <div class="flex flex-col gap-2 p-4 pt-0">
             <TransitionGroup name="list" appear>
               <MessageListItem
-                v-for="msg in filteredMessages"
+                v-for="msg in displayMessages"
                 :key="msg.id"
                 :message="msg"
                 :selected="store.currentMessage?.id === msg.id"
@@ -158,7 +158,7 @@ const performEmptyTrash = async () => {
                 @click="selectMessage(msg)"
               />
             </TransitionGroup>
-            <div v-if="filteredMessages.length === 0" class="p-8 text-center text-muted-foreground">
+            <div v-if="displayMessages.length === 0" class="p-8 text-center text-muted-foreground">
               No messages found.
             </div>
           </div>
@@ -175,7 +175,7 @@ const performEmptyTrash = async () => {
           <div class="flex flex-col gap-2 p-4 pt-0">
             <TransitionGroup name="list" appear>
               <MessageListItem
-                v-for="msg in unreadMessages"
+                v-for="msg in displayMessages"
                 :key="msg.id"
                 :message="msg"
                 :selected="store.currentMessage?.id === msg.id"
@@ -183,7 +183,7 @@ const performEmptyTrash = async () => {
                 @click="selectMessage(msg)"
               />
             </TransitionGroup>
-            <div v-if="unreadMessages.length === 0" class="p-8 text-center text-muted-foreground">
+            <div v-if="displayMessages.length === 0" class="p-8 text-center text-muted-foreground">
               No unread messages.
             </div>
           </div>
@@ -200,7 +200,7 @@ const performEmptyTrash = async () => {
           <div class="flex flex-col gap-2 p-4 pt-0">
             <TransitionGroup name="list" appear>
               <MessageListItem
-                v-for="msg in starredMessages"
+                v-for="msg in displayMessages"
                 :key="msg.id"
                 :message="msg"
                 :selected="store.currentMessage?.id === msg.id"
@@ -208,7 +208,7 @@ const performEmptyTrash = async () => {
                 @click="selectMessage(msg)"
               />
             </TransitionGroup>
-            <div v-if="starredMessages.length === 0" class="p-8 text-center text-muted-foreground">
+            <div v-if="displayMessages.length === 0" class="p-8 text-center text-muted-foreground">
               No starred messages.
             </div>
           </div>

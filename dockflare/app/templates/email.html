@@ -111,6 +111,7 @@
                             <td>{{ mb.display_name }}</td>
                             <td>{{ domain }}</td>
                             <td>
+                                <button class="btn btn-sm btn-outline" onclick="emailSetPassword('{{ addr }}', '{{ domain }}')">Set Password</button>
                                 <button class="btn btn-sm btn-error" onclick="emailDeleteMailbox('{{ addr }}', '{{ domain }}')">{{ t('email.delete') }}</button>
                             </td>
                         </tr>

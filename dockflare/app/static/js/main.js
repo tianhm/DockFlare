@@ -2063,6 +2063,35 @@ async function emailRepairDns(domain) {
     }
 }
 
+async function emailSetPassword(address, domain) {
+    const password = prompt(`New password for ${address} (min 8 characters):`);
+    if (!password) return;
+    if (password.length < 8) {
+        await dfAlert('Password must be at least 8 characters.', 'Error');
+        return;
+    }
+    const confirmed = prompt('Confirm password:');
+    if (password !== confirmed) {
+        await dfAlert('Passwords do not match.', 'Error');
+        return;
+    }
+    try {
+        const response = await fetch('/email/mailbox/set-password', {
+            method: 'POST',
+            headers: buildApiHeaders({'Content-Type': 'application/json'}),
+            body: JSON.stringify({ address, domain, password })
+        });
+        const data = await response.json();
+        if (data.success) {
+            await dfAlert(`Password set for ${address}.`, 'Success');
+        } else {
+            await dfAlert('Error: ' + (data.error || 'Unknown'), 'Failed');
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
 async function emailRedeployWorkers() {
     if (!confirm('Redeploy all inbound and outbound workers? This will push the latest worker code and bindings to Cloudflare.')) return;
     try {

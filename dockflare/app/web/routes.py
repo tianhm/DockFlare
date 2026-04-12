@@ -188,7 +188,7 @@ def gating_logic():
             return
 
         if not current_user.is_authenticated:
-            exempt_endpoints = ['static', 'web.ping', 'web.cloudflare_ping_route', 'setup.step_import_env', 'email.internal_mail_config']
+            exempt_endpoints = ['static', 'web.ping', 'web.cloudflare_ping_route', 'setup.step_import_env', 'email.internal_mail_config', 'email.mailbox_login']
             oauth_endpoints = ['web.login_provider', 'web.auth_callback', 'web.login']
             if request.endpoint and not request.endpoint.startswith('auth.') and request.endpoint not in exempt_endpoints and request.endpoint not in oauth_endpoints:
                 try:
@@ -229,7 +229,7 @@ def add_security_headers_bp(response):
         "style-src": ["'self'", "'unsafe-inline'", "https://rsms.me", "https://cdn.jsdelivr.net"],
         "img-src": ["'self'", "data:", "https://img.shields.io"],
         "font-src": ["'self'", "https://rsms.me"],
-        "connect-src": ["'self'", "https://cdn.jsdelivr.net"],
+        "connect-src": ["'self'", "https://cdn.jsdelivr.net", "https://mail.*"],
         "frame-src": ["'none'"]
     }
     if is_https:
@@ -455,7 +455,6 @@ def access_policies_page():
         policy = access_groups[default_bypass_id]
         cf_policy_id = policy.get("cf_policy_id")
 
-        # If no Cloudflare policy ID, create it now
         if not cf_policy_id or cf_policy_id == default_bypass_id:
             try:
                 cf_policy = reusable_policies.create_reusable_policy(

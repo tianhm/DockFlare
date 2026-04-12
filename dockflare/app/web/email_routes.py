@@ -10,7 +10,8 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from flask_login import login_required, current_user
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
-from app import config, docker_client
+from werkzeug.security import generate_password_hash, check_password_hash
+from app import config, docker_client, limiter
 from app.core import email_manager
 from app.core.cloudflare_api import list_account_zones
 from app.web.config_loader import load_encrypted_config, load_encrypted_config_with_cipher, config_file_path
@@ -22,6 +23,20 @@ def _read_worker_template(filename):
         return f.read()
 
 email_bp = Blueprint('email', __name__, url_prefix='/email')
+
+def _webmail_origin():
+    request_origin = request.headers.get('Origin', '')
+    if not request_origin:
+        return '*'
+        
+    # Allow any origin that looks like our mail subdomains
+    if '.dockflare.app' in request_origin or 'localhost' in request_origin or '127.0.0.1' in request_origin:
+        return request_origin
+
+    # Fallback to the first domain or *
+    domains = config.EMAIL_CONFIG.get('domains', {})
+    first_domain = next(iter(domains), '')
+    return f"https://mail.{first_domain}" if first_domain else '*'
 
 def save_email_config(email_config_data):
     cfg, fernet = load_encrypted_config_with_cipher()
@@ -330,35 +345,98 @@ def sso_callback():
         return "No webmail domain configured.", 500
     return redirect(f"https://{return_to}/auth/callback?token={token}")
 
-def _generate_jwt(username):
+def _generate_jwt(username, mailboxes=None, role='admin', expiry_seconds=None):
     email_cfg = config.EMAIL_CONFIG
     if not email_cfg or 'jwt_signing_key' not in email_cfg:
         return None
-        
-    private_key_pem = email_cfg['jwt_signing_key']
+
     private_key = serialization.load_pem_private_key(
-        private_key_pem.encode('utf-8'),
+        email_cfg['jwt_signing_key'].encode('utf-8'),
         password=None
     )
-    
-    mailboxes = []
-    for d, d_data in email_cfg.get('domains', {}).items():
-        for m in d_data.get('mailboxes', {}).keys():
-            mailboxes.append(m)
-            
+
+    if mailboxes is None:
+        mailboxes = [
+            m for d in email_cfg.get('domains', {}).values()
+            for m in d.get('mailboxes', {}).keys()
+        ]
+
+    if expiry_seconds is None:
+        expiry_seconds = config.EMAIL_JWT_EXPIRY_SECONDS
+
     now = int(time.time())
     payload = {
         "sub": username,
         "iss": config.EMAIL_JWT_ISSUER,
         "aud": config.EMAIL_JWT_AUDIENCE,
         "iat": now,
-        "exp": now + config.EMAIL_JWT_EXPIRY_SECONDS,
+        "exp": now + expiry_seconds,
         "mailboxes": mailboxes,
-        "role": "admin"
+        "role": role,
     }
-    
-    token = jwt.encode(payload, private_key, algorithm=config.EMAIL_JWT_ALGORITHM)
-    return token
+
+    return jwt.encode(payload, private_key, algorithm=config.EMAIL_JWT_ALGORITHM)
+
+
+@email_bp.route('/mailbox/set-password', methods=['POST'])
+@login_required
+def set_mailbox_password():
+    data = request.get_json(force=True, silent=True) or {}
+    address = data.get('address', '')
+    domain = data.get('domain', '')
+    password = data.get('password', '')
+
+    if len(password) < 8:
+        return jsonify({'success': False, 'error': 'Password must be at least 8 characters'}), 400
+
+    email_cfg = config.EMAIL_CONFIG
+    if domain not in email_cfg.get('domains', {}) or address not in email_cfg['domains'][domain].get('mailboxes', {}):
+        return jsonify({'success': False, 'error': 'Mailbox not found'}), 404
+
+    email_cfg['domains'][domain]['mailboxes'][address]['password_hash'] = generate_password_hash(password)
+    save_email_config(email_cfg)
+    return jsonify({'success': True})
+
+
+@email_bp.route('/auth/login', methods=['POST', 'OPTIONS'])
+@limiter.limit("5 per 5 minutes")
+def mailbox_login():
+    origin = _webmail_origin()
+
+    if request.method == 'OPTIONS':
+        response = current_app.make_default_options_response()
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        response.headers['Access-Control-Allow-Methods'] = 'POST'
+        return response
+
+    data = request.get_json(force=True, silent=True) or {}
+    email = data.get('email', '').lower().strip()
+    password = data.get('password', '')
+
+    email_cfg = config.EMAIL_CONFIG
+    mailbox_data = None
+
+    for d in email_cfg.get('domains', {}).values():
+        if email in d.get('mailboxes', {}):
+            mailbox_data = d['mailboxes'][email]
+            break
+
+    _dummy = 'pbkdf2:sha256:600000$dummy$' + 'a' * 64
+    stored_hash = mailbox_data.get('password_hash', '') if mailbox_data else _dummy
+
+    if not stored_hash or not check_password_hash(stored_hash, password) or mailbox_data is None:
+        response = jsonify({'success': False, 'error': 'Invalid email or password'})
+        response.headers['Access-Control-Allow-Origin'] = origin
+        return response, 401
+
+    token = _generate_jwt(email, mailboxes=[email], role='user', expiry_seconds=28800)
+    if not token:
+        return jsonify({'success': False, 'error': 'Auth configuration error'}), 500
+
+    response = jsonify({'success': True, 'token': token})
+    response.headers['Access-Control-Allow-Origin'] = origin
+    return response
 
 def _check_internal_request():
     # Block any request that carries Cloudflare edge headers (all public internet

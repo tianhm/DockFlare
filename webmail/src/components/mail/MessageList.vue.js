@@ -266,7 +266,7 @@ const __VLS_49 = __VLS_48({
     appear: true,
 }, ...__VLS_functionalComponentArgsRest(__VLS_48));
 __VLS_50.slots.default;
-for (const [msg] of __VLS_getVForSourceType((__VLS_ctx.filteredMessages))) {
+for (const [msg] of __VLS_getVForSourceType((__VLS_ctx.displayMessages))) {
     /** @type {[typeof MessageListItem, ]} */ ;
     // @ts-ignore
     const __VLS_51 = __VLS_asFunctionalComponent(MessageListItem, new MessageListItem({
@@ -294,7 +294,7 @@ for (const [msg] of __VLS_getVForSourceType((__VLS_ctx.filteredMessages))) {
     var __VLS_53;
 }
 var __VLS_50;
-if (__VLS_ctx.filteredMessages.length === 0) {
+if (__VLS_ctx.displayMessages.length === 0) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "p-8 text-center text-muted-foreground" },
     });
@@ -371,7 +371,7 @@ const __VLS_80 = __VLS_79({
     appear: true,
 }, ...__VLS_functionalComponentArgsRest(__VLS_79));
 __VLS_81.slots.default;
-for (const [msg] of __VLS_getVForSourceType((__VLS_ctx.unreadMessages))) {
+for (const [msg] of __VLS_getVForSourceType((__VLS_ctx.displayMessages))) {
     /** @type {[typeof MessageListItem, ]} */ ;
     // @ts-ignore
     const __VLS_82 = __VLS_asFunctionalComponent(MessageListItem, new MessageListItem({
@@ -399,7 +399,7 @@ for (const [msg] of __VLS_getVForSourceType((__VLS_ctx.unreadMessages))) {
     var __VLS_84;
 }
 var __VLS_81;
-if (__VLS_ctx.unreadMessages.length === 0) {
+if (__VLS_ctx.displayMessages.length === 0) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "p-8 text-center text-muted-foreground" },
     });
@@ -476,7 +476,7 @@ const __VLS_111 = __VLS_110({
     appear: true,
 }, ...__VLS_functionalComponentArgsRest(__VLS_110));
 __VLS_112.slots.default;
-for (const [msg] of __VLS_getVForSourceType((__VLS_ctx.starredMessages))) {
+for (const [msg] of __VLS_getVForSourceType((__VLS_ctx.displayMessages))) {
     /** @type {[typeof MessageListItem, ]} */ ;
     // @ts-ignore
     const __VLS_113 = __VLS_asFunctionalComponent(MessageListItem, new MessageListItem({
@@ -504,7 +504,7 @@ for (const [msg] of __VLS_getVForSourceType((__VLS_ctx.starredMessages))) {
     var __VLS_115;
 }
 var __VLS_112;
-if (__VLS_ctx.starredMessages.length === 0) {
+if (__VLS_ctx.displayMessages.length === 0) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "p-8 text-center text-muted-foreground" },
     });
@@ -810,9 +810,7 @@ const __VLS_self = (await import('vue')).defineComponent({
             searchValue: searchValue,
             showTrashConfirm: showTrashConfirm,
             folderColor: folderColor,
-            filteredMessages: filteredMessages,
-            unreadMessages: unreadMessages,
-            starredMessages: starredMessages,
+            displayMessages: displayMessages,
             toggleSort: toggleSort,
             selectMessage: selectMessage,
             emptyTrash: emptyTrash,
