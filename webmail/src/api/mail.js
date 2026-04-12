@@ -14,6 +14,7 @@ export const mailApi = {
     markMessages: (address, data) => apiClient.post(`/mailboxes/${address}/messages/mark`, data),
     sendMessage: (address, data) => apiClient.post(`/mailboxes/${address}/send`, data),
     searchMessages: (address, params) => apiClient.get(`/mailboxes/${address}/search`, { params }),
+    getMailboxStatus: () => apiClient.get('/mailboxes/status'),
     getAttachmentUrl: (id) => `/api/v1/attachments/${id}/download`,
     downloadAttachment: (id) => apiClient.get(`/attachments/${id}/download`, { responseType: 'blob' }).then(r => r.data),
     createDraft: (address, data) => apiClient.post(`/mailboxes/${address}/drafts`, data),

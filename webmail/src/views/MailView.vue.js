@@ -1,9 +1,13 @@
 /// <reference types="../../node_modules/.vue-global-types/vue_3.5_0_0_0.d.ts" />
 import { onMounted, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { useMail } from '../composables/useMail';
+import { useMailPolling } from '../composables/useMailPolling';
 import { mailApi } from '../api/mail';
 import MailLayout from '../components/mail/MailLayout.vue';
+const route = useRoute();
 const { store, loadMailboxes } = useMail();
+useMailPolling();
 const loadMessages = async (addr, folder) => {
     if (!addr || !folder)
         return;
@@ -17,8 +21,21 @@ const loadMessages = async (addr, folder) => {
         console.error('Failed to load messages', e);
     }
 };
-onMounted(() => {
-    loadMailboxes();
+onMounted(async () => {
+    await loadMailboxes();
+    const mailboxParam = route.query.mailbox;
+    if (mailboxParam) {
+        const found = store.mailboxes.find((b) => b.address === mailboxParam);
+        if (found)
+            store.currentMailbox = mailboxParam;
+    }
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('message', (ev) => {
+            if (ev.data?.type === 'NOTIFICATION_CLICK' && ev.data.mailbox) {
+                store.currentMailbox = ev.data.mailbox;
+            }
+        });
+    }
 });
 watch(() => store.currentMailbox, async (addr) => {
     if (!addr)

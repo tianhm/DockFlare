@@ -101,6 +101,16 @@ _SCHEMA = """
     CREATE INDEX IF NOT EXISTS idx_messages_read ON messages(is_read);
     CREATE INDEX IF NOT EXISTS idx_attachments_message ON attachments(message_id);
     CREATE INDEX IF NOT EXISTS idx_send_log_from ON send_log(from_address);
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mailbox_address TEXT NOT NULL,
+        endpoint TEXT NOT NULL UNIQUE,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (mailbox_address) REFERENCES mailboxes(address) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_push_subscriptions_mailbox ON push_subscriptions(mailbox_address);
 
     DROP TRIGGER IF EXISTS messages_ai;
     CREATE TRIGGER messages_ai AFTER INSERT ON messages BEGIN
@@ -144,9 +154,10 @@ def get_standalone_db():
     return _connect()
 
 
-def _migrate(conn):    
+def _migrate(conn):
     migrations = [
         "ALTER TABLE folders ADD COLUMN color TEXT",
+        "ALTER TABLE mailboxes ADD COLUMN notification_preview INTEGER DEFAULT 1",
     ]
     for sql in migrations:
         try:

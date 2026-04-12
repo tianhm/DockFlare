@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 from app.config import config
 from app.core.database import get_db
+from app.core.push import send_push_notifications
 from app.core.r2_client import fetch_email_from_r2, delete_from_r2
 from app.core.mime_parser import parse_eml
 
@@ -135,6 +136,12 @@ def inbound():
             ))
 
         db.commit()
+        send_push_notifications(to_address, {
+            'message_id': msg_id,
+            'subject': parsed['subject'],
+            'from_name': parsed['from_name'] or parsed['from_address'],
+            'mailbox': to_address,
+        })
         delete_from_r2(r2_key, domain_cfg)
 
         log.info("Inbound delivered: message=%s to=%s db_id=%s",

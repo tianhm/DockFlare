@@ -36,6 +36,8 @@ def bootstrap():
                     os.environ['JWT_ALGORITHM'] = data.get('jwt_algorithm', 'EdDSA')
                     os.environ['JWT_ISSUER'] = data.get('jwt_issuer', 'dockflare-master')
                     os.environ['JWT_AUDIENCE'] = data.get('jwt_audience', 'dockflare-mail')
+                    os.environ['VAPID_PRIVATE_KEY'] = data.get('vapid_private_key', '')
+                    os.environ['VAPID_PUBLIC_KEY'] = data.get('vapid_public_key', '')
                     domains = data.get('domains', {})
                     if not domains:
                         log.warning("No domains in bootstrap config")

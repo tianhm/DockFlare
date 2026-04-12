@@ -1,3 +1,4 @@
+import base64
 import hmac
 import ipaddress
 import json
@@ -9,7 +10,7 @@ import jwt
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, current_app
 from flask_login import login_required, current_user
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives.asymmetric import ec, ed25519
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import config, docker_client, limiter
 from app.core import email_manager
@@ -106,7 +107,21 @@ def setup_email_domain():
             )
             email_cfg['jwt_signing_key'] = private_bytes.decode('utf-8')
             email_cfg['jwt_public_key'] = public_bytes.decode('utf-8')
-            
+
+        if 'vapid_private_key' not in email_cfg:
+            vapid_key = ec.generate_private_key(ec.SECP256R1())
+            email_cfg['vapid_private_key'] = vapid_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            ).decode()
+            email_cfg['vapid_public_key'] = base64.urlsafe_b64encode(
+                vapid_key.public_key().public_bytes(
+                    encoding=serialization.Encoding.X962,
+                    format=serialization.PublicFormat.UncompressedPoint
+                )
+            ).rstrip(b'=').decode()
+
         webhook_secret = secrets.token_hex(32)
         outbound_auth_secret = secrets.token_hex(32)
         inbound_worker_name = f"dockflare-mail-inbound-{zone_name.replace('.', '-')}"
@@ -470,6 +485,23 @@ def internal_mail_config():
     cfg = config.EMAIL_CONFIG
     if not cfg or not cfg.get('enabled') or not cfg.get('domains'):
         return jsonify({'configured': False})
+
+    if 'vapid_private_key' not in cfg or not cfg.get('vapid_private_key'):
+        vapid_key = ec.generate_private_key(ec.SECP256R1())
+        cfg['vapid_private_key'] = vapid_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption()
+        ).decode()
+        cfg['vapid_public_key'] = base64.urlsafe_b64encode(
+            vapid_key.public_key().public_bytes(
+                encoding=serialization.Encoding.X962,
+                format=serialization.PublicFormat.UncompressedPoint
+            )
+        ).rstrip(b'=').decode()
+        save_email_config(cfg)
+        logging.info("Generated VAPID keys for existing email config")
+
     domains_out = {}
     for zone_name, d in cfg['domains'].items():
         domains_out[zone_name] = {
@@ -491,6 +523,8 @@ def internal_mail_config():
         'jwt_algorithm': config.EMAIL_JWT_ALGORITHM,
         'jwt_issuer': config.EMAIL_JWT_ISSUER,
         'jwt_audience': config.EMAIL_JWT_AUDIENCE,
+        'vapid_private_key': cfg.get('vapid_private_key', ''),
+        'vapid_public_key': cfg.get('vapid_public_key', ''),
         'domains': domains_out
     })
 

@@ -17,7 +17,25 @@ export const useAuthStore = defineStore('auth', () => {
         token.value = newToken;
         localStorage.setItem('jwt_token', newToken);
     };
-    const logout = () => {
+    const logout = async () => {
+        if ('serviceWorker' in navigator) {
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.getSubscription();
+                if (sub) {
+                    await fetch('/api/v1/notifications/subscribe', {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token.value}`,
+                        },
+                        body: JSON.stringify({ endpoint: sub.endpoint }),
+                    });
+                    await sub.unsubscribe();
+                }
+            }
+            catch { /* ignore push cleanup errors */ }
+        }
         token.value = '';
         localStorage.removeItem('jwt_token');
     };

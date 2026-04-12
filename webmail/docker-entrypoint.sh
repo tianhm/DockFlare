@@ -8,7 +8,7 @@ server {
     listen 80;
     server_name _;
     client_max_body_size 25m;
-    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self';";
+    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; worker-src 'self'; connect-src 'self';";
 
     location /api/ {
         proxy_pass http://dockflare-mail-manager:8025/api/;
@@ -22,6 +22,18 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header CF-Connecting-IP \$http_cf_connecting_ip;
+    }
+
+    location = /sw.js {
+        root /usr/share/nginx/html;
+        add_header Cache-Control "no-cache";
+        add_header Service-Worker-Allowed "/";
+    }
+
+    location = /manifest.webmanifest {
+        root /usr/share/nginx/html;
+        add_header Cache-Control "no-cache";
+        types { application/manifest+json webmanifest; }
     }
 
     location = /config.json {

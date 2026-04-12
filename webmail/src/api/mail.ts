@@ -20,6 +20,10 @@ export const mailApi = {
   sendMessage: (address: string, data: FormData | Record<string, any>) =>
     apiClient.post(`/mailboxes/${address}/send`, data),
   searchMessages: (address: string, params: any) => apiClient.get(`/mailboxes/${address}/search`, { params }),
+  getMailboxStatus: () => apiClient.get('/mailboxes/status'),
+  getMailboxPreferences: (address: string) => apiClient.get(`/mailboxes/${address}/preferences`),
+  updateMailboxPreferences: (address: string, data: Record<string, any>) =>
+    apiClient.patch(`/mailboxes/${address}/preferences`, data),
   getAttachmentUrl: (id: string) => `/api/v1/attachments/${id}/download`,
   downloadAttachment: (id: number | string) =>
     apiClient.get(`/attachments/${id}/download`, { responseType: 'blob' }).then(r => r.data as Blob),

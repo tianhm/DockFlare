@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useMail } from '../composables/useMail'
+import { useMailPolling } from '../composables/useMailPolling'
 import { mailApi } from '../api/mail'
 import MailLayout from '../components/mail/MailLayout.vue'
 
+const route = useRoute()
 const { store, loadMailboxes } = useMail()
+useMailPolling()
 
 const loadMessages = async (addr: string, folder: string) => {
   if (!addr || !folder) return
@@ -18,8 +22,32 @@ const loadMessages = async (addr: string, folder: string) => {
   }
 }
 
-onMounted(() => {
-  loadMailboxes()
+onMounted(async () => {
+  await loadMailboxes()
+
+  const mailboxParam = route.query.mailbox as string | undefined
+  if (mailboxParam) {
+    const found = store.mailboxes.find((b: any) => b.address === mailboxParam)
+    if (found) store.currentMailbox = mailboxParam
+  }
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (ev: MessageEvent) => {
+      if (ev.data?.type === 'NOTIFICATION_CLICK' && ev.data.mailbox) {
+        store.currentMailbox = ev.data.mailbox
+      }
+      if (ev.data?.type === 'SET_BADGE') {
+        const count: number = ev.data.count ?? 0
+        if ('setAppBadge' in navigator) {
+          if (count > 0) {
+            navigator.setAppBadge(count).catch(() => {})
+          } else {
+            navigator.clearAppBadge().catch(() => {})
+          }
+        }
+      }
+    })
+  }
 })
 
 watch(() => store.currentMailbox, async (addr) => {

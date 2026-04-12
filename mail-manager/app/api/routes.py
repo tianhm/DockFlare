@@ -58,6 +58,91 @@ def stats():
     })
 
 
+@api_bp.route('/notifications/vapid-key', methods=['GET'])
+@jwt_required
+def get_vapid_key():
+    public_key = os.environ.get('VAPID_PUBLIC_KEY', '')
+    if not public_key:
+        return jsonify({"error": "push notifications not configured"}), 503
+    return jsonify({"public_key": public_key})
+
+
+@api_bp.route('/notifications/subscribe', methods=['POST'])
+@jwt_required
+def push_subscribe():
+    data = request.json or {}
+    endpoint = data.get('endpoint', '')
+    keys = data.get('keys') or {}
+    p256dh = keys.get('p256dh', '')
+    auth_key = keys.get('auth', '')
+    mailbox_address = data.get('mailbox_address', '')
+
+    if not endpoint or not p256dh or not auth_key or not mailbox_address:
+        return jsonify({"error": "endpoint, keys, and mailbox_address are required"}), 400
+
+    if not _check_mailbox_access(mailbox_address):
+        return jsonify({"error": "forbidden"}), 403
+
+    db = get_db()
+    now = datetime.now(timezone.utc).isoformat()
+    db.execute("""
+        INSERT INTO push_subscriptions (mailbox_address, endpoint, p256dh, auth, created_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(endpoint) DO UPDATE SET
+            mailbox_address=excluded.mailbox_address,
+            p256dh=excluded.p256dh,
+            auth=excluded.auth,
+            created_at=excluded.created_at
+    """, (mailbox_address, endpoint, p256dh, auth_key, now))
+    db.commit()
+    return jsonify({"status": "subscribed"})
+
+
+@api_bp.route('/notifications/subscribe', methods=['DELETE'])
+@jwt_required
+def push_unsubscribe():
+    data = request.json or {}
+    endpoint = data.get('endpoint', '')
+    if not endpoint:
+        return jsonify({"error": "endpoint is required"}), 400
+    db = get_db()
+    db.execute("DELETE FROM push_subscriptions WHERE endpoint=?", (endpoint,))
+    db.commit()
+    return jsonify({"status": "unsubscribed"})
+
+
+@api_bp.route('/mailboxes/status', methods=['GET'])
+@jwt_required
+def mailbox_status():
+    db = get_db()
+    user = request.user
+
+    if user.get('role') == 'admin':
+        cur = db.execute("SELECT address FROM mailboxes WHERE is_active=1")
+        addresses = [row['address'] for row in cur.fetchall()]
+    else:
+        addresses = user.get('mailboxes', [])
+
+    results = []
+    for address in addresses:
+        cur = db.execute("""
+            SELECT
+                COUNT(CASE WHEN m.is_read=0 THEN 1 END) AS unread_count,
+                MAX(m.received_at) AS latest_received_at
+            FROM messages m
+            JOIN folders f ON m.folder_id = f.id
+            WHERE m.mailbox_address=? AND f.name='Inbox' AND m.is_draft=0
+        """, (address,))
+        row = cur.fetchone()
+        results.append({
+            'address': address,
+            'unread_count': row['unread_count'] or 0,
+            'latest_received_at': row['latest_received_at'],
+        })
+
+    return jsonify(results)
+
+
 @api_bp.route('/mailboxes', methods=['GET'])
 @admin_required
 def get_mailboxes():
@@ -125,6 +210,36 @@ def patch_mailbox(address):
         db.execute(
             "UPDATE mailboxes SET display_name=? WHERE address=?",
             (data['display_name'], address),
+        )
+        db.commit()
+    return jsonify({"status": "updated"})
+
+
+@api_bp.route('/mailboxes/<address>/preferences', methods=['GET'])
+@jwt_required
+def get_mailbox_preferences(address):
+    if not _check_mailbox_access(address):
+        return jsonify({"error": "forbidden"}), 403
+    db = get_db()
+    cur = db.execute("SELECT notification_preview FROM mailboxes WHERE address=?", (address,))
+    row = cur.fetchone()
+    if not row:
+        return jsonify({"error": "not found"}), 404
+    preview = row['notification_preview'] if row['notification_preview'] is not None else 1
+    return jsonify({"notification_preview": bool(preview)})
+
+
+@api_bp.route('/mailboxes/<address>/preferences', methods=['PATCH'])
+@jwt_required
+def patch_mailbox_preferences(address):
+    if not _check_mailbox_access(address):
+        return jsonify({"error": "forbidden"}), 403
+    data = request.json or {}
+    db = get_db()
+    if 'notification_preview' in data:
+        db.execute(
+            "UPDATE mailboxes SET notification_preview=? WHERE address=?",
+            (int(bool(data['notification_preview'])), address),
         )
         db.commit()
     return jsonify({"status": "updated"})

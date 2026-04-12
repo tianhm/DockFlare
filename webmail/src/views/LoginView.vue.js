@@ -31,8 +31,7 @@ const handleLogin = async () => {
     error.value = '';
     loading.value = true;
     try {
-        const masterUrl = await getMasterUrl();
-        const data = await authApi.loginWithPassword(masterUrl, email.value, password.value);
+        const data = await authApi.loginWithPassword(email.value, password.value);
         if (data.success && data.token) {
             login(data.token);
         }
