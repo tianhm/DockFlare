@@ -62,7 +62,8 @@
                                 <button class="btn btn-sm btn-outline" onclick="emailVerifyDns('{{ domain }}')">{{ t('email.dns_verify') }}</button>
                                 <button class="btn btn-sm btn-outline" onclick="emailRepairDns('{{ domain }}')">Repair DNS</button>
                                 <button class="btn btn-sm btn-warning" onclick="emailUpdateR2('{{ domain }}')">R2 Credentials</button>
-                                <button class="btn btn-sm btn-error" onclick="emailTeardownDomain('{{ domain }}')">{{ t('email.teardown') }}</button>
+                                <button class="btn btn-sm btn-warning" onclick="emailTeardownPartial('{{ domain }}')">{{ t('email.teardown_partial') }}</button>
+                                <button class="btn btn-sm btn-error" onclick="emailTeardownComplete('{{ domain }}')">{{ t('email.teardown_complete') }}</button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -178,6 +179,25 @@
                 </div>
                 <p id="emailRestoreFeedback" class="text-sm mt-2 font-semibold hidden"></p>
             </div>
+            <div id="emailOrphanedSection" class="hidden">
+                <div class="divider"></div>
+                <h3 class="text-lg font-semibold">{{ t('email.orphaned_data_title') }}</h3>
+                <p class="text-sm opacity-80 mb-2">{{ t('email.orphaned_data_description') }}</p>
+                <div id="emailOrphanedList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-xl border border-error mb-8">
+        <div class="card-body">
+            <h2 class="card-title text-error">{{ t('email.nuke_all_title') }}</h2>
+            <div class="divider mt-0 mb-4"></div>
+            <p class="text-sm opacity-80 mb-4">{{ t('email.nuke_all_description') }}</p>
+            <div class="flex gap-2">
+                <button class="btn btn-warning btn-sm" onclick="emailNukeAll(false)">{{ t('email.nuke_all_partial') }}</button>
+                <button class="btn btn-error btn-sm" onclick="emailNukeAll(true)">{{ t('email.nuke_all_complete') }}</button>
+            </div>
+            <p id="emailNukeFeedback" class="text-sm mt-2 font-semibold hidden"></p>
         </div>
     </div>
 
@@ -194,6 +214,6 @@
     </div>
 </div>
 {% block scripts %}
-<script>document.addEventListener('DOMContentLoaded', emailCheckPermissions);</script>
+<script>document.addEventListener('DOMContentLoaded', () => { emailCheckPermissions(); emailLoadOrphanedDomains(); });</script>
 {% endblock %}
 {% endblock %}

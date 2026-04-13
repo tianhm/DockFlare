@@ -188,17 +188,159 @@ def repair_dns():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+def _teardown_domain_remote(domain, domain_cfg):
+    errors = []
+    zone_id = domain_cfg.get('zone_id')
+    for address, mb in domain_cfg.get('mailboxes', {}).items():
+        rule_id = mb.get('routing_rule_id')
+        if rule_id:
+            try:
+                email_manager.delete_email_routing_rule(zone_id, rule_id)
+            except Exception as e:
+                errors.append(f"Routing rule {address}: {e}")
+    try:
+        email_manager.reset_catchall_to_drop(zone_id)
+    except Exception as e:
+        errors.append(f"Catchall reset: {e}")
+    try:
+        email_manager.disable_email_routing(zone_id)
+    except Exception as e:
+        errors.append(f"Disable routing: {e}")
+    try:
+        email_manager.delete_worker(domain_cfg.get('inbound_worker_name', ''))
+    except Exception as e:
+        errors.append(f"Inbound worker: {e}")
+    try:
+        email_manager.delete_worker(domain_cfg.get('outbound_worker_name', ''))
+    except Exception as e:
+        errors.append(f"Outbound worker: {e}")
+    try:
+        email_manager.empty_and_delete_r2_bucket(
+            domain_cfg.get('r2_bucket', ''),
+            domain_cfg.get('r2_endpoint_url', ''),
+            domain_cfg.get('r2_access_key_id', ''),
+            domain_cfg.get('r2_secret_access_key', ''),
+        )
+    except Exception as e:
+        errors.append(f"R2 bucket: {e}")
+    try:
+        errors.extend(email_manager.scrub_email_dns_records(zone_id, domain))
+    except Exception as e:
+        errors.append(f"DNS scrub: {e}")
+    return errors
+
 @email_bp.route('/teardown-domain', methods=['POST'])
 @login_required
 def teardown_domain():
+    import requests as req_lib
     data = request.get_json(force=True, silent=True) or {}
     zone_name = data.get('zone_name')
+    include_local = data.get('include_local_data', False)
     email_cfg = config.EMAIL_CONFIG.copy()
-    if 'domains' in email_cfg and zone_name in email_cfg['domains']:
-        del email_cfg['domains'][zone_name]
-        save_email_config(email_cfg)
-        _restart_mail_container()
-    return jsonify({'success': True})
+    if 'domains' not in email_cfg or zone_name not in email_cfg['domains']:
+        return jsonify({'success': False, 'error': 'Domain not found'}), 404
+    domain_cfg = email_cfg['domains'][zone_name]
+    errors = _teardown_domain_remote(zone_name, domain_cfg)
+    if include_local:
+        token = _generate_jwt(current_user.get_id(), role='admin')
+        if token:
+            try:
+                resp = req_lib.post(
+                    f"{config.MAIL_MANAGER_INTERNAL_URL}/api/v1/system/wipe-domain",
+                    headers={'Authorization': f'Bearer {token}'},
+                    json={'domain': zone_name},
+                    timeout=120
+                )
+                if not resp.ok:
+                    errors.append(f"Local wipe: {resp.text}")
+            except Exception as e:
+                errors.append(f"Local wipe: {e}")
+    del email_cfg['domains'][zone_name]
+    if not email_cfg.get('domains'):
+        config.EMAIL_ENABLED = False
+        current_app.config['EMAIL_ENABLED'] = False
+    save_email_config(email_cfg)
+    _restart_mail_container()
+    return jsonify({'success': True, 'errors': errors})
+
+@email_bp.route('/teardown-all', methods=['POST'])
+@login_required
+def teardown_all():
+    import requests as req_lib
+    data = request.get_json(force=True, silent=True) or {}
+    include_local = data.get('include_local_data', False)
+    email_cfg = config.EMAIL_CONFIG.copy()
+    errors = []
+    for domain, domain_cfg in list(email_cfg.get('domains', {}).items()):
+        errors.extend(_teardown_domain_remote(domain, domain_cfg))
+    if include_local:
+        token = _generate_jwt(current_user.get_id(), role='admin')
+        if token:
+            try:
+                resp = req_lib.post(
+                    f"{config.MAIL_MANAGER_INTERNAL_URL}/api/v1/system/wipe-all",
+                    headers={'Authorization': f'Bearer {token}'},
+                    timeout=120
+                )
+                if not resp.ok:
+                    errors.append(f"Local wipe-all: {resp.text}")
+            except Exception as e:
+                errors.append(f"Local wipe-all: {e}")
+    email_cfg['domains'] = {}
+    config.EMAIL_ENABLED = False
+    current_app.config['EMAIL_ENABLED'] = False
+    save_email_config(email_cfg)
+    _restart_mail_container()
+    return jsonify({'success': True, 'errors': errors})
+
+@email_bp.route('/wipe-local', methods=['POST'])
+@login_required
+def wipe_local():
+    import requests as req_lib
+    data = request.get_json(force=True, silent=True) or {}
+    domain = data.get('domain')
+    if not domain:
+        return jsonify({'success': False, 'error': 'domain required'}), 400
+    token = _generate_jwt(current_user.get_id(), role='admin')
+    if not token:
+        return jsonify({'success': False, 'error': 'JWT configuration missing'}), 500
+    try:
+        resp = req_lib.post(
+            f"{config.MAIL_MANAGER_INTERNAL_URL}/api/v1/system/wipe-domain",
+            headers={'Authorization': f'Bearer {token}'},
+            json={'domain': domain},
+            timeout=120
+        )
+        resp.raise_for_status()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@email_bp.route('/local-domains', methods=['GET'])
+@login_required
+def local_domains():
+    import requests as req_lib
+    token = _generate_jwt(current_user.get_id(), role='admin')
+    if not token:
+        return jsonify({'active': [], 'orphaned': []})
+    try:
+        resp = req_lib.get(
+            f"{config.MAIL_MANAGER_INTERNAL_URL}/api/v1/system/local-domains",
+            headers={'Authorization': f'Bearer {token}'},
+            timeout=10
+        )
+        resp.raise_for_status()
+        local = resp.json()
+        active_domains = set((config.EMAIL_CONFIG or {}).get('domains', {}).keys())
+        result = {'active': [], 'orphaned': []}
+        for d in local:
+            if d['domain'] in active_domains:
+                result['active'].append(d)
+            else:
+                result['orphaned'].append(d)
+        return jsonify(result)
+    except Exception:
+        return jsonify({'active': [], 'orphaned': []})
 
 def _redeploy_outbound_worker(email_cfg, domain):
     d = email_cfg['domains'][domain]

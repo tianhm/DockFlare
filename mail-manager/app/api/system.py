@@ -64,6 +64,87 @@ def backup_system():
             os.remove(tmp_zip_path)
         return jsonify({"error": str(e)}), 500
 
+@system_bp.route('/local-domains', methods=['GET'])
+@admin_required
+def local_domains():
+    db_path = config.DB_PATH
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("""
+            SELECT m.domain,
+                   COUNT(DISTINCT m.address) AS mailbox_count,
+                   COUNT(msg.id) AS message_count
+            FROM mailboxes m
+            LEFT JOIN messages msg ON msg.mailbox_address = m.address
+            GROUP BY m.domain
+        """).fetchall()
+        conn.close()
+        return jsonify([dict(r) for r in rows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@system_bp.route('/wipe-domain', methods=['POST'])
+@admin_required
+def wipe_domain():
+    data = request.get_json(force=True, silent=True) or {}
+    domain = data.get('domain', '').strip()
+    if not domain:
+        return jsonify({"error": "domain required"}), 400
+    config.IN_MAINTENANCE = True
+    db_path = config.DB_PATH
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys=ON")
+        rows = conn.execute(
+            "SELECT id FROM messages WHERE mailbox_address LIKE ? AND has_attachments=1",
+            (f'%@{domain}',)
+        ).fetchall()
+        for row in rows:
+            shutil.rmtree(os.path.join(config.ATTACHMENTS_PATH, str(row['id'])), ignore_errors=True)
+        conn.execute("DELETE FROM mailboxes WHERE address LIKE ?", (f'%@{domain}',))
+        conn.commit()
+        conn.close()
+        def _vacuum():
+            c = sqlite3.connect(db_path)
+            c.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            c.execute("VACUUM")
+            c.close()
+        threading.Thread(target=_vacuum, daemon=True).start()
+        config.IN_MAINTENANCE = False
+        return jsonify({"status": "wiped", "domain": domain})
+    except Exception as e:
+        config.IN_MAINTENANCE = False
+        return jsonify({"error": str(e)}), 500
+
+@system_bp.route('/wipe-all', methods=['POST'])
+@admin_required
+def wipe_all():
+    config.IN_MAINTENANCE = True
+    db_path = config.DB_PATH
+    try:
+        att_path = config.ATTACHMENTS_PATH
+        if os.path.exists(att_path):
+            shutil.rmtree(att_path)
+        os.makedirs(att_path, exist_ok=True)
+        conn = sqlite3.connect(db_path)
+        conn.execute("PRAGMA foreign_keys=ON")
+        conn.execute("DELETE FROM mailboxes")
+        conn.commit()
+        conn.close()
+        def _vacuum():
+            c = sqlite3.connect(db_path)
+            c.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            c.execute("VACUUM")
+            c.close()
+        threading.Thread(target=_vacuum, daemon=True).start()
+        config.IN_MAINTENANCE = False
+        return jsonify({"status": "wiped"})
+    except Exception as e:
+        config.IN_MAINTENANCE = False
+        return jsonify({"error": str(e)}), 500
+
 def _schedule_restart():
     def restart():
         import time

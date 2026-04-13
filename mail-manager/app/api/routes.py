@@ -3,6 +3,8 @@ import json
 import logging
 import os
 import re
+import shutil
+import threading
 import uuid
 from datetime import datetime, timezone
 
@@ -165,14 +167,19 @@ def create_mailbox():
     now = datetime.now(timezone.utc).isoformat()
     try:
         db.execute(
-            "INSERT INTO mailboxes (address, display_name, domain, created_at, is_active) VALUES (?, ?, ?, ?, ?)",
-            (address, data.get('display_name', ''), domain, now, 1),
+            "INSERT INTO mailboxes (address, display_name, domain, created_at, is_active) VALUES (?, ?, ?, ?, 1) "
+            "ON CONFLICT(address) DO UPDATE SET is_active=1, display_name=excluded.display_name",
+            (address, data.get('display_name', ''), domain, now),
         )
-        for folder in ['Inbox', 'Sent', 'Drafts', 'Trash', 'Spam']:
-            db.execute(
-                "INSERT INTO folders (mailbox_address, name, system_folder, created_at) VALUES (?, ?, 1, ?)",
-                (address, folder, now),
-            )
+        folder_count = db.execute(
+            "SELECT COUNT(*) FROM folders WHERE mailbox_address=?", (address,)
+        ).fetchone()[0]
+        if folder_count == 0:
+            for folder in ['Inbox', 'Sent', 'Drafts', 'Trash', 'Spam']:
+                db.execute(
+                    "INSERT INTO folders (mailbox_address, name, system_folder, created_at) VALUES (?, ?, 1, ?)",
+                    (address, folder, now),
+                )
         db.commit()
     except Exception as e:
         db.rollback()
@@ -195,8 +202,20 @@ def get_mailbox(address):
 @admin_required
 def delete_mailbox(address):
     db = get_db()
+    cur = db.execute(
+        "SELECT id FROM messages WHERE mailbox_address=? AND has_attachments=1", (address,)
+    )
+    for row in cur.fetchall():
+        shutil.rmtree(os.path.join(config.ATTACHMENTS_PATH, str(row['id'])), ignore_errors=True)
     db.execute("DELETE FROM mailboxes WHERE address=?", (address,))
     db.commit()
+    def _vacuum():
+        import sqlite3 as _sqlite3
+        conn = _sqlite3.connect(config.DB_PATH)
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        conn.execute("VACUUM")
+        conn.close()
+    threading.Thread(target=_vacuum, daemon=True).start()
     return jsonify({"status": "deleted"})
 
 
@@ -317,7 +336,7 @@ def delete_message(address, msg_id):
 
     db = get_db()
     cur = db.execute(
-        "SELECT folder_id FROM messages WHERE id=? AND mailbox_address=?",
+        "SELECT folder_id, has_attachments FROM messages WHERE id=? AND mailbox_address=?",
         (msg_id, address),
     )
     msg = cur.fetchone()
@@ -334,6 +353,8 @@ def delete_message(address, msg_id):
     trash_id = trash_row['id']
 
     if msg['folder_id'] == trash_id:
+        if msg['has_attachments']:
+            shutil.rmtree(os.path.join(config.ATTACHMENTS_PATH, str(msg_id)), ignore_errors=True)
         db.execute("DELETE FROM messages WHERE id=?", (msg_id,))
     else:
         db.execute(

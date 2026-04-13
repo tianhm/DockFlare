@@ -1,6 +1,8 @@
 import logging
 import requests
 import json
+import boto3
+from botocore.config import Config as BotoConfig
 from app import config
 from app.core.cloudflare_api import cf_api_request, dns_semaphore
 
@@ -239,6 +241,74 @@ def delete_email_routing_rule(zone_id, rule_id):
 
 def list_email_routing_rules(zone_id):
     return cf_api_request('GET', f'/zones/{zone_id}/email/routing/rules')
+
+def disable_email_routing(zone_id):
+    try:
+        return cf_api_request('POST', f'/zones/{zone_id}/email/routing/disable', json_data={})
+    except Exception as e:
+        logging.warning(f"Could not disable email routing for zone {zone_id}: {e}")
+
+def reset_catchall_to_drop(zone_id):
+    data = {
+        "matchers": [{"type": "all"}],
+        "actions": [{"type": "drop"}],
+        "enabled": True,
+        "name": "DockFlare: Drop All"
+    }
+    try:
+        return cf_api_request('PUT', f'/zones/{zone_id}/email/routing/rules/catch_all', json_data=data)
+    except Exception as e:
+        logging.warning(f"Could not reset catch_all to drop for zone {zone_id}: {e}")
+
+def empty_and_delete_r2_bucket(bucket_name, r2_endpoint, r2_key_id, r2_secret):
+    try:
+        client = boto3.client(
+            's3',
+            endpoint_url=r2_endpoint,
+            aws_access_key_id=r2_key_id,
+            aws_secret_access_key=r2_secret,
+            config=BotoConfig(signature_version='s3v4'),
+        )
+        paginator = client.get_paginator('list_objects_v2')
+        for page in paginator.paginate(Bucket=bucket_name):
+            objects = page.get('Contents', [])
+            if objects:
+                client.delete_objects(
+                    Bucket=bucket_name,
+                    Delete={'Objects': [{'Key': o['Key']} for o in objects]}
+                )
+    except Exception as e:
+        logging.warning(f"Could not empty R2 bucket {bucket_name}: {e}")
+    try:
+        cf_api_request('DELETE', f'/accounts/{config.CF_ACCOUNT_ID}/r2/buckets/{bucket_name}')
+    except Exception as e:
+        logging.warning(f"Could not delete R2 bucket {bucket_name}: {e}")
+
+def scrub_email_dns_records(zone_id, zone_name):
+    errors = []
+    for rtype, name in [('MX', zone_name), ('TXT', zone_name), ('TXT', f'_dmarc.{zone_name}')]:
+        try:
+            res = cf_api_request('GET', f'/zones/{zone_id}/dns_records?type={rtype}&name={name}')
+            for record in res.get('result', []):
+                if rtype == 'TXT' and name == zone_name and 'v=spf1' not in record.get('content', ''):
+                    continue
+                try:
+                    delete_dns_record_generic(zone_id, record['id'])
+                except Exception as e:
+                    errors.append(f"DNS {rtype} {name}: {e}")
+        except Exception as e:
+            errors.append(f"DNS list {rtype} {name}: {e}")
+    try:
+        res = cf_api_request('GET', f'/zones/{zone_id}/dns_records?type=CNAME')
+        for record in res.get('result', []):
+            if '_domainkey' in record.get('name', ''):
+                try:
+                    delete_dns_record_generic(zone_id, record['id'])
+                except Exception as e:
+                    errors.append(f"DNS CNAME {record['name']}: {e}")
+    except Exception as e:
+        errors.append(f"DNS list CNAME: {e}")
+    return errors
 
 def setup_catchall_routing_rule(zone_id, worker_name):
     data = {

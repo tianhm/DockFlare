@@ -1954,16 +1954,163 @@ async function emailSetupDomain() {
     }
 }
 
-async function emailTeardownDomain(domain) {
-    if (!await dfConfirm('Are you sure you want to remove this domain?', 'Teardown')) return;
+async function dfConfirmTyped(message, expectedValue, title) {
+    title = title || t('common.confirm');
+    return new Promise((resolve) => {
+        const modal = document.getElementById('dockflare-prompt-modal');
+        const titleEl = document.getElementById('dockflare-prompt-title');
+        const messageEl = document.getElementById('dockflare-prompt-message');
+        const inputEl = document.getElementById('dockflare-prompt-input');
+        const okBtn = document.getElementById('dockflare-prompt-ok');
+        const cancelBtn = document.getElementById('dockflare-prompt-cancel');
+
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        inputEl.value = '';
+        okBtn.disabled = true;
+        okBtn.classList.add('btn-disabled');
+
+        const checkInput = () => {
+            const match = inputEl.value === expectedValue;
+            okBtn.disabled = !match;
+            okBtn.classList.toggle('btn-disabled', !match);
+        };
+
+        const handleOk = () => {
+            if (inputEl.value !== expectedValue) return;
+            modal.close();
+            cleanup();
+            resolve(true);
+        };
+
+        const handleCancel = () => {
+            modal.close();
+            cleanup();
+            resolve(false);
+        };
+
+        const handleEnter = (e) => {
+            if (e.key === 'Enter' && inputEl.value === expectedValue) handleOk();
+        };
+
+        const cleanup = () => {
+            okBtn.disabled = false;
+            okBtn.classList.remove('btn-disabled');
+            okBtn.removeEventListener('click', handleOk);
+            cancelBtn.removeEventListener('click', handleCancel);
+            inputEl.removeEventListener('input', checkInput);
+            inputEl.removeEventListener('keypress', handleEnter);
+        };
+
+        okBtn.addEventListener('click', handleOk);
+        cancelBtn.addEventListener('click', handleCancel);
+        inputEl.addEventListener('input', checkInput);
+        inputEl.addEventListener('keypress', handleEnter);
+
+        modal.showModal();
+        setTimeout(() => inputEl.focus(), 100);
+    });
+}
+
+async function emailTeardownPartial(domain) {
+    if (!await dfConfirm(t('email.teardown_confirm_remote').replace('{domain}', domain), t('email.teardown_partial'))) return;
+    await _emailTeardown(domain, false);
+}
+
+async function emailTeardownComplete(domain) {
+    if (!await dfConfirm(t('email.teardown_confirm_local').replace('{domain}', domain), t('email.teardown_complete'))) return;
+    if (!await dfConfirmTyped(t('email.teardown_type_to_confirm').replace('{domain}', domain), domain, t('email.teardown_complete'))) return;
+    await _emailTeardown(domain, true);
+}
+
+async function _emailTeardown(domain, includeLocalData) {
     try {
         const response = await fetch('/email/teardown-domain', {
             method: 'POST',
             headers: buildApiHeaders({'Content-Type': 'application/json'}),
-            body: JSON.stringify({ zone_name: domain })
+            body: JSON.stringify({ zone_name: domain, include_local_data: includeLocalData })
+        });
+        const data = await response.json();
+        if (data.success) {
+            if (data.errors && data.errors.length > 0) {
+                await dfAlert(t('email.teardown_errors') + '\n' + data.errors.join('\n'), t('email.teardown_complete'));
+            }
+            location.reload();
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function emailNukeAll(includeLocalData) {
+    if (includeLocalData) {
+        if (!await dfConfirm(t('email.nuke_all_confirm_1'), t('email.nuke_all_complete'))) return;
+        if (!await dfConfirm(t('email.nuke_all_confirm_2'), t('email.nuke_all_complete'))) return;
+        if (!await dfConfirmTyped(t('email.nuke_all_type_to_confirm'), 'NUKE ALL', t('email.nuke_all_complete'))) return;
+    } else {
+        if (!await dfConfirm(t('email.nuke_all_confirm_1'), t('email.nuke_all_partial'))) return;
+    }
+    const feedback = document.getElementById('emailNukeFeedback');
+    feedback.classList.remove('hidden', 'text-error', 'text-success');
+    feedback.textContent = t('common.loading');
+    try {
+        const response = await fetch('/email/teardown-all', {
+            method: 'POST',
+            headers: buildApiHeaders({'Content-Type': 'application/json'}),
+            body: JSON.stringify({ include_local_data: includeLocalData })
+        });
+        const data = await response.json();
+        if (data.success) {
+            if (data.errors && data.errors.length > 0) {
+                feedback.classList.add('text-error');
+                feedback.textContent = t('email.teardown_errors') + data.errors.join(', ');
+                setTimeout(() => location.reload(), 3000);
+            } else {
+                location.reload();
+            }
+        }
+    } catch (e) {
+        feedback.classList.add('text-error');
+        feedback.textContent = e.message;
+        console.error(e);
+    }
+}
+
+async function emailLoadOrphanedDomains() {
+    try {
+        const response = await fetch('/email/local-domains', { headers: buildApiHeaders() });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!data.orphaned || data.orphaned.length === 0) return;
+        const section = document.getElementById('emailOrphanedSection');
+        const list = document.getElementById('emailOrphanedList');
+        section.classList.remove('hidden');
+        list.innerHTML = data.orphaned.map(d => `
+            <div class="flex items-center gap-4 py-2">
+                <div class="flex-1">
+                    <span class="font-mono font-semibold">${d.domain}</span>
+                    <span class="text-sm opacity-70 ml-2">${d.mailbox_count} mailbox(es), ${d.message_count} message(s)</span>
+                </div>
+                <a href="/email/backup" class="btn btn-xs btn-outline">${t('email.download_backup')}</a>
+                <button class="btn btn-xs btn-error" onclick="emailWipeLocal('${d.domain}')">${t('email.wipe_local_data')}</button>
+            </div>
+        `).join('');
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function emailWipeLocal(domain) {
+    if (!await dfConfirmTyped(t('email.wipe_local_confirm').replace('{domain}', domain), domain, t('email.wipe_local_data'))) return;
+    try {
+        const response = await fetch('/email/wipe-local', {
+            method: 'POST',
+            headers: buildApiHeaders({'Content-Type': 'application/json'}),
+            body: JSON.stringify({ domain })
         });
         const data = await response.json();
         if (data.success) location.reload();
+        else await dfAlert('Error: ' + (data.error || 'Unknown error'));
     } catch (e) {
         console.error(e);
     }
