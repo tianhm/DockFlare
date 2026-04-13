@@ -104,11 +104,15 @@ _SCHEMA = """
     CREATE TABLE IF NOT EXISTS push_subscriptions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         mailbox_address TEXT NOT NULL,
-        endpoint TEXT NOT NULL UNIQUE,
+        endpoint TEXT NOT NULL,
         p256dh TEXT NOT NULL,
         auth TEXT NOT NULL,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        FOREIGN KEY (mailbox_address) REFERENCES mailboxes(address) ON DELETE CASCADE
+        last_attempted_at TEXT,
+        last_success_at TEXT,
+        fail_count INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (mailbox_address) REFERENCES mailboxes(address) ON DELETE CASCADE,
+        UNIQUE(mailbox_address, endpoint)
     );
     CREATE INDEX IF NOT EXISTS idx_push_subscriptions_mailbox ON push_subscriptions(mailbox_address);
 
@@ -155,37 +159,52 @@ def get_standalone_db():
 
 
 def _migrate(conn):
-    migrations = [
+    for sql in [
         "ALTER TABLE folders ADD COLUMN color TEXT",
         "ALTER TABLE mailboxes ADD COLUMN notification_preview INTEGER DEFAULT 1",
-    ]
-    for sql in migrations:
+    ]:
         try:
             conn.execute(sql)
         except Exception:
             pass
 
     try:
-        conn.executescript("""
-            CREATE TABLE IF NOT EXISTS push_subscriptions_new (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                mailbox_address TEXT NOT NULL,
-                endpoint TEXT NOT NULL,
-                p256dh TEXT NOT NULL,
-                auth TEXT NOT NULL,
-                created_at TEXT NOT NULL DEFAULT (datetime('now')),
-                FOREIGN KEY (mailbox_address) REFERENCES mailboxes(address) ON DELETE CASCADE,
-                UNIQUE(mailbox_address, endpoint)
-            );
-            INSERT OR IGNORE INTO push_subscriptions_new
-                SELECT id, mailbox_address, endpoint, p256dh, auth, created_at
-                FROM push_subscriptions;
-            DROP TABLE push_subscriptions;
-            ALTER TABLE push_subscriptions_new RENAME TO push_subscriptions;
-            CREATE INDEX IF NOT EXISTS idx_push_subscriptions_mailbox ON push_subscriptions(mailbox_address);
-        """)
+        row = conn.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='push_subscriptions'"
+        ).fetchone()
+        if row and 'UNIQUE(mailbox_address, endpoint)' not in (row[0] or ''):
+            conn.executescript("""
+                CREATE TABLE IF NOT EXISTS push_subscriptions_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    mailbox_address TEXT NOT NULL,
+                    endpoint TEXT NOT NULL,
+                    p256dh TEXT NOT NULL,
+                    auth TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                    FOREIGN KEY (mailbox_address) REFERENCES mailboxes(address) ON DELETE CASCADE,
+                    UNIQUE(mailbox_address, endpoint)
+                );
+                INSERT OR IGNORE INTO push_subscriptions_new
+                    SELECT id, mailbox_address, endpoint, p256dh, auth, created_at
+                    FROM push_subscriptions;
+                DROP TABLE push_subscriptions;
+                ALTER TABLE push_subscriptions_new RENAME TO push_subscriptions;
+                CREATE INDEX IF NOT EXISTS idx_push_subscriptions_mailbox ON push_subscriptions(mailbox_address);
+            """)
     except Exception:
         pass
+
+    for sql in [
+        "ALTER TABLE push_subscriptions ADD COLUMN last_attempted_at TEXT",
+        "ALTER TABLE push_subscriptions ADD COLUMN last_success_at TEXT",
+        "ALTER TABLE push_subscriptions ADD COLUMN fail_count INTEGER NOT NULL DEFAULT 0",
+        "CREATE INDEX IF NOT EXISTS idx_push_subscriptions_endpoint ON push_subscriptions(endpoint)",
+        "CREATE INDEX IF NOT EXISTS idx_push_subscriptions_last_success ON push_subscriptions(last_success_at)",
+    ]:
+        try:
+            conn.execute(sql)
+        except Exception:
+            pass
 
 
 def init_db():
