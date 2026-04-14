@@ -2498,6 +2498,163 @@ async function emailUpdateR2(domain, event) {
     }
 }
 
+async function emailLoadAllCatchAllStatuses() {
+    const statusEls = document.querySelectorAll('[id^="catchAllStatus_"]');
+    for (const el of statusEls) {
+        const domain = el.id.replace('catchAllStatus_', '').replace(/_/g, '.');
+        try {
+            const resp = await fetch(`/email/catch-all/status?domain=${encodeURIComponent(domain)}`, { headers: buildApiHeaders({}) });
+            if (!resp.ok) { el.textContent = 'Catch-All: —'; continue; }
+            const data = await resp.json();
+            el.textContent = data.catch_all_mailbox ? `Catch-All → ${data.catch_all_mailbox}` : 'Catch-All: disabled';
+        } catch { el.textContent = 'Catch-All: —'; }
+    }
+}
+
+async function emailOpenCatchAllModal(domain) {
+    document.getElementById('catchAllDomain').value = domain;
+    document.getElementById('catchAllDomainLabel').textContent = domain;
+    const sel = document.getElementById('catchAllTarget');
+    sel.innerHTML = '';
+    const rows = document.querySelectorAll('tr[data-mailbox]');
+    let current = '';
+    try {
+        const resp = await fetch(`/email/catch-all/status?domain=${encodeURIComponent(domain)}`, { headers: buildApiHeaders({}) });
+        if (resp.ok) { const d = await resp.json(); current = d.catch_all_mailbox || ''; }
+    } catch {}
+    rows.forEach(row => {
+        const addr = row.dataset.mailbox;
+        const opt = document.createElement('option');
+        opt.value = addr;
+        opt.textContent = addr;
+        if (addr === current) opt.selected = true;
+        sel.appendChild(opt);
+    });
+    document.getElementById('catchAllModal').showModal();
+}
+
+async function emailSaveCatchAll() {
+    const domain = document.getElementById('catchAllDomain').value;
+    const target = document.getElementById('catchAllTarget').value;
+    try {
+        const resp = await fetch('/email/catch-all/enable', {
+            method: 'POST',
+            headers: buildApiHeaders({'Content-Type': 'application/json'}),
+            body: JSON.stringify({ domain, target_address: target }),
+        });
+        const data = await resp.json();
+        document.getElementById('catchAllModal').close();
+        emailLoadAllCatchAllStatuses();
+        if (!data.status && !data.catch_all_mailbox) await dfAlert(data.error || 'Failed', 'Error');
+    } catch (e) { console.error(e); }
+}
+
+async function emailDisableCatchAll() {
+    const domain = document.getElementById('catchAllDomain').value;
+    try {
+        await fetch('/email/catch-all/disable', {
+            method: 'POST',
+            headers: buildApiHeaders({'Content-Type': 'application/json'}),
+            body: JSON.stringify({ domain }),
+        });
+        document.getElementById('catchAllModal').close();
+        emailLoadAllCatchAllStatuses();
+    } catch (e) { console.error(e); }
+}
+
+async function emailLoadAutoResponderBadges() {
+    try {
+        const resp = await fetch('/email/auto-responders', { headers: buildApiHeaders({}) });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const active = new Set((data.auto_responders || []).filter(r => r.is_active).map(r => r.mailbox_address));
+        document.querySelectorAll('tr[data-mailbox]').forEach(row => {
+            const badge = row.querySelector('.mb-ar-badge');
+            if (badge) badge.classList.toggle('hidden', !active.has(row.dataset.mailbox));
+        });
+    } catch {}
+}
+
+async function emailOpenAutoResponderModal(address, domain) {
+    document.getElementById('arAddress').value = address;
+    document.getElementById('arDomain').value = domain;
+    document.getElementById('autoResponderMailboxLabel').textContent = address;
+    document.getElementById('arFeedback').classList.add('hidden');
+    document.getElementById('arSubject').value = 'Auto Reply';
+    document.getElementById('arBody').value = '';
+    document.getElementById('arStartDate').value = '';
+    document.getElementById('arEndDate').value = '';
+    document.getElementById('arInterval').value = '24';
+    document.getElementById('arIsActive').checked = true;
+    document.getElementById('arDeleteBtn').classList.add('hidden');
+    try {
+        const resp = await fetch(`/email/mailbox/auto-responder?address=${encodeURIComponent(address)}`, { headers: buildApiHeaders({}) });
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data.auto_responder) {
+                const ar = data.auto_responder;
+                document.getElementById('arSubject').value = ar.subject || 'Auto Reply';
+                document.getElementById('arBody').value = ar.message_body || '';
+                document.getElementById('arStartDate').value = ar.start_date || '';
+                document.getElementById('arEndDate').value = ar.end_date || '';
+                document.getElementById('arInterval').value = ar.reply_interval_hours || 24;
+                document.getElementById('arIsActive').checked = !!ar.is_active;
+                document.getElementById('arDeleteBtn').classList.remove('hidden');
+            }
+        }
+    } catch {}
+    document.getElementById('autoResponderModal').showModal();
+}
+
+async function emailSaveAutoResponder() {
+    const address = document.getElementById('arAddress').value;
+    const feedback = document.getElementById('arFeedback');
+    const payload = {
+        address,
+        subject: document.getElementById('arSubject').value.trim() || 'Auto Reply',
+        message_body: document.getElementById('arBody').value.trim(),
+        start_date: document.getElementById('arStartDate').value || null,
+        end_date: document.getElementById('arEndDate').value || null,
+        reply_interval_hours: parseInt(document.getElementById('arInterval').value) || 24,
+        is_active: document.getElementById('arIsActive').checked,
+    };
+    if (!payload.message_body) {
+        feedback.textContent = 'Message body is required.';
+        feedback.className = 'text-sm font-semibold mb-2 text-error';
+        feedback.classList.remove('hidden');
+        return;
+    }
+    try {
+        const resp = await fetch('/email/mailbox/auto-responder', {
+            method: 'POST',
+            headers: buildApiHeaders({'Content-Type': 'application/json'}),
+            body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+        if (data.auto_responder) {
+            document.getElementById('autoResponderModal').close();
+            emailLoadAutoResponderBadges();
+        } else {
+            feedback.textContent = data.error || 'Failed to save.';
+            feedback.className = 'text-sm font-semibold mb-2 text-error';
+            feedback.classList.remove('hidden');
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function emailDeleteAutoResponder() {
+    const address = document.getElementById('arAddress').value;
+    try {
+        await fetch('/email/mailbox/auto-responder', {
+            method: 'DELETE',
+            headers: buildApiHeaders({'Content-Type': 'application/json'}),
+            body: JSON.stringify({ address }),
+        });
+        document.getElementById('autoResponderModal').close();
+        emailLoadAutoResponderBadges();
+    } catch (e) { console.error(e); }
+}
+
 let _logCurrentTab = 'outbound';
 let _logCurrentPage = 1;
 

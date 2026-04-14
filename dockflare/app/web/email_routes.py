@@ -550,6 +550,30 @@ def generate_jwt_route():
         return jsonify({'success': False, 'error': 'JWT config missing'}), 500
     return jsonify({'success': True, 'token': token})
 
+def _get_webmail_hostname():
+    from app.core.utils import get_label
+    try:
+        containers = docker_client.containers.list()
+        for c in containers:
+            labels = c.labels or {}
+            if get_label(labels, 'enable', '').lower() not in ('true', '1', 'yes'):
+                continue
+            hostname = get_label(labels, 'hostname', '')
+            service = get_label(labels, 'service', '')
+            if hostname and 'webmail' in service.lower():
+                return hostname
+        for c in containers:
+            labels = c.labels or {}
+            if get_label(labels, 'enable', '').lower() not in ('true', '1', 'yes'):
+                continue
+            hostname = get_label(labels, 'hostname', '')
+            if hostname and c.name and 'webmail' in c.name.lower():
+                return hostname
+    except Exception:
+        pass
+    return None
+
+
 @email_bp.route('/sso/callback', methods=['GET'])
 @login_required
 def sso_callback():
@@ -558,11 +582,17 @@ def sso_callback():
     if not token:
         return "JWT configuration missing. Please setup email first.", 500
     return_to = request.args.get('return_to', '')
-    allowed_domains = set()
-    for zone_name in config.EMAIL_CONFIG.get('domains', {}).keys():
-        allowed_domains.add(f"mail.{zone_name}")
-    if not return_to or return_to not in allowed_domains:
-        return_to = next(iter(allowed_domains), '')
+    webmail_hostname = _get_webmail_hostname()
+    if webmail_hostname:
+        allowed_domains = {webmail_hostname}
+        if not return_to or return_to not in allowed_domains:
+            return_to = webmail_hostname
+    else:
+        allowed_domains = set()
+        for zone_name in config.EMAIL_CONFIG.get('domains', {}).keys():
+            allowed_domains.add(f"mail.{zone_name}")
+        if not return_to or return_to not in allowed_domains:
+            return_to = next(iter(allowed_domains), '')
     if not return_to:
         return "No webmail domain configured.", 500
     return redirect(f"https://{return_to}/auth/callback?token={token}")
@@ -720,6 +750,213 @@ def mail_stats():
         return jsonify(resp.json()), resp.status_code
     except Exception as e:
         return jsonify({'error': str(e)}), 502
+
+
+@email_bp.route('/catch-all/status', methods=['GET'])
+@login_required
+def catch_all_status():
+    import requests
+    domain = request.args.get('domain', '')
+    token = _generate_jwt(current_user.get_id(), role='admin')
+    if not token:
+        return jsonify({'error': 'JWT configuration missing'}), 500
+    try:
+        resp = requests.get(
+            f"{config.MAIL_MANAGER_INTERNAL_URL}/api/v1/catch-all/{domain}",
+            headers={'Authorization': f'Bearer {token}'},
+            timeout=5,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
+
+@email_bp.route('/catch-all/enable', methods=['POST'])
+@login_required
+def catch_all_enable():
+    import requests
+    data = request.get_json(force=True, silent=True) or {}
+    domain = data.get('domain', '')
+    target = data.get('target_address', '')
+    email_cfg = config.EMAIL_CONFIG
+    if domain not in email_cfg.get('domains', {}):
+        return jsonify({'success': False, 'error': 'Domain not found'}), 404
+    if target not in email_cfg['domains'][domain].get('mailboxes', {}):
+        return jsonify({'success': False, 'error': 'Target mailbox not found in this domain'}), 400
+    token = _generate_jwt(current_user.get_id(), role='admin')
+    if not token:
+        return jsonify({'error': 'JWT configuration missing'}), 500
+    try:
+        resp = requests.post(
+            f"{config.MAIL_MANAGER_INTERNAL_URL}/api/v1/catch-all/{domain}",
+            json={'mailbox_address': target},
+            headers={'Authorization': f'Bearer {token}'},
+            timeout=5,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
+
+@email_bp.route('/catch-all/disable', methods=['POST'])
+@login_required
+def catch_all_disable():
+    import requests
+    data = request.get_json(force=True, silent=True) or {}
+    domain = data.get('domain', '')
+    token = _generate_jwt(current_user.get_id(), role='admin')
+    if not token:
+        return jsonify({'error': 'JWT configuration missing'}), 500
+    try:
+        resp = requests.delete(
+            f"{config.MAIL_MANAGER_INTERNAL_URL}/api/v1/catch-all/{domain}",
+            headers={'Authorization': f'Bearer {token}'},
+            timeout=5,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
+
+@email_bp.route('/mailbox/auto-responder', methods=['GET'])
+@login_required
+def get_mailbox_auto_responder():
+    import requests
+    address = request.args.get('address', '')
+    token = _generate_jwt(current_user.get_id(), role='admin')
+    if not token:
+        return jsonify({'error': 'JWT configuration missing'}), 500
+    try:
+        resp = requests.get(
+            f"{config.MAIL_MANAGER_INTERNAL_URL}/api/v1/mailboxes/{address}/auto-responder",
+            headers={'Authorization': f'Bearer {token}'},
+            timeout=5,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
+
+@email_bp.route('/mailbox/auto-responder', methods=['POST'])
+@login_required
+def set_mailbox_auto_responder():
+    import requests
+    data = request.get_json(force=True, silent=True) or {}
+    address = data.pop('address', '')
+    token = _generate_jwt(current_user.get_id(), role='admin')
+    if not token:
+        return jsonify({'error': 'JWT configuration missing'}), 500
+    try:
+        resp = requests.post(
+            f"{config.MAIL_MANAGER_INTERNAL_URL}/api/v1/mailboxes/{address}/auto-responder",
+            json=data,
+            headers={'Authorization': f'Bearer {token}'},
+            timeout=5,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
+
+@email_bp.route('/mailbox/auto-responder', methods=['DELETE'])
+@login_required
+def delete_mailbox_auto_responder():
+    import requests
+    data = request.get_json(force=True, silent=True) or {}
+    address = data.get('address', '')
+    token = _generate_jwt(current_user.get_id(), role='admin')
+    if not token:
+        return jsonify({'error': 'JWT configuration missing'}), 500
+    try:
+        resp = requests.delete(
+            f"{config.MAIL_MANAGER_INTERNAL_URL}/api/v1/mailboxes/{address}/auto-responder",
+            headers={'Authorization': f'Bearer {token}'},
+            timeout=5,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
+
+@email_bp.route('/auto-responders', methods=['GET'])
+@login_required
+def list_auto_responders():
+    import requests
+    token = _generate_jwt(current_user.get_id(), role='admin')
+    if not token:
+        return jsonify({'error': 'JWT configuration missing'}), 500
+    try:
+        resp = requests.get(
+            f"{config.MAIL_MANAGER_INTERNAL_URL}/api/v1/auto-responders",
+            headers={'Authorization': f'Bearer {token}'},
+            timeout=5,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
+
+@email_bp.route('/auth/change-password', methods=['POST', 'OPTIONS'])
+@limiter.limit("5 per 5 minutes")
+def mailbox_change_password():
+    origin = _webmail_origin()
+    if request.method == 'OPTIONS':
+        response = current_app.make_default_options_response()
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'POST'
+        return response
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    token_str = auth_header[7:]
+    email_cfg = config.EMAIL_CONFIG
+    try:
+        private_key = serialization.load_pem_private_key(
+            email_cfg['jwt_signing_key'].encode('utf-8'), password=None
+        )
+        public_key = private_key.public_key()
+        payload = jwt.decode(
+            token_str, public_key,
+            algorithms=[config.EMAIL_JWT_ALGORITHM],
+            audience=config.EMAIL_JWT_AUDIENCE,
+            issuer=config.EMAIL_JWT_ISSUER,
+        )
+        mailbox_address = payload.get('sub', '')
+        if mailbox_address not in payload.get('mailboxes', []):
+            raise ValueError('mailbox not in token claims')
+    except Exception:
+        response = jsonify({'success': False, 'error': 'Invalid or expired token'})
+        response.headers['Access-Control-Allow-Origin'] = origin
+        return response, 401
+    data = request.get_json(force=True, silent=True) or {}
+    current_password = data.get('current_password', '')
+    new_password = data.get('new_password', '')
+    if len(new_password) < 8:
+        response = jsonify({'success': False, 'error': 'New password must be at least 8 characters'})
+        response.headers['Access-Control-Allow-Origin'] = origin
+        return response, 400
+    mailbox_data = None
+    domain_key = None
+    for domain, dcfg in email_cfg.get('domains', {}).items():
+        if mailbox_address in dcfg.get('mailboxes', {}):
+            mailbox_data = dcfg['mailboxes'][mailbox_address]
+            domain_key = domain
+            break
+    if not mailbox_data:
+        response = jsonify({'success': False, 'error': 'Mailbox not found'})
+        response.headers['Access-Control-Allow-Origin'] = origin
+        return response, 404
+    stored_hash = mailbox_data.get('password_hash', '')
+    if not stored_hash or not check_password_hash(stored_hash, current_password):
+        response = jsonify({'success': False, 'error': 'Current password is incorrect'})
+        response.headers['Access-Control-Allow-Origin'] = origin
+        return response, 401
+    email_cfg['domains'][domain_key]['mailboxes'][mailbox_address]['password_hash'] = generate_password_hash(new_password)
+    save_email_config(email_cfg)
+    response = jsonify({'success': True})
+    response.headers['Access-Control-Allow-Origin'] = origin
+    return response
 
 
 @email_bp.route('/logs/send-log', methods=['GET'])

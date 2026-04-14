@@ -61,7 +61,10 @@
                     {% if email_config.domains %}
                     {% for domain, cfg in email_config.domains.items() %}
                     <tr>
-                        <td class="px-4 py-3">{{ domain }}</td>
+                        <td class="px-4 py-3">
+                            <div>{{ domain }}</div>
+                            <div class="text-xs opacity-50 mt-1" id="catchAllStatus_{{ domain | replace('.', '_') }}">Catch-All: loading…</div>
+                        </td>
                         <td class="px-4 py-3"><div class="badge badge-success badge-sm">{{ t('email.setup_complete') }}</div></td>
                         <td class="px-4 py-3">
                             <div class="flex items-center justify-end gap-1">
@@ -69,7 +72,8 @@
                                 <button class="btn btn-sm btn-ghost" onclick="emailRepairDns('{{ domain }}', event)">Repair DNS</button>
                                 <div class="dropdown dropdown-end">
                                     <button tabindex="0" class="btn btn-sm btn-ghost px-2">⋮</button>
-                                    <ul tabindex="0" class="dropdown-content z-50 menu menu-sm p-2 shadow-lg bg-base-100 border border-base-200 rounded-box w-52">
+                                    <ul tabindex="0" class="dropdown-content z-50 menu menu-sm p-2 shadow-lg bg-base-100 border border-base-200 rounded-box w-56">
+                                        <li><button onclick="emailOpenCatchAllModal('{{ domain }}')">Catch-All Routing</button></li>
                                         <li><button onclick="emailUpdateR2('{{ domain }}', event)">R2 Credentials</button></li>
                                         <li class="menu-title">Danger zone</li>
                                         <li><button onclick="emailTeardownPartial('{{ domain }}', event)" class="text-warning">{{ t('email.teardown_partial') }}</button></li>
@@ -120,7 +124,10 @@
                             <td class="px-4 py-3">
                                 <div class="font-mono text-sm">{{ addr }}</div>
                                 <div class="text-xs opacity-50">{{ mb.display_name }} &middot; {{ domain }}</div>
-                                <div class="badge badge-warning badge-sm mt-1 mb-quota-badge hidden"></div>
+                                <div class="flex gap-1 mt-1 flex-wrap">
+                                    <div class="badge badge-warning badge-sm mb-quota-badge hidden"></div>
+                                    <div class="badge badge-info badge-sm mb-ar-badge hidden">Out of Office</div>
+                                </div>
                             </td>
                             <td class="px-4 py-3 text-center text-sm mb-received opacity-50">—</td>
                             <td class="px-4 py-3 text-center text-sm mb-sent opacity-50">—</td>
@@ -132,6 +139,7 @@
                                 <div class="flex items-center justify-end gap-1 flex-wrap">
                                     <button class="btn btn-sm btn-outline" onclick="emailSetPassword('{{ addr }}', '{{ domain }}')">Set Password</button>
                                     <button class="btn btn-sm btn-outline" onclick="emailEditQuota('{{ addr }}', '{{ domain }}', {{ mb.get('quota_bytes', 10737418240) }})">Quota</button>
+                                    <button class="btn btn-sm btn-outline" onclick="emailOpenAutoResponderModal('{{ addr }}', '{{ domain }}')">Auto-Responder</button>
                                     <button class="btn btn-sm btn-error btn-outline" onclick="emailDeleteMailbox('{{ addr }}', '{{ domain }}', event)">{{ t('email.delete') }}</button>
                                 </div>
                             </td>
@@ -349,6 +357,69 @@
 
     {% endif %}
 
+<dialog id="catchAllModal" class="modal">
+    <div class="modal-box max-w-md">
+        <h3 class="font-bold text-lg mb-4">Catch-All Routing</h3>
+        <p class="text-sm opacity-60 mb-4">Route all unmatched addresses on <strong id="catchAllDomainLabel"></strong> to a designated mailbox.</p>
+        <input type="hidden" id="catchAllDomain" />
+        <div class="form-control mb-4">
+            <label class="label"><span class="label-text">Target mailbox</span></label>
+            <select id="catchAllTarget" class="select select-bordered select-sm w-full"></select>
+        </div>
+        <div class="modal-action">
+            <form method="dialog"><button class="btn btn-ghost btn-sm">Cancel</button></form>
+            <button class="btn btn-error btn-sm" onclick="emailDisableCatchAll()">Disable</button>
+            <button class="btn btn-primary btn-sm" onclick="emailSaveCatchAll()">Save</button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<dialog id="autoResponderModal" class="modal">
+    <div class="modal-box max-w-lg">
+        <h3 class="font-bold text-lg mb-1">Auto-Responder</h3>
+        <p class="text-sm opacity-60 mb-4" id="autoResponderMailboxLabel"></p>
+        <input type="hidden" id="arAddress" />
+        <input type="hidden" id="arDomain" />
+        <div class="form-control mb-3">
+            <label class="label py-1"><span class="label-text text-xs">Status</span></label>
+            <label class="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" id="arIsActive" class="toggle toggle-primary toggle-sm" />
+                <span class="text-sm" id="arActiveLabel">Enabled</span>
+            </label>
+        </div>
+        <div class="form-control mb-3">
+            <label class="label py-1"><span class="label-text text-xs">Subject</span></label>
+            <input type="text" id="arSubject" class="input input-bordered input-sm w-full" placeholder="Auto Reply" />
+        </div>
+        <div class="form-control mb-3">
+            <label class="label py-1"><span class="label-text text-xs">Message body</span></label>
+            <textarea id="arBody" class="textarea textarea-bordered textarea-sm w-full h-28" placeholder="I am currently out of office…"></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="form-control">
+                <label class="label py-1"><span class="label-text text-xs">Start date (optional)</span></label>
+                <input type="date" id="arStartDate" class="input input-bordered input-sm w-full" />
+            </div>
+            <div class="form-control">
+                <label class="label py-1"><span class="label-text text-xs">End date (optional)</span></label>
+                <input type="date" id="arEndDate" class="input input-bordered input-sm w-full" />
+            </div>
+        </div>
+        <div class="form-control mb-4">
+            <label class="label py-1"><span class="label-text text-xs">Reply interval (hours) — min time between replies to same sender</span></label>
+            <input type="number" id="arInterval" class="input input-bordered input-sm w-32" value="24" min="1" max="168" />
+        </div>
+        <p id="arFeedback" class="text-sm font-semibold mb-2 hidden"></p>
+        <div class="modal-action">
+            <form method="dialog"><button class="btn btn-ghost btn-sm">Cancel</button></form>
+            <button class="btn btn-error btn-sm" id="arDeleteBtn" onclick="emailDeleteAutoResponder()">Delete</button>
+            <button class="btn btn-primary btn-sm" onclick="emailSaveAutoResponder()">Save</button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
 <dialog id="emailAddMailboxModal" class="modal">
     <div class="modal-box">
         <h3 class="font-bold text-lg mb-4">{{ t('email.add_mailbox') }}</h3>
@@ -435,7 +506,7 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', () => { emailCheckPermissions(); emailLoadOrphanedDomains(); emailLoadStats(); emailLoadMailboxStats(); emailLoadDeliveryStats(); if (sessionStorage.getItem('logsModalOpen')) emailOpenLogsModal(); });
+document.addEventListener('DOMContentLoaded', () => { emailCheckPermissions(); emailLoadOrphanedDomains(); emailLoadStats(); emailLoadMailboxStats(); emailLoadDeliveryStats(); emailLoadAllCatchAllStatuses(); emailLoadAutoResponderBadges(); if (sessionStorage.getItem('logsModalOpen')) emailOpenLogsModal(); });
 </script>
 {% endblock %}
 {% endblock %}

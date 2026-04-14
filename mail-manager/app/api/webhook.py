@@ -5,8 +5,10 @@ import json
 import os
 import sqlite3
 import logging
-from datetime import datetime, timezone
+import uuid
+from datetime import datetime, timezone, timedelta
 from flask import Blueprint, request, jsonify
+import requests as _http_requests
 from app.config import config
 from app.core.database import get_db
 from app.core.push import send_push_notifications
@@ -78,6 +80,70 @@ def _detect_and_log_bounce(eml_bytes, parsed):
         log.warning("bounce_log write failed for message_id=%s", original_message_id)
 
 
+def _check_and_send_auto_reply(db, mailbox_address, parsed, domain_cfg):
+    from_addr = (parsed.get('from_address') or '').strip()
+    if not from_addr or 'mailer-daemon' in from_addr.lower():
+        return
+    headers = {}
+    for h in parsed.get('headers_json', []):
+        for k, v in h.items():
+            headers[k.lower()] = v
+    auto_submitted = headers.get('auto-submitted', '').lower()
+    if auto_submitted and auto_submitted != 'no':
+        return
+    precedence = headers.get('precedence', '').lower()
+    if 'bulk' in precedence or 'list' in precedence or headers.get('list-id'):
+        return
+    row = db.execute(
+        "SELECT * FROM auto_responders WHERE mailbox_address=? AND is_active=1",
+        (mailbox_address,),
+    ).fetchone()
+    if not row:
+        return
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    if row['start_date'] and now_iso < row['start_date']:
+        return
+    if row['end_date'] and now_iso > row['end_date'] + 'T23:59:59':
+        return
+    cutoff = (now - timedelta(hours=row['reply_interval_hours'])).isoformat()
+    if db.execute(
+        "SELECT 1 FROM auto_reply_log WHERE mailbox_address=? AND original_sender=? AND replied_at > ?",
+        (mailbox_address, from_addr, cutoff),
+    ).fetchone():
+        return
+    outbound_url = domain_cfg['outbound_worker_url'] if domain_cfg else None
+    outbound_auth = domain_cfg['outbound_auth_secret'] if domain_cfg else None
+    if not outbound_url:
+        return
+    msg_id = f"<auto-reply-{uuid.uuid4()}@dockflare>"
+    original_subject = parsed.get('subject') or ''
+    worker_payload = {
+        "from": mailbox_address,
+        "to": [from_addr],
+        "subject": f"Auto Reply: {original_subject}",
+        "text": f"{row['message_body']}\n\n---\nThis is an automated reply.",
+        "messageId": msg_id,
+        "inReplyTo": parsed.get('message_id') or '',
+        "references": parsed.get('message_id') or '',
+    }
+    try:
+        resp = _http_requests.post(
+            outbound_url,
+            json=worker_payload,
+            headers={"Authorization": f"Bearer {outbound_auth}"},
+            timeout=15,
+        )
+        if resp.ok:
+            db.execute(
+                "INSERT INTO auto_reply_log (mailbox_address, original_sender, original_message_id, replied_at) VALUES (?, ?, ?, ?)",
+                (mailbox_address, from_addr, parsed.get('message_id') or '', now_iso),
+            )
+            db.commit()
+    except Exception:
+        log.warning("Auto-reply send failed for %s -> %s", mailbox_address, from_addr)
+
+
 def _get_domain_config(domain):
     db = get_db()
     cur = db.execute("SELECT * FROM domain_configs WHERE domain_name=?", (domain,))
@@ -141,6 +207,11 @@ def inbound():
             if cur.fetchone():
                 to_address = addr
                 break
+
+        if not to_address and domain_cfg and domain_cfg['catch_all_mailbox']:
+            catch_all = domain_cfg['catch_all_mailbox']
+            if db.execute("SELECT 1 FROM mailboxes WHERE address=?", (catch_all,)).fetchone():
+                to_address = catch_all
 
         if not to_address:
             log.info("Inbound ignored: no matching mailbox for %s",
@@ -226,6 +297,7 @@ def inbound():
             'from_name': parsed['from_name'] or parsed['from_address'],
             'mailbox': to_address,
         })
+        _check_and_send_auto_reply(db, to_address, parsed, domain_cfg)
         delete_from_r2(r2_key, domain_cfg)
 
         log.info("Inbound delivered: message=%s to=%s db_id=%s",

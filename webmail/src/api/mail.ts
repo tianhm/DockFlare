@@ -31,4 +31,10 @@ export const mailApi = {
     apiClient.post(`/mailboxes/${address}/drafts`, data),
   updateDraft: (address: string, id: number, data: Record<string, any>) =>
     apiClient.put(`/mailboxes/${address}/drafts/${id}`, data),
+  getAutoResponder: (address: string) =>
+    apiClient.get(`/mailboxes/${address}/auto-responder`),
+  setAutoResponder: (address: string, data: Record<string, any>) =>
+    apiClient.post(`/mailboxes/${address}/auto-responder`, data),
+  deleteAutoResponder: (address: string) =>
+    apiClient.delete(`/mailboxes/${address}/auto-responder`),
 }

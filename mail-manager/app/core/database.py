@@ -205,11 +205,41 @@ def _migrate(conn):
         "CREATE INDEX IF NOT EXISTS idx_send_log_sent_at ON send_log(sent_at DESC)",
         "CREATE INDEX IF NOT EXISTS idx_bounce_log_received_at ON bounce_log(received_at DESC)",
         "CREATE INDEX IF NOT EXISTS idx_bounce_log_message_id ON bounce_log(original_message_id)",
+        "ALTER TABLE domain_configs ADD COLUMN catch_all_mailbox TEXT DEFAULT NULL",
     ]:
         try:
             conn.execute(sql)
         except Exception:
             pass
+
+
+    try:
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS auto_responders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mailbox_address TEXT NOT NULL,
+                subject TEXT NOT NULL DEFAULT 'Auto Reply',
+                message_body TEXT NOT NULL,
+                start_date TEXT,
+                end_date TEXT,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                reply_interval_hours INTEGER NOT NULL DEFAULT 24,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (mailbox_address) REFERENCES mailboxes(address) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS auto_reply_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mailbox_address TEXT NOT NULL,
+                original_sender TEXT NOT NULL,
+                original_message_id TEXT,
+                replied_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_auto_responders_mailbox ON auto_responders(mailbox_address);
+            CREATE INDEX IF NOT EXISTS idx_auto_reply_log_lookup ON auto_reply_log(mailbox_address, original_sender, replied_at);
+        """)
+    except Exception:
+        pass
 
 
 def init_db():

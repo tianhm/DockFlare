@@ -239,8 +239,9 @@ def update_mailbox(address):
     if not db.execute("SELECT 1 FROM mailboxes WHERE address=?", (address,)).fetchone():
         return jsonify({"error": "not found"}), 404
     if 'quota_bytes' in data:
-        db.execute("UPDATE mailboxes SET quota_bytes=? WHERE address=?", (data['quota_bytes'], address))
-    db.execute("UPDATE mailboxes SET quota_exceeded_count=0 WHERE address=?", (address,))
+        db.execute("UPDATE mailboxes SET quota_bytes=?, quota_exceeded_count=0 WHERE address=?", (data['quota_bytes'], address))
+    if 'display_name' in data:
+        db.execute("UPDATE mailboxes SET display_name=? WHERE address=?", (data['display_name'], address))
     db.commit()
     return jsonify({"status": "updated"})
 
@@ -266,18 +267,6 @@ def delete_mailbox(address):
     return jsonify({"status": "deleted"})
 
 
-@api_bp.route('/mailboxes/<address>', methods=['PATCH'])
-@admin_required
-def patch_mailbox(address):
-    data = request.json or {}
-    if 'display_name' in data:
-        db = get_db()
-        db.execute(
-            "UPDATE mailboxes SET display_name=? WHERE address=?",
-            (data['display_name'], address),
-        )
-        db.commit()
-    return jsonify({"status": "updated"})
 
 
 @api_bp.route('/mailboxes/<address>/preferences', methods=['GET'])
@@ -1112,3 +1101,96 @@ def get_log_stats():
         "bounce_rate": bounce_rate,
         "top_bounce_reasons": top_reasons,
     })
+
+
+@api_bp.route('/catch-all/<domain>', methods=['GET'])
+@admin_required
+def get_catch_all(domain):
+    db = get_db()
+    row = db.execute("SELECT catch_all_mailbox FROM domain_configs WHERE domain_name=?", (domain,)).fetchone()
+    if not row:
+        return jsonify({"error": "domain not found"}), 404
+    return jsonify({"catch_all_mailbox": row['catch_all_mailbox']})
+
+
+@api_bp.route('/catch-all/<domain>', methods=['POST'])
+@admin_required
+def set_catch_all(domain):
+    data = request.json or {}
+    mailbox = (data.get('mailbox_address') or '').strip() or None
+    db = get_db()
+    if not db.execute("SELECT 1 FROM domain_configs WHERE domain_name=?", (domain,)).fetchone():
+        return jsonify({"error": "domain not found"}), 404
+    db.execute("UPDATE domain_configs SET catch_all_mailbox=? WHERE domain_name=?", (mailbox, domain))
+    db.commit()
+    return jsonify({"status": "updated", "catch_all_mailbox": mailbox})
+
+
+@api_bp.route('/catch-all/<domain>', methods=['DELETE'])
+@admin_required
+def clear_catch_all(domain):
+    db = get_db()
+    db.execute("UPDATE domain_configs SET catch_all_mailbox=NULL WHERE domain_name=?", (domain,))
+    db.commit()
+    return jsonify({"status": "updated"})
+
+
+@api_bp.route('/mailboxes/<address>/auto-responder', methods=['GET'])
+@jwt_required
+def get_auto_responder(address):
+    if not _check_mailbox_access(address):
+        return jsonify({"error": "forbidden"}), 403
+    db = get_db()
+    row = db.execute("SELECT * FROM auto_responders WHERE mailbox_address=?", (address,)).fetchone()
+    return jsonify({"auto_responder": dict(row) if row else None})
+
+
+@api_bp.route('/mailboxes/<address>/auto-responder', methods=['POST'])
+@jwt_required
+def set_auto_responder(address):
+    if not _check_mailbox_access(address):
+        return jsonify({"error": "forbidden"}), 403
+    data = request.json or {}
+    subject = (data.get('subject') or 'Auto Reply').strip()
+    message_body = (data.get('message_body') or '').strip()
+    if not message_body:
+        return jsonify({"error": "message_body is required"}), 400
+    start_date = data.get('start_date') or None
+    end_date = data.get('end_date') or None
+    is_active = 1 if data.get('is_active', True) else 0
+    reply_interval_hours = max(1, int(data.get('reply_interval_hours', 24) or 24))
+    db = get_db()
+    now = datetime.now(timezone.utc).isoformat()
+    existing = db.execute("SELECT id FROM auto_responders WHERE mailbox_address=?", (address,)).fetchone()
+    if existing:
+        db.execute(
+            "UPDATE auto_responders SET subject=?, message_body=?, start_date=?, end_date=?, is_active=?, reply_interval_hours=?, updated_at=? WHERE mailbox_address=?",
+            (subject, message_body, start_date, end_date, is_active, reply_interval_hours, now, address),
+        )
+    else:
+        db.execute(
+            "INSERT INTO auto_responders (mailbox_address, subject, message_body, start_date, end_date, is_active, reply_interval_hours, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (address, subject, message_body, start_date, end_date, is_active, reply_interval_hours, now, now),
+        )
+    db.commit()
+    row = db.execute("SELECT * FROM auto_responders WHERE mailbox_address=?", (address,)).fetchone()
+    return jsonify({"auto_responder": dict(row)})
+
+
+@api_bp.route('/mailboxes/<address>/auto-responder', methods=['DELETE'])
+@jwt_required
+def delete_auto_responder(address):
+    if not _check_mailbox_access(address):
+        return jsonify({"error": "forbidden"}), 403
+    db = get_db()
+    db.execute("DELETE FROM auto_responders WHERE mailbox_address=?", (address,))
+    db.commit()
+    return jsonify({"status": "deleted"})
+
+
+@api_bp.route('/auto-responders', methods=['GET'])
+@admin_required
+def list_auto_responders():
+    db = get_db()
+    rows = db.execute("SELECT mailbox_address, is_active FROM auto_responders").fetchall()
+    return jsonify({"auto_responders": [dict(r) for r in rows]})
