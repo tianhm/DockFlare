@@ -1,3 +1,4 @@
+import email as _email_lib
 import hmac
 import hashlib
 import json
@@ -11,9 +12,70 @@ from app.core.database import get_db
 from app.core.push import send_push_notifications
 from app.core.r2_client import fetch_email_from_r2, delete_from_r2
 from app.core.mime_parser import parse_eml
+from app.core.bounce_handler import log_bounce
 
 log = logging.getLogger(__name__)
 webhook_bp = Blueprint('webhook', __name__)
+
+
+def _detect_and_log_bounce(eml_bytes, parsed):
+    from_addr = (parsed.get('from_address') or '').lower()
+    headers = {}
+    for h in parsed.get('headers_json', []):
+        for k, v in h.items():
+            headers[k.lower()] = v
+
+    content_type = headers.get('content-type', '').lower()
+    is_dsn = 'multipart/report' in content_type and 'delivery-status' in content_type
+    is_mailer_daemon = 'mailer-daemon' in from_addr or (not from_addr and is_dsn)
+
+    if not (is_dsn or is_mailer_daemon):
+        return
+
+    msg = _email_lib.message_from_bytes(eml_bytes)
+    original_message_id = parsed.get('in_reply_to') or ''
+    bounce_type = 'permanent'
+    recipient = ''
+    reason = ''
+
+    for part in msg.walk():
+        if part.get_content_type() == 'message/delivery-status':
+            try:
+                payload = part.get_payload(decode=False)
+                if isinstance(payload, list):
+                    dsn_text = '\n'.join(
+                        p.as_string() if hasattr(p, 'as_string') else str(p)
+                        for p in payload
+                    )
+                else:
+                    dsn_text = str(payload or '')
+                for line in dsn_text.splitlines():
+                    if ':' not in line:
+                        continue
+                    key, _, val = line.partition(':')
+                    key = key.strip().lower()
+                    val = val.strip()
+                    if key == 'final-recipient' and not recipient:
+                        parts = val.split(';')
+                        recipient = parts[-1].strip() if len(parts) > 1 else val
+                    elif key == 'status':
+                        bounce_type = 'temporary' if val.startswith('4.') else 'permanent'
+                    elif key == 'diagnostic-code' and not reason:
+                        reason = val.split(';', 1)[-1].strip() if ';' in val else val
+                    elif key == 'original-message-id' and not original_message_id:
+                        original_message_id = val.strip('<>')
+            except Exception:
+                pass
+
+    if not recipient:
+        recipient = ', '.join(parsed.get('to_addresses', []))
+    if not reason:
+        reason = (parsed.get('subject') or '').strip()
+
+    try:
+        log_bounce(original_message_id, bounce_type, recipient, reason)
+    except Exception:
+        log.warning("bounce_log write failed for message_id=%s", original_message_id)
 
 
 def _get_domain_config(domain):
@@ -139,6 +201,8 @@ def inbound():
             ))
 
         db.commit()
+
+        _detect_and_log_bounce(eml_bytes, parsed)
 
         quota_row = db.execute(
             "SELECT quota_bytes FROM mailboxes WHERE address=?", (to_address,)

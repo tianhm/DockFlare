@@ -722,6 +722,62 @@ def mail_stats():
         return jsonify({'error': str(e)}), 502
 
 
+@email_bp.route('/logs/send-log', methods=['GET'])
+@login_required
+def email_send_log():
+    import requests
+    token = _generate_jwt(current_user.get_id(), role='admin')
+    if not token:
+        return jsonify({'error': 'JWT configuration missing'}), 500
+    try:
+        resp = requests.get(
+            f"{config.MAIL_MANAGER_INTERNAL_URL}/api/v1/logs/send-log",
+            headers={'Authorization': f'Bearer {token}'},
+            params=request.args,
+            timeout=10,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
+
+@email_bp.route('/logs/bounce-log', methods=['GET'])
+@login_required
+def email_bounce_log():
+    import requests
+    token = _generate_jwt(current_user.get_id(), role='admin')
+    if not token:
+        return jsonify({'error': 'JWT configuration missing'}), 500
+    try:
+        resp = requests.get(
+            f"{config.MAIL_MANAGER_INTERNAL_URL}/api/v1/logs/bounce-log",
+            headers={'Authorization': f'Bearer {token}'},
+            params=request.args,
+            timeout=10,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
+
+@email_bp.route('/logs/stats', methods=['GET'])
+@login_required
+def email_log_stats():
+    import requests
+    token = _generate_jwt(current_user.get_id(), role='admin')
+    if not token:
+        return jsonify({'error': 'JWT configuration missing'}), 500
+    try:
+        resp = requests.get(
+            f"{config.MAIL_MANAGER_INTERNAL_URL}/api/v1/logs/stats",
+            headers={'Authorization': f'Bearer {token}'},
+            timeout=10,
+        )
+        return jsonify(resp.json()), resp.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
+
 def _check_internal_request():
     # Block any request that carries Cloudflare edge headers (all public internet
     # requests via the CF tunnel have CF-Ray; internal Docker requests never do)

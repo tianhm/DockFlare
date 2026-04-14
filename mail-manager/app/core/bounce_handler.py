@@ -9,4 +9,3 @@ def log_bounce(original_message_id, bounce_type, recipient, reason):
         (original_message_id, bounce_type, recipient, reason, datetime.now(timezone.utc).isoformat())
     )
     conn.commit()
-    conn.close()

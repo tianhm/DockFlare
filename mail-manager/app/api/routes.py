@@ -1005,3 +1005,110 @@ def download_attachment(aid):
         download_name=att['filename'],
         mimetype=att['content_type'],
     )
+
+
+@api_bp.route('/logs/send-log', methods=['GET'])
+@admin_required
+def get_send_log():
+    db = get_db()
+    mailbox = request.args.get('mailbox')
+    status = request.args.get('status')
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+        limit = min(200, max(1, int(request.args.get('limit', 50))))
+    except (ValueError, TypeError):
+        page, limit = 1, 50
+    offset = (page - 1) * limit
+
+    conditions = []
+    params = []
+    if mailbox:
+        conditions.append("from_address = ?")
+        params.append(mailbox)
+    if status:
+        conditions.append("status = ?")
+        params.append(status)
+    if date_from:
+        conditions.append("sent_at >= ?")
+        params.append(date_from)
+    if date_to:
+        conditions.append("sent_at <= ?")
+        params.append(date_to + 'T23:59:59')
+
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+    total = db.execute(f"SELECT COUNT(*) FROM send_log {where}", params).fetchone()[0]
+    rows = db.execute(
+        f"SELECT id, message_id, from_address, to_addresses, subject, sent_at, status, error_message FROM send_log {where} ORDER BY sent_at DESC LIMIT ? OFFSET ?",
+        params + [limit, offset],
+    ).fetchall()
+
+    logs = []
+    for row in rows:
+        entry = dict(row)
+        try:
+            entry['to_addresses'] = json.loads(entry['to_addresses'] or '[]')
+        except Exception:
+            entry['to_addresses'] = [entry['to_addresses']] if entry['to_addresses'] else []
+        logs.append(entry)
+
+    return jsonify({"logs": logs, "total": total, "page": page, "limit": limit})
+
+
+@api_bp.route('/logs/bounce-log', methods=['GET'])
+@admin_required
+def get_bounce_log():
+    db = get_db()
+    bounce_type = request.args.get('bounce_type')
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+        limit = min(200, max(1, int(request.args.get('limit', 50))))
+    except (ValueError, TypeError):
+        page, limit = 1, 50
+    offset = (page - 1) * limit
+
+    conditions = []
+    params = []
+    if bounce_type:
+        conditions.append("bounce_type = ?")
+        params.append(bounce_type)
+    if date_from:
+        conditions.append("received_at >= ?")
+        params.append(date_from)
+    if date_to:
+        conditions.append("received_at <= ?")
+        params.append(date_to + 'T23:59:59')
+
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+    total = db.execute(f"SELECT COUNT(*) FROM bounce_log {where}", params).fetchone()[0]
+    rows = db.execute(
+        f"SELECT * FROM bounce_log {where} ORDER BY received_at DESC LIMIT ? OFFSET ?",
+        params + [limit, offset],
+    ).fetchall()
+
+    return jsonify({"logs": [dict(r) for r in rows], "total": total, "page": page, "limit": limit})
+
+
+@api_bp.route('/logs/stats', methods=['GET'])
+@admin_required
+def get_log_stats():
+    db = get_db()
+    total_sent = db.execute("SELECT COUNT(*) FROM send_log WHERE status='sent'").fetchone()[0]
+    total_failed = db.execute("SELECT COUNT(*) FROM send_log WHERE status='failed'").fetchone()[0]
+    total_bounced = db.execute("SELECT COUNT(*) FROM bounce_log").fetchone()[0]
+    bounce_rate = round(total_bounced / total_sent * 100, 2) if total_sent > 0 else 0.0
+    top_reasons = [
+        dict(r) for r in db.execute(
+            "SELECT reason, COUNT(*) as count FROM bounce_log WHERE reason != '' GROUP BY reason ORDER BY count DESC LIMIT 5"
+        ).fetchall()
+    ]
+    return jsonify({
+        "total_sent": total_sent,
+        "total_failed": total_failed,
+        "total_bounced": total_bounced,
+        "bounce_rate": bounce_rate,
+        "top_bounce_reasons": top_reasons,
+    })

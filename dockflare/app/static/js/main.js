@@ -2498,6 +2498,172 @@ async function emailUpdateR2(domain, event) {
     }
 }
 
+let _logCurrentTab = 'outbound';
+let _logCurrentPage = 1;
+
+function emailOpenLogsModal() {
+    _logCurrentTab = 'outbound';
+    _logCurrentPage = 1;
+    document.getElementById('logTabOutbound')?.classList.add('tab-active');
+    document.getElementById('logTabBounce')?.classList.remove('tab-active');
+    document.getElementById('logPanelOutbound')?.classList.remove('hidden');
+    document.getElementById('logPanelBounce')?.classList.add('hidden');
+    document.getElementById('logStatusFilterWrap')?.classList.remove('hidden');
+    document.getElementById('logBounceTypeFilterWrap')?.classList.add('hidden');
+    sessionStorage.setItem('logsModalOpen', '1');
+    document.getElementById('logsModal')?.showModal();
+    emailLoadSendLog(1);
+}
+
+function emailSwitchLogTab(tab) {
+    _logCurrentTab = tab;
+    _logCurrentPage = 1;
+    ['outbound', 'bounce'].forEach(t => {
+        document.getElementById('logTab' + t.charAt(0).toUpperCase() + t.slice(1))?.classList.toggle('tab-active', t === tab);
+        const panel = document.getElementById('logPanel' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (panel) panel.classList.toggle('hidden', t !== tab);
+    });
+    document.getElementById('logStatusFilterWrap')?.classList.toggle('hidden', tab !== 'outbound');
+    document.getElementById('logBounceTypeFilterWrap')?.classList.toggle('hidden', tab !== 'bounce');
+    emailLoadCurrentLog();
+}
+
+function emailLoadCurrentLog() {
+    if (_logCurrentTab === 'outbound') emailLoadSendLog(_logCurrentPage);
+    else if (_logCurrentTab === 'bounce') emailLoadBounceLog(_logCurrentPage);
+}
+
+function emailLogPrevPage() {
+    if (_logCurrentPage > 1) { _logCurrentPage--; emailLoadCurrentLog(); }
+}
+
+function emailLogNextPage() {
+    _logCurrentPage++;
+    emailLoadCurrentLog();
+}
+
+function _logFmtDate(iso) {
+    if (!iso) return '';
+    try { return new Date(iso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }); }
+    catch { return iso; }
+}
+
+function _logUpdatePagination(total, page, limit) {
+    const pages = Math.max(1, Math.ceil(total / limit));
+    const info = document.getElementById('logPageInfo');
+    if (info) info.textContent = `Page ${page} of ${pages} (${total} total)`;
+    const prev = document.getElementById('logPrevBtn');
+    const next = document.getElementById('logNextBtn');
+    if (prev) prev.disabled = page <= 1;
+    if (next) next.disabled = page >= pages;
+    document.getElementById('logPagination')?.classList.remove('hidden');
+}
+
+async function emailLoadSendLog(page) {
+    page = page || 1;
+    const params = new URLSearchParams({ page, limit: 50 });
+    const dateFrom = document.getElementById('logDateFrom')?.value;
+    const dateTo = document.getElementById('logDateTo')?.value;
+    const status = document.getElementById('logStatus')?.value;
+    if (dateFrom) params.set('date_from', dateFrom);
+    if (dateTo) params.set('date_to', dateTo);
+    if (status) params.set('status', status);
+    try {
+        const resp = await fetch('/email/logs/send-log?' + params.toString(), { headers: buildApiHeaders({}) });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const tbody = document.getElementById('logBodyOutbound');
+        const empty = document.getElementById('logEmptyOutbound');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        if (!data.logs || data.logs.length === 0) {
+            if (empty) empty.classList.remove('hidden');
+            _logUpdatePagination(0, page, 50);
+            return;
+        }
+        if (empty) empty.classList.add('hidden');
+        for (const row of data.logs) {
+            const toList = Array.isArray(row.to_addresses) ? row.to_addresses.join(', ') : (row.to_addresses || '');
+            const statusBadge = row.status === 'sent'
+                ? '<span class="badge badge-success badge-sm">sent</span>'
+                : '<span class="badge badge-error badge-sm">failed</span>';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-xs opacity-70 whitespace-nowrap">${_logFmtDate(row.sent_at)}</td>
+                <td class="text-xs max-w-32 truncate">${row.from_address || ''}</td>
+                <td class="text-xs max-w-32 truncate">${toList}</td>
+                <td class="text-xs max-w-40 truncate">${row.subject || ''}</td>
+                <td>${statusBadge}</td>
+                <td class="text-xs max-w-40 truncate opacity-60">${row.error_message || ''}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+        _logUpdatePagination(data.total, page, data.limit);
+    } catch (e) { console.error(e); }
+}
+
+async function emailLoadBounceLog(page) {
+    page = page || 1;
+    const params = new URLSearchParams({ page, limit: 50 });
+    const dateFrom = document.getElementById('logDateFrom')?.value;
+    const dateTo = document.getElementById('logDateTo')?.value;
+    const bounceType = document.getElementById('logBounceType')?.value;
+    if (dateFrom) params.set('date_from', dateFrom);
+    if (dateTo) params.set('date_to', dateTo);
+    if (bounceType) params.set('bounce_type', bounceType);
+    try {
+        const resp = await fetch('/email/logs/bounce-log?' + params.toString(), { headers: buildApiHeaders({}) });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const tbody = document.getElementById('logBodyBounce');
+        const empty = document.getElementById('logEmptyBounce');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        if (!data.logs || data.logs.length === 0) {
+            if (empty) empty.classList.remove('hidden');
+            _logUpdatePagination(0, page, 50);
+            return;
+        }
+        if (empty) empty.classList.add('hidden');
+        for (const row of data.logs) {
+            const typeBadge = row.bounce_type === 'permanent'
+                ? '<span class="badge badge-error badge-sm">permanent</span>'
+                : '<span class="badge badge-warning badge-sm">temporary</span>';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-xs opacity-70 whitespace-nowrap">${_logFmtDate(row.received_at)}</td>
+                <td class="text-xs max-w-40 truncate">${row.recipient || ''}</td>
+                <td>${typeBadge}</td>
+                <td class="text-xs max-w-60 truncate opacity-70">${row.reason || ''}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+        _logUpdatePagination(data.total, page, data.limit);
+    } catch (e) { console.error(e); }
+}
+
+async function emailLoadDeliveryStats() {
+    try {
+        const resp = await fetch('/email/logs/stats', { headers: buildApiHeaders({}) });
+        if (!resp.ok) return;
+        const d = await resp.json();
+        const el = id => document.getElementById(id);
+        if (el('dlStatSent')) el('dlStatSent').textContent = d.total_sent ?? 0;
+        if (el('dlStatFailed')) el('dlStatFailed').textContent = d.total_failed ?? 0;
+        if (el('dlStatBounced')) el('dlStatBounced').textContent = d.total_bounced ?? 0;
+        if (el('dlStatRate')) el('dlStatRate').textContent = (d.bounce_rate ?? 0) + '%';
+        const reasons = document.getElementById('dlTopReasons');
+        if (reasons && d.top_bounce_reasons?.length > 0) {
+            reasons.innerHTML = '<p class="text-sm font-semibold mb-2 opacity-70">Top bounce reasons</p>' +
+                d.top_bounce_reasons.map(r =>
+                    `<div class="flex justify-between text-sm py-1 border-b border-base-300 opacity-70"><span class="truncate mr-4">${r.reason}</span><span class="shrink-0">${r.count}</span></div>`
+                ).join('');
+        } else if (reasons) {
+            reasons.innerHTML = '<p class="text-sm opacity-50">No bounce data yet.</p>';
+        }
+    } catch (e) { console.error(e); }
+}
+
 function emailOpenWebmail() {
     window.location.href = '/email/sso/callback';
 }

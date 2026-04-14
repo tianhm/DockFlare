@@ -1,8 +1,6 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
             <h1 class="text-3xl font-bold">{{ t('email.title') }}</h1>
@@ -178,6 +176,117 @@
 
     <section class="card bg-base-100 shadow-xl mb-8 sm:mb-12 transition-all duration-300 hover:shadow-2xl">
         <div class="card-body">
+            <div class="border-b border-base-300 pb-4 mb-6 flex items-start justify-between gap-4">
+                <div>
+                    <h2 class="card-title text-2xl sm:text-3xl">Delivery Logs</h2>
+                    <p class="text-sm opacity-60 mt-1">Outbound send history and bounce tracking.</p>
+                </div>
+                <button class="btn btn-outline btn-sm shrink-0 mt-1" onclick="emailOpenLogsModal()">Investigate</button>
+            </div>
+            <div class="stats stats-horizontal shadow w-full flex-wrap">
+                <div class="stat">
+                    <div class="stat-title">Total Sent</div>
+                    <div class="stat-value text-success" id="dlStatSent">-</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-title">Failed</div>
+                    <div class="stat-value text-error" id="dlStatFailed">-</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-title">Bounced</div>
+                    <div class="stat-value text-warning" id="dlStatBounced">-</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-title">Bounce Rate</div>
+                    <div class="stat-value text-info" id="dlStatRate">-</div>
+                </div>
+            </div>
+            <div id="dlTopReasons" class="mt-4"></div>
+        </div>
+    </section>
+
+    <dialog id="logsModal" class="modal" onclose="sessionStorage.removeItem('logsModalOpen')">
+        <div class="modal-box w-screen max-w-none h-screen max-h-none rounded-none m-0 flex flex-col">
+            <div class="flex items-center justify-between mb-4 shrink-0">
+                <h3 class="font-bold text-xl">Delivery Log Investigation</h3>
+                <button class="btn btn-sm btn-ghost" onclick="document.getElementById('logsModal').close()">✕</button>
+            </div>
+            <div role="tablist" class="tabs tabs-bordered mb-4 shrink-0">
+                <button role="tab" id="logTabOutbound" class="tab tab-active" onclick="emailSwitchLogTab('outbound')">Outbound Log</button>
+                <button role="tab" id="logTabBounce" class="tab" onclick="emailSwitchLogTab('bounce')">Bounce Log</button>
+            </div>
+            <div class="flex flex-wrap gap-3 mb-4 shrink-0 items-end">
+                <div class="form-control">
+                    <label class="label py-0"><span class="label-text text-xs">From date</span></label>
+                    <input type="date" id="logDateFrom" class="input input-bordered input-sm" onchange="emailLoadCurrentLog()" />
+                </div>
+                <div class="form-control">
+                    <label class="label py-0"><span class="label-text text-xs">To date</span></label>
+                    <input type="date" id="logDateTo" class="input input-bordered input-sm" onchange="emailLoadCurrentLog()" />
+                </div>
+                <div class="form-control" id="logStatusFilterWrap">
+                    <label class="label py-0"><span class="label-text text-xs">Status</span></label>
+                    <select id="logStatus" class="select select-bordered select-sm" onchange="emailLoadCurrentLog()">
+                        <option value="">All</option>
+                        <option value="sent">Sent</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                </div>
+                <div class="form-control hidden" id="logBounceTypeFilterWrap">
+                    <label class="label py-0"><span class="label-text text-xs">Bounce type</span></label>
+                    <select id="logBounceType" class="select select-bordered select-sm" onchange="emailLoadCurrentLog()">
+                        <option value="">All</option>
+                        <option value="permanent">Permanent</option>
+                        <option value="temporary">Temporary</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto">
+                <div id="logPanelOutbound">
+                    <div class="overflow-x-auto">
+                        <table class="table table-sm">
+                            <thead class="sticky top-0 bg-base-100">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>From</th>
+                                    <th>To</th>
+                                    <th>Subject</th>
+                                    <th>Status</th>
+                                    <th>Error</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logBodyOutbound"></tbody>
+                        </table>
+                    </div>
+                    <p id="logEmptyOutbound" class="text-center opacity-50 py-6 hidden">No outbound records found.</p>
+                </div>
+                <div id="logPanelBounce" class="hidden">
+                    <div class="overflow-x-auto">
+                        <table class="table table-sm">
+                            <thead class="sticky top-0 bg-base-100">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Recipient</th>
+                                    <th>Type</th>
+                                    <th>Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logBodyBounce"></tbody>
+                        </table>
+                    </div>
+                    <p id="logEmptyBounce" class="text-center opacity-50 py-6 hidden">No bounce records found.</p>
+                </div>
+            </div>
+            <div class="flex gap-2 justify-center pt-4 shrink-0 items-center border-t border-base-300 mt-2">
+                <button class="btn btn-sm btn-ghost" id="logPrevBtn" onclick="emailLogPrevPage()">←</button>
+                <span id="logPageInfo" class="text-sm opacity-60"></span>
+                <button class="btn btn-sm btn-ghost" id="logNextBtn" onclick="emailLogNextPage()">→</button>
+            </div>
+        </div>
+    </dialog>
+
+    <section class="card bg-base-100 shadow-xl mb-8 sm:mb-12 transition-all duration-300 hover:shadow-2xl">
+        <div class="card-body">
             <div class="border-b border-base-300 pb-4 mb-6">
                 <h2 class="card-title text-2xl sm:text-3xl">{{ t('email.backup_restore') }}</h2>
                 <p class="text-sm opacity-60 mt-1">{{ t('email.backup_restore_description') }}</p>
@@ -239,8 +348,6 @@
     </section>
 
     {% endif %}
-
-</div>
 
 <dialog id="emailAddMailboxModal" class="modal">
     <div class="modal-box">
@@ -328,7 +435,7 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', () => { emailCheckPermissions(); emailLoadOrphanedDomains(); emailLoadStats(); emailLoadMailboxStats(); });
+document.addEventListener('DOMContentLoaded', () => { emailCheckPermissions(); emailLoadOrphanedDomains(); emailLoadStats(); emailLoadMailboxStats(); emailLoadDeliveryStats(); if (sessionStorage.getItem('logsModalOpen')) emailOpenLogsModal(); });
 </script>
 {% endblock %}
 {% endblock %}
