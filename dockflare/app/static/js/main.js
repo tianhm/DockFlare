@@ -456,6 +456,170 @@ function findRowByRuleKey(ruleId) {
     return null;
 }
 
+const emailProgressState = {
+    steps: [],
+    timers: [],
+    autoCloseTimer: null,
+    activeIndex: -1,
+};
+
+const EMAIL_OPERATION_STEPS = {
+    setup_domain: [
+        { key: 'email.progress.step_enable_routing', ms: 3000 },
+        { key: 'email.progress.step_dns_records',    ms: 4000 },
+        { key: 'email.progress.step_r2_bucket',      ms: 3000 },
+        { key: 'email.progress.step_r2_credentials', ms: 2000 },
+        { key: 'email.progress.step_generate_keys',  ms: 2000 },
+        { key: 'email.progress.step_deploy_inbound', ms: 6000 },
+        { key: 'email.progress.step_deploy_outbound',ms: 6000 },
+        { key: 'email.progress.step_restart_container', ms: 3000 },
+    ],
+    create_mailbox: [
+        { key: 'email.progress.step_create_rule',    ms: 3000 },
+        { key: 'email.progress.step_redeploy_inbound', ms: 6000 },
+        { key: 'email.progress.step_restart_container', ms: 3000 },
+    ],
+    delete_mailbox: [
+        { key: 'email.progress.step_remove_rule',    ms: 3000 },
+        { key: 'email.progress.step_redeploy_inbound', ms: 6000 },
+        { key: 'email.progress.step_restart_container', ms: 3000 },
+    ],
+    repair_dns: [
+        { key: 'email.progress.step_repair_dns',     ms: 5000 },
+    ],
+    teardown_domain: [
+        { key: 'email.progress.step_remove_rule',    ms: 3000 },
+        { key: 'email.progress.step_delete_workers', ms: 4000 },
+        { key: 'email.progress.step_remove_dns',     ms: 3000 },
+        { key: 'email.progress.step_restart_container', ms: 2000 },
+    ],
+    teardown_all: [
+        { key: 'email.progress.step_remove_rule',    ms: 5000 },
+        { key: 'email.progress.step_delete_workers', ms: 5000 },
+        { key: 'email.progress.step_remove_dns',     ms: 4000 },
+        { key: 'email.progress.step_restart_container', ms: 2000 },
+    ],
+    update_r2: [
+        { key: 'email.progress.step_save_credentials', ms: 2000 },
+        { key: 'email.progress.step_restart_container', ms: 3000 },
+    ],
+    redeploy_workers: [
+        { key: 'email.progress.step_deploy_inbound', ms: 6000 },
+        { key: 'email.progress.step_deploy_outbound',ms: 6000 },
+    ],
+};
+
+function emailProgressShowPanel(title) {
+    const panel = document.getElementById('emailProgressPanel');
+    if (!panel) return;
+    const titleEl = document.getElementById('emailProgressTitle');
+    if (titleEl) titleEl.textContent = title;
+    document.getElementById('emailProgressSteps').innerHTML = '';
+    panel.classList.remove('translate-y-4', 'opacity-0', 'pointer-events-none');
+    panel.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+}
+
+function emailProgressHidePanel() {
+    const panel = document.getElementById('emailProgressPanel');
+    if (!panel) return;
+    emailProgressState.timers.forEach(t => clearTimeout(t));
+    emailProgressState.timers = [];
+    if (emailProgressState.autoCloseTimer) {
+        clearTimeout(emailProgressState.autoCloseTimer);
+        emailProgressState.autoCloseTimer = null;
+    }
+    emailProgressState.steps = [];
+    emailProgressState.activeIndex = -1;
+    panel.classList.add('translate-y-4', 'opacity-0', 'pointer-events-none');
+    panel.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+}
+
+function emailProgressRenderSteps() {
+    const list = document.getElementById('emailProgressSteps');
+    if (!list) return;
+    list.innerHTML = '';
+    for (const step of emailProgressState.steps) {
+        const li = document.createElement('li');
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'w-4 text-center shrink-0 inline-flex items-center justify-center';
+        if (step.status === 'done') {
+            li.className = 'flex items-center gap-2 text-success';
+            iconSpan.textContent = '✓';
+        } else if (step.status === 'error') {
+            li.className = 'flex items-center gap-2 text-error';
+            iconSpan.textContent = '✗';
+        } else if (step.status === 'active') {
+            li.className = 'flex items-center gap-2 text-primary';
+            const spinner = document.createElement('span');
+            spinner.className = 'loading loading-spinner loading-xs';
+            iconSpan.appendChild(spinner);
+        } else {
+            li.className = 'flex items-center gap-2 opacity-40';
+            iconSpan.textContent = '·';
+        }
+        const labelSpan = document.createElement('span');
+        labelSpan.textContent = t(step.key) || step.key;
+        li.appendChild(iconSpan);
+        li.appendChild(labelSpan);
+        list.appendChild(li);
+    }
+}
+
+function _emailProgressActivateStep(index, stepDefs) {
+    if (index >= emailProgressState.steps.length) return;
+    emailProgressState.activeIndex = index;
+    emailProgressState.steps[index].status = 'active';
+    emailProgressRenderSteps();
+    const timer = setTimeout(() => {
+        if (emailProgressState.steps[index]) {
+            emailProgressState.steps[index].status = 'done';
+            emailProgressRenderSteps();
+        }
+        _emailProgressActivateStep(index + 1, stepDefs);
+    }, stepDefs[index].ms);
+    emailProgressState.timers.push(timer);
+}
+
+function emailProgressStart(stepDefs, title) {
+    emailProgressHidePanel();
+    emailProgressState.steps = stepDefs.map(s => ({ key: s.key, status: 'pending' }));
+    emailProgressShowPanel(title);
+    emailProgressRenderSteps();
+    _emailProgressActivateStep(0, stepDefs);
+}
+
+function emailProgressFinish(success) {
+    emailProgressState.timers.forEach(t => clearTimeout(t));
+    emailProgressState.timers = [];
+    if (success) {
+        let delay = 0;
+        for (let i = 0; i < emailProgressState.steps.length; i++) {
+            if (emailProgressState.steps[i].status !== 'done') {
+                const idx = i;
+                const timer = setTimeout(() => {
+                    if (emailProgressState.steps[idx]) {
+                        emailProgressState.steps[idx].status = 'done';
+                        emailProgressRenderSteps();
+                    }
+                }, delay);
+                emailProgressState.timers.push(timer);
+                delay += 150;
+            }
+        }
+        emailProgressState.autoCloseTimer = setTimeout(() => {
+            emailProgressHidePanel();
+            location.reload();
+        }, delay + 1500);
+    } else {
+        const active = emailProgressState.steps.findIndex(s => s.status === 'active');
+        if (active >= 0) emailProgressState.steps[active].status = 'error';
+        for (let i = active + 1; i < emailProgressState.steps.length; i++) {
+            emailProgressState.steps[i].status = 'pending';
+        }
+        emailProgressRenderSteps();
+    }
+}
+
 function handleStructuredStateEvent(message) {
     const eventType = message.type;
     const data = message.data || {};
@@ -493,7 +657,7 @@ function connectStateUpdateSource() {
         return;
     }
 
-    const streamUrl = `${document.baseURI}stream-state-updates`;
+    const streamUrl = `${window.location.origin}/stream-state-updates`;
     if (activeStateEventSource) {
         activeStateEventSource.close();
     }
@@ -1524,6 +1688,8 @@ document.addEventListener('DOMContentLoaded', function() {
     connectStateUpdateSource();
     scheduleServicesSnapshotRefresh();
 
+    document.getElementById('emailProgressClose')?.addEventListener('click', emailProgressHidePanel);
+
     startServerPing();
 
     if (document.getElementById('idp-table-container')) {
@@ -1932,11 +2098,16 @@ async function emailCheckPermissions() {
     }
 }
 
-async function emailSetupDomain() {
+async function emailSetupDomain(event) {
     const select = document.getElementById('emailZoneSelect');
     if (!select || !select.value) return;
     const zoneId = select.value;
     const zoneName = select.options[select.selectedIndex].text;
+    const btn = event?.currentTarget;
+    const originalHTML = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading loading-spinner loading-sm"></span>'; }
+    const title = (t('email.progress.setup_domain') || 'Setting up {zone}').replace('{zone}', zoneName);
+    emailProgressStart(EMAIL_OPERATION_STEPS.setup_domain, title);
     try {
         const response = await fetch('/email/setup-domain', {
             method: 'POST',
@@ -1945,11 +2116,15 @@ async function emailSetupDomain() {
         });
         const data = await response.json();
         if (data.success) {
-            location.reload();
+            emailProgressFinish(true);
         } else {
+            if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
+            emailProgressFinish(false);
             await dfAlert(data.error || 'Error', 'Error');
         }
     } catch (e) {
+        if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
+        emailProgressFinish(false);
         console.error(e);
     }
 }
@@ -2012,18 +2187,23 @@ async function dfConfirmTyped(message, expectedValue, title) {
     });
 }
 
-async function emailTeardownPartial(domain) {
+async function emailTeardownPartial(domain, event) {
     if (!await dfConfirm(t('email.teardown_confirm_remote').replace('{domain}', domain), t('email.teardown_partial'))) return;
-    await _emailTeardown(domain, false);
+    await _emailTeardown(domain, false, event);
 }
 
-async function emailTeardownComplete(domain) {
+async function emailTeardownComplete(domain, event) {
     if (!await dfConfirm(t('email.teardown_confirm_local').replace('{domain}', domain), t('email.teardown_complete'))) return;
     if (!await dfConfirmTyped(t('email.teardown_type_to_confirm').replace('{domain}', domain), domain, t('email.teardown_complete'))) return;
-    await _emailTeardown(domain, true);
+    await _emailTeardown(domain, true, event);
 }
 
-async function _emailTeardown(domain, includeLocalData) {
+async function _emailTeardown(domain, includeLocalData, event) {
+    const btn = event?.currentTarget;
+    const originalHTML = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading loading-spinner loading-sm"></span>'; }
+    const title = (t('email.progress.teardown_domain') || 'Tearing down {zone}').replace('{zone}', domain);
+    emailProgressStart(EMAIL_OPERATION_STEPS.teardown_domain, title);
     try {
         const response = await fetch('/email/teardown-domain', {
             method: 'POST',
@@ -2032,17 +2212,22 @@ async function _emailTeardown(domain, includeLocalData) {
         });
         const data = await response.json();
         if (data.success) {
+            emailProgressFinish(true);
             if (data.errors && data.errors.length > 0) {
                 await dfAlert(t('email.teardown_errors') + '\n' + data.errors.join('\n'), t('email.teardown_complete'));
             }
-            location.reload();
+        } else {
+            if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
+            emailProgressFinish(false);
         }
     } catch (e) {
+        if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
+        emailProgressFinish(false);
         console.error(e);
     }
 }
 
-async function emailNukeAll(includeLocalData) {
+async function emailNukeAll(includeLocalData, event) {
     if (includeLocalData) {
         if (!await dfConfirm(t('email.nuke_all_confirm_1'), t('email.nuke_all_complete'))) return;
         if (!await dfConfirm(t('email.nuke_all_confirm_2'), t('email.nuke_all_complete'))) return;
@@ -2050,9 +2235,10 @@ async function emailNukeAll(includeLocalData) {
     } else {
         if (!await dfConfirm(t('email.nuke_all_confirm_1'), t('email.nuke_all_partial'))) return;
     }
-    const feedback = document.getElementById('emailNukeFeedback');
-    feedback.classList.remove('hidden', 'text-error', 'text-success');
-    feedback.textContent = t('common.loading');
+    const btn = event?.currentTarget;
+    const originalHTML = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading loading-spinner loading-sm"></span>'; }
+    emailProgressStart(EMAIL_OPERATION_STEPS.teardown_all, t('email.progress.teardown_all') || 'Removing all domains');
     try {
         const response = await fetch('/email/teardown-all', {
             method: 'POST',
@@ -2061,15 +2247,22 @@ async function emailNukeAll(includeLocalData) {
         });
         const data = await response.json();
         if (data.success) {
+            emailProgressFinish(true);
             if (data.errors && data.errors.length > 0) {
+                const feedback = document.getElementById('emailNukeFeedback');
+                feedback.classList.remove('hidden', 'text-error', 'text-success');
                 feedback.classList.add('text-error');
                 feedback.textContent = t('email.teardown_errors') + data.errors.join(', ');
-                setTimeout(() => location.reload(), 3000);
-            } else {
-                location.reload();
             }
+        } else {
+            if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
+            emailProgressFinish(false);
         }
     } catch (e) {
+        if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
+        emailProgressFinish(false);
+        const feedback = document.getElementById('emailNukeFeedback');
+        feedback.classList.remove('hidden', 'text-error', 'text-success');
         feedback.classList.add('text-error');
         feedback.textContent = e.message;
         console.error(e);
@@ -2116,11 +2309,15 @@ async function emailWipeLocal(domain) {
     }
 }
 
-async function emailCreateMailbox() {
+async function emailCreateMailbox(event) {
     const address = document.getElementById('newMailboxAddress').value;
     const domain = document.getElementById('newMailboxDomain').value;
     const name = document.getElementById('newMailboxName').value;
     if (!address || !domain) return;
+    const btn = event?.currentTarget;
+    const originalHTML = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading loading-spinner loading-sm"></span>'; }
+    emailProgressStart(EMAIL_OPERATION_STEPS.create_mailbox, t('email.progress.create_mailbox') || 'Creating mailbox');
     try {
         const response = await fetch('/email/mailbox/create', {
             method: 'POST',
@@ -2128,14 +2325,26 @@ async function emailCreateMailbox() {
             body: JSON.stringify({ address: address + '@' + domain, domain: domain, display_name: name })
         });
         const data = await response.json();
-        if (data.success) location.reload();
+        if (data.success) {
+            emailProgressFinish(true);
+        } else {
+            if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
+            emailProgressFinish(false);
+            if (data.error) await dfAlert(data.error, 'Error');
+        }
     } catch (e) {
+        if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
+        emailProgressFinish(false);
         console.error(e);
     }
 }
 
-async function emailDeleteMailbox(address, domain) {
+async function emailDeleteMailbox(address, domain, event) {
     if (!await dfConfirm('Delete mailbox?', 'Delete')) return;
+    const btn = event?.currentTarget;
+    const originalHTML = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading loading-spinner loading-sm"></span>'; }
+    emailProgressStart(EMAIL_OPERATION_STEPS.delete_mailbox, t('email.progress.delete_mailbox') || 'Deleting mailbox');
     try {
         const response = await fetch('/email/mailbox/delete', {
             method: 'POST',
@@ -2143,13 +2352,23 @@ async function emailDeleteMailbox(address, domain) {
             body: JSON.stringify({ address: address, domain: domain })
         });
         const data = await response.json();
-        if (data.success) location.reload();
+        if (data.success) {
+            emailProgressFinish(true);
+        } else {
+            if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
+            emailProgressFinish(false);
+        }
     } catch (e) {
+        if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
+        emailProgressFinish(false);
         console.error(e);
     }
 }
 
-async function emailVerifyDns(domain) {
+async function emailVerifyDns(domain, event) {
+    const btn = event?.currentTarget;
+    const originalHTML = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading loading-spinner loading-sm"></span>'; }
     try {
         const response = await fetch('/email/verify-dns', {
             method: 'POST',
@@ -2162,14 +2381,20 @@ async function emailVerifyDns(domain) {
         }
     } catch (e) {
         console.error(e);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
     }
 }
 
-async function emailUpdateR2(domain) {
+async function emailUpdateR2(domain, event) {
     const accessKeyId = prompt('R2 Access Key ID (from CF Dashboard → R2 → Manage R2 API Tokens):');
     if (!accessKeyId) return;
     const secretAccessKey = prompt('R2 Secret Access Key:');
     if (!secretAccessKey) return;
+    const btn = event?.currentTarget;
+    const originalHTML = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading loading-spinner loading-sm"></span>'; }
+    emailProgressStart(EMAIL_OPERATION_STEPS.update_r2, t('email.progress.update_r2') || 'Updating R2 credentials');
     try {
         const response = await fetch('/email/update-r2-credentials', {
             method: 'POST',
@@ -2178,12 +2403,16 @@ async function emailUpdateR2(domain) {
         });
         const data = await response.json();
         if (data.success) {
-            await dfAlert('R2 credentials updated and mail-manager restarted.', 'Success');
+            emailProgressFinish(true);
         } else {
+            emailProgressFinish(false);
             await dfAlert('Error: ' + (data.error || 'Unknown'), 'Failed');
         }
     } catch (e) {
+        emailProgressFinish(false);
         console.error(e);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
     }
 }
 
@@ -2191,8 +2420,12 @@ function emailOpenWebmail() {
     window.location.href = '/email/sso/callback';
 }
 
-async function emailRepairDns(domain) {
+async function emailRepairDns(domain, event) {
     if (!confirm(`Re-apply all required DNS records for ${domain}? Missing records (including DKIM) will be added.`)) return;
+    const btn = event?.currentTarget;
+    const originalHTML = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading loading-spinner loading-sm"></span>'; }
+    emailProgressStart(EMAIL_OPERATION_STEPS.repair_dns, t('email.progress.repair_dns') || 'Repairing DNS');
     try {
         const response = await fetch('/email/repair-dns', {
             method: 'POST',
@@ -2201,46 +2434,76 @@ async function emailRepairDns(domain) {
         });
         const data = await response.json();
         if (data.success) {
-            await dfAlert(`DNS records repaired for ${domain}.`, 'Success');
+            emailProgressFinish(true);
         } else {
+            emailProgressFinish(false);
             await dfAlert('Error: ' + (data.error || 'Unknown'), 'Failed');
         }
     } catch (e) {
+        emailProgressFinish(false);
         console.error(e);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
     }
 }
 
 async function emailSetPassword(address, domain) {
-    const password = prompt(`New password for ${address} (min 8 characters):`);
-    if (!password) return;
-    if (password.length < 8) {
-        await dfAlert('Password must be at least 8 characters.', 'Error');
-        return;
-    }
-    const confirmed = prompt('Confirm password:');
-    if (password !== confirmed) {
-        await dfAlert('Passwords do not match.', 'Error');
-        return;
-    }
-    try {
-        const response = await fetch('/email/mailbox/set-password', {
-            method: 'POST',
-            headers: buildApiHeaders({'Content-Type': 'application/json'}),
-            body: JSON.stringify({ address, domain, password })
-        });
-        const data = await response.json();
-        if (data.success) {
-            await dfAlert(`Password set for ${address}.`, 'Success');
-        } else {
-            await dfAlert('Error: ' + (data.error || 'Unknown'), 'Failed');
+    const modal = document.getElementById('emailSetPasswordModal');
+    if (!modal) return;
+    const targetEl = document.getElementById('emailSetPasswordTarget');
+    const newPwEl = document.getElementById('emailSetPasswordNew');
+    const confirmEl = document.getElementById('emailSetPasswordConfirm');
+    const errorEl = document.getElementById('emailSetPasswordError');
+    const submitBtn = document.getElementById('emailSetPasswordSubmitBtn');
+
+    if (targetEl) targetEl.textContent = address;
+    if (newPwEl) newPwEl.value = '';
+    if (confirmEl) confirmEl.value = '';
+    if (errorEl) errorEl.classList.add('hidden');
+
+    modal.showModal();
+    setTimeout(() => newPwEl?.focus(), 100);
+
+    const handler = async () => {
+        submitBtn.removeEventListener('click', handler);
+        const password = newPwEl.value;
+        const confirmed = confirmEl.value;
+        errorEl.classList.add('hidden');
+        if (password.length < 8) {
+            errorEl.textContent = 'Password must be at least 8 characters.';
+            errorEl.classList.remove('hidden');
+            submitBtn.addEventListener('click', handler);
+            return;
         }
-    } catch (e) {
-        console.error(e);
-    }
+        if (password !== confirmed) {
+            errorEl.textContent = 'Passwords do not match.';
+            errorEl.classList.remove('hidden');
+            submitBtn.addEventListener('click', handler);
+            return;
+        }
+        modal.close();
+        try {
+            const response = await fetch('/email/mailbox/set-password', {
+                method: 'POST',
+                headers: buildApiHeaders({'Content-Type': 'application/json'}),
+                body: JSON.stringify({ address, domain, password })
+            });
+            const data = await response.json();
+            if (data.success) {
+                await dfAlert(`Password updated for ${address}.`, 'Success');
+            } else {
+                await dfAlert('Error: ' + (data.error || 'Unknown'), 'Error');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+    submitBtn.addEventListener('click', handler);
 }
 
 async function emailRedeployWorkers() {
     if (!confirm('Redeploy all inbound and outbound workers? This will push the latest worker code and bindings to Cloudflare.')) return;
+    emailProgressStart(EMAIL_OPERATION_STEPS.redeploy_workers, t('email.progress.redeploy_workers') || 'Redeploying workers');
     try {
         const response = await fetch('/email/redeploy-workers', {
             method: 'POST',
@@ -2248,11 +2511,13 @@ async function emailRedeployWorkers() {
         });
         const data = await response.json();
         if (data.success) {
-            await dfAlert('Workers redeployed for: ' + (data.domains || []).join(', '), 'Success');
+            emailProgressFinish(true);
         } else {
+            emailProgressFinish(false);
             await dfAlert('Error: ' + (data.error || 'Unknown'), 'Failed');
         }
     } catch (e) {
+        emailProgressFinish(false);
         console.error(e);
     }
 }

@@ -72,14 +72,18 @@ def setup_email_domain():
     zone_name = data.get('zone_name')
     if not zone_id or not zone_name:
         return jsonify({'success': False, 'error': 'Missing zone info'}), 400
+
     try:
         try:
             email_manager.enable_email_routing(zone_id)
         except Exception as routing_err:
             logging.warning(f"Could not enable email routing via API (may need manual enable in CF Dashboard): {routing_err}")
+
         email_manager.setup_email_dns_records(zone_id, zone_name)
+
         bucket_name = f"dockflare-mail-{zone_name.replace('.', '-')}"
         email_manager.create_r2_bucket(bucket_name)
+
         r2_creds = email_manager.get_r2_s3_credentials()
         r2_access_key_id = r2_creds['access_key_id']
         r2_secret_access_key = r2_creds['secret_access_key']
@@ -91,11 +95,10 @@ def setup_email_domain():
         email_cfg['enabled'] = True
         if 'domains' not in email_cfg:
             email_cfg['domains'] = {}
-            
+
         if 'jwt_signing_key' not in email_cfg:
             private_key = ed25519.Ed25519PrivateKey.generate()
             public_key = private_key.public_key()
-            
             private_bytes = private_key.private_bytes(
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PrivateFormat.PKCS8,
@@ -136,6 +139,7 @@ def setup_email_domain():
             {"type": "plain_text", "name": "ALLOWED_RECIPIENTS", "text": "[]"},
             {"type": "plain_text", "name": "DOMAIN_NAME", "text": zone_name}
         ]
+
         email_manager.deploy_worker(inbound_worker_name, _read_worker_template('inbound_worker.js'), inbound_bindings)
         email_manager.set_worker_cron(inbound_worker_name, ['*/5 * * * *'])
         email_manager.setup_catchall_routing_rule(zone_id, inbound_worker_name)
@@ -144,6 +148,7 @@ def setup_email_domain():
             {"type": "send_email", "name": "SEND_EMAIL"},
             {"type": "secret_text", "name": "AUTH_SECRET", "text": outbound_auth_secret}
         ]
+
         email_manager.deploy_worker(outbound_worker_name, _read_worker_template('outbound_worker.js'), outbound_bindings)
 
         outbound_worker_url = f"https://{outbound_worker_name}.{workers_subdomain}.workers.dev" if workers_subdomain else ''
@@ -167,6 +172,7 @@ def setup_email_domain():
         save_email_config(email_cfg)
         config.EMAIL_ENABLED = True
         current_app.config['EMAIL_ENABLED'] = True
+
         _restart_mail_container()
         return jsonify({'success': True})
     except Exception as e:
@@ -239,8 +245,11 @@ def teardown_domain():
     email_cfg = config.EMAIL_CONFIG.copy()
     if 'domains' not in email_cfg or zone_name not in email_cfg['domains']:
         return jsonify({'success': False, 'error': 'Domain not found'}), 404
+
     domain_cfg = email_cfg['domains'][zone_name]
+
     errors = _teardown_domain_remote(zone_name, domain_cfg)
+
     if include_local:
         token = _generate_jwt(current_user.get_id(), role='admin')
         if token:
@@ -255,11 +264,13 @@ def teardown_domain():
                     errors.append(f"Local wipe: {resp.text}")
             except Exception as e:
                 errors.append(f"Local wipe: {e}")
+
     del email_cfg['domains'][zone_name]
     if not email_cfg.get('domains'):
         config.EMAIL_ENABLED = False
         current_app.config['EMAIL_ENABLED'] = False
     save_email_config(email_cfg)
+
     _restart_mail_container()
     return jsonify({'success': True, 'errors': errors})
 
@@ -271,8 +282,10 @@ def teardown_all():
     include_local = data.get('include_local_data', False)
     email_cfg = config.EMAIL_CONFIG.copy()
     errors = []
+
     for domain, domain_cfg in list(email_cfg.get('domains', {}).items()):
         errors.extend(_teardown_domain_remote(domain, domain_cfg))
+
     if include_local:
         token = _generate_jwt(current_user.get_id(), role='admin')
         if token:
@@ -286,10 +299,12 @@ def teardown_all():
                     errors.append(f"Local wipe-all: {resp.text}")
             except Exception as e:
                 errors.append(f"Local wipe-all: {e}")
+
     email_cfg['domains'] = {}
     config.EMAIL_ENABLED = False
     current_app.config['EMAIL_ENABLED'] = False
     save_email_config(email_cfg)
+
     _restart_mail_container()
     return jsonify({'success': True, 'errors': errors})
 
@@ -383,7 +398,6 @@ def create_mailbox():
     try:
         res = email_manager.create_email_routing_rule(zone_id, address, worker_name)
         rule_id = res.get('result', {}).get('id', '')
-
         email_cfg['domains'][domain]['mailboxes'][address] = {
             'display_name': display_name,
             'routing_rule_id': rule_id,
@@ -402,7 +416,7 @@ def delete_mailbox():
     data = request.get_json(force=True, silent=True) or {}
     address = data.get('address')
     domain = data.get('domain')
-    
+
     email_cfg = config.EMAIL_CONFIG.copy()
     if 'domains' in email_cfg and domain in email_cfg['domains']:
         if address in email_cfg['domains'][domain]['mailboxes']:
@@ -447,6 +461,7 @@ def update_r2_credentials():
     email_cfg = config.EMAIL_CONFIG.copy()
     if 'domains' not in email_cfg or zone_name not in email_cfg['domains']:
         return jsonify({'success': False, 'error': 'Domain not configured'}), 404
+
     email_cfg['domains'][zone_name]['r2_access_key_id'] = access_key_id
     email_cfg['domains'][zone_name]['r2_secret_access_key'] = secret_access_key
     save_email_config(email_cfg)
