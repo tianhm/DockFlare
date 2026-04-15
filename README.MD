@@ -108,6 +108,7 @@ For full setup documentation, use the project docs site:
   - `Account:Access: Service Tokens:Edit`
   - `Account:Email:Edit`
   - `Account:Workers Scripts:Edit`
+  - `Account:Workers KV Storage:Edit`
   - `Account:R2:Edit`
   - `Zone:Zone:Read`
   - `Zone:DNS:Edit`
