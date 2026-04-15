@@ -17,10 +17,22 @@ function updateBadge(count: number) {
   }
 }
 
+async function getPushIntervalMs(): Promise<number> {
+  try {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.getSubscription()
+      if (sub) return 300_000
+    }
+  } catch { /* SW not available */ }
+  return 30_000 + Math.random() * 20_000 - 10_000
+}
+
 export function useMailPolling() {
   const mailStore = useMailStore()
   const lastSeen = ref<Record<string, string | null>>({})
   const initialized = ref(false)
+  let intervalId: ReturnType<typeof setInterval> | null = null
 
   const poll = async () => {
     if (mailStore.mailboxes.length === 0) return
@@ -53,9 +65,15 @@ export function useMailPolling() {
               const mRes = await mailApi.getMessages(s.address, {
                 folder: mailStore.currentFolder,
                 order: mailStore.sortOrder,
+                page: 1,
+                per_page: 50,
               })
               const payload = mRes.data
-              mailStore.messages = Array.isArray(payload) ? payload : payload.items || []
+              const items: any[] = Array.isArray(payload) ? payload : payload.items || []
+              mailStore.messages = items
+              mailStore.totalMessages = payload.total ?? items.length
+              mailStore.messagesPage = 1
+              mailStore.hasMoreMessages = items.length === 50
             } catch { /* network error — skip */ }
 
             try {
@@ -88,6 +106,22 @@ export function useMailPolling() {
     }
   }
 
+  const startInterval = async () => {
+    if (intervalId) clearInterval(intervalId)
+    const ms = await getPushIntervalMs()
+    intervalId = setInterval(poll, ms)
+  }
+
+  const onVisibilityChange = () => {
+    if (document.visibilityState === 'hidden') {
+      if (intervalId) { clearInterval(intervalId); intervalId = null }
+    } else {
+      poll()
+      startInterval()
+    }
+  }
+  document.addEventListener('visibilitychange', onVisibilityChange)
+
   watch(
     () => mailStore.mailboxes,
     (boxes) => {
@@ -96,6 +130,10 @@ export function useMailPolling() {
     { immediate: true }
   )
 
-  const interval = setInterval(poll, 30_000)
-  onUnmounted(() => clearInterval(interval))
+  startInterval()
+
+  onUnmounted(() => {
+    if (intervalId) clearInterval(intervalId)
+    document.removeEventListener('visibilitychange', onVisibilityChange)
+  })
 }

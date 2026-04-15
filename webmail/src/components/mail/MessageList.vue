@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Search, ArrowDownUp, Trash2 } from 'lucide-vue-next'
+import { ArrowDownUp, Trash2 } from 'lucide-vue-next'
 import {
   TabsRoot, TabsList, TabsTrigger, TabsContent,
 } from 'radix-vue'
@@ -10,38 +10,25 @@ import {
 import { useMailStore } from '../../stores/mail'
 import { mailApi } from '../../api/mail'
 import MessageListItem from './MessageListItem.vue'
-import Separator from '../ui/Separator.vue'
-import Input from '../ui/Input.vue'
+import SearchBar from './SearchBar.vue'
 import Dialog from '../ui/Dialog.vue'
 import Button from '../ui/Button.vue'
 
 const store = useMailStore()
-const searchValue = ref('')
 const showTrashConfirm = ref(false)
 
 const folderColor = computed(() => store.currentFolderObj?.color || '')
 
-const filteredMessages = computed(() => {
-  const q = searchValue.value.trim().toLowerCase()
-  if (!q) return store.messages
-  return store.messages.filter((m: any) =>
-    (m.from_name || '').toLowerCase().includes(q) ||
-    (m.from_address || '').toLowerCase().includes(q) ||
-    (m.subject || '').toLowerCase().includes(q) ||
-    (m.text_body || '').toLowerCase().includes(q)
-  )
-})
-
 const unreadMessages = computed(() =>
-  filteredMessages.value.filter((m: any) => !m.is_read)
+  store.messages.filter((m: any) => !m.is_read)
 )
 
 const starredMessages = computed(() =>
-  filteredMessages.value.filter((m: any) => m.is_starred)
+  store.messages.filter((m: any) => m.is_starred)
 )
 
 const displayMessages = computed(() => {
-  let msgs = filteredMessages.value
+  let msgs = store.messages as any[]
   if (store.activeTab === 'unread') msgs = unreadMessages.value
   else if (store.activeTab === 'starred') msgs = starredMessages.value
 
@@ -140,10 +127,7 @@ const performEmptyTrash = async () => {
       </div>
     </div>
     <div class="bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div class="relative">
-        <Search class="absolute left-2 top-2.5 size-4 text-muted-foreground" />
-        <Input v-model="searchValue" placeholder="Search" class="pl-8" />
-      </div>
+      <SearchBar />
     </div>
 
     <TabsContent value="all" class="m-0 flex-1 overflow-hidden">
@@ -167,6 +151,14 @@ const performEmptyTrash = async () => {
               <div v-if="displayMessages.length === 0" class="p-8 text-center text-muted-foreground">
                 No messages found.
               </div>
+              <button
+                v-if="store.hasMoreMessages && !store.messagesLoading"
+                class="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                :disabled="store.isFetchingNextPage"
+                @click="store.loadMore()"
+              >
+                {{ store.isFetchingNextPage ? 'Loading…' : 'Load more' }}
+              </button>
             </template>
           </div>
         </ScrollAreaViewport>
@@ -197,6 +189,14 @@ const performEmptyTrash = async () => {
               <div v-if="displayMessages.length === 0" class="p-8 text-center text-muted-foreground">
                 No unread messages.
               </div>
+              <button
+                v-if="store.hasMoreMessages && !store.messagesLoading"
+                class="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                :disabled="store.isFetchingNextPage"
+                @click="store.loadMore()"
+              >
+                {{ store.isFetchingNextPage ? 'Loading…' : 'Load more' }}
+              </button>
             </template>
           </div>
         </ScrollAreaViewport>
@@ -227,6 +227,14 @@ const performEmptyTrash = async () => {
               <div v-if="displayMessages.length === 0" class="p-8 text-center text-muted-foreground">
                 No starred messages.
               </div>
+              <button
+                v-if="store.hasMoreMessages && !store.messagesLoading"
+                class="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                :disabled="store.isFetchingNextPage"
+                @click="store.loadMore()"
+              >
+                {{ store.isFetchingNextPage ? 'Loading…' : 'Load more' }}
+              </button>
             </template>
           </div>
         </ScrollAreaViewport>

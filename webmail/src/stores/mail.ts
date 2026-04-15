@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, shallowRef, computed } from 'vue'
 import type { Mailbox, Folder, Message, Toast, ComposeDefaults } from '../types/mail'
 
 export const useMailStore = defineStore('mail', () => {
@@ -7,7 +7,11 @@ export const useMailStore = defineStore('mail', () => {
   const currentMailbox = ref<string>('')
   const folders = ref<Folder[]>([])
   const currentFolder = ref<string>('')
-  const messages = ref<Message[]>([])
+  const messages = shallowRef<Message[]>([])
+  const totalMessages = ref(0)
+  const hasMoreMessages = ref(false)
+  const messagesPage = ref(1)
+  const isFetchingNextPage = ref(false)
   const currentMessage = ref<Message | null>(null)
   const messagesLoading = ref(false)
   const isComposeOpen = ref(false)
@@ -23,11 +27,20 @@ export const useMailStore = defineStore('mail', () => {
   const toast = ref<Toast | null>(null)
 
   let toastTimer: ReturnType<typeof setTimeout> | null = null
+  let _loadMore: (() => void) | null = null
 
   function showToast(message: string, type: Toast['type'] = 'error') {
     if (toastTimer) clearTimeout(toastTimer)
     toast.value = { message, type }
     toastTimer = setTimeout(() => { toast.value = null }, 4000)
+  }
+
+  function registerLoadMore(fn: () => void) {
+    _loadMore = fn
+  }
+
+  function loadMore() {
+    if (_loadMore) _loadMore()
   }
 
   const unreadMessages = computed(() =>
@@ -61,12 +74,14 @@ export const useMailStore = defineStore('mail', () => {
   return {
     mailboxes, currentMailbox,
     folders, currentFolder, currentFolderObj,
-    messages, currentMessage, messagesLoading,
+    messages, totalMessages, hasMoreMessages, messagesPage, isFetchingNextPage,
+    currentMessage, messagesLoading,
     isComposeOpen, isComposeFullView, isSettingsOpen, composeDefaults, composeBody,
     activeTab, isCollapsed,
     sortOrder, isDark, toggleTheme,
     viewMode, toggleViewMode,
     unreadMessages, starredMessages,
     toast, showToast,
+    registerLoadMore, loadMore,
   }
 })

@@ -18,20 +18,37 @@ const showNotifPrompt = ref(false)
 
 let mailboxLoadSeq = 0
 
-const loadMessages = async (addr: string, folder: string) => {
+const loadMessages = async (addr: string, folder: string, page = 1) => {
   if (!addr || !folder) return
-  store.messagesLoading = true
+  if (page === 1) {
+    store.messagesLoading = true
+    store.messages = []
+    store.messagesPage = 1
+  } else {
+    store.isFetchingNextPage = true
+  }
   try {
-    const mRes = await mailApi.getMessages(addr, { folder, order: store.sortOrder })
+    const mRes = await mailApi.getMessages(addr, { folder, order: store.sortOrder, page, per_page: 50 })
     const payload = mRes.data
-    store.messages = Array.isArray(payload) ? payload : payload.items || []
-    store.currentMessage = null
+    const items: any[] = Array.isArray(payload) ? payload : payload.items || []
+    store.messages = page === 1 ? items : [...store.messages, ...items]
+    store.totalMessages = payload.total ?? items.length
+    store.messagesPage = page
+    store.hasMoreMessages = items.length === 50
+    if (page === 1) store.currentMessage = null
   } catch {
     store.showToast('Failed to load messages')
   } finally {
     store.messagesLoading = false
+    store.isFetchingNextPage = false
   }
 }
+
+store.registerLoadMore(() => {
+  if (store.hasMoreMessages && !store.isFetchingNextPage) {
+    loadMessages(store.currentMailbox, store.currentFolder, store.messagesPage + 1)
+  }
+})
 
 async function enableNotifications() {
   await notificationsStore.requestPermission()
