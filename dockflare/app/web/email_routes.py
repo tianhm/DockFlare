@@ -497,28 +497,11 @@ def set_mailbox_quota():
             pass
 
     kv_ns_id = email_cfg['domains'][domain].get('quota_kv_namespace_id')
-    if kv_ns_id and quota_bytes and quota_bytes > 0 and token:
+    if kv_ns_id:
         try:
-            current_size = 0
-            mb_resp = requests.get(
-                f"{config.MAIL_MANAGER_INTERNAL_URL}/api/v1/mailboxes",
-                headers={'Authorization': f'Bearer {token}'},
-                timeout=5,
-            )
-            if mb_resp.ok:
-                for mb in mb_resp.json():
-                    if mb.get('address') == address:
-                        current_size = mb.get('storage_bytes', 0)
-                        break
-            grace = max(int(quota_bytes * 0.15), 10 * 1024 * 1024)
-            email_manager.update_kv_entry(kv_ns_id, address, {
-                "hard_limit_bytes": quota_bytes + grace,
-                "current_size_bytes": current_size,
-            })
+            email_manager.delete_kv_entry(kv_ns_id, address)
         except Exception as e:
-            logging.warning(f"Could not update quota KV for {address}: {e}")
-    elif kv_ns_id and quota_bytes == 0:
-        email_manager.delete_kv_entry(kv_ns_id, address)
+            logging.warning(f"Could not unblock quota KV for {address}: {e}")
 
     return jsonify({'success': True})
 
@@ -1154,29 +1137,24 @@ def quota_kv_sync():
     data = request.get_json(force=True, silent=True) or {}
     domain = data.get('domain')
     address = data.get('address')
-    current_size_bytes = data.get('current_size_bytes', 0)
-    if not domain or not address:
-        return jsonify({'error': 'missing domain or address'}), 400
+    action = data.get('action')
+    if not domain or not address or action not in ('block', 'unblock'):
+        return jsonify({'error': 'missing domain, address, or valid action'}), 400
     cfg = config.EMAIL_CONFIG
     if not cfg or domain not in cfg.get('domains', {}):
         return jsonify({'status': 'domain_not_found'}), 200
-    d = cfg['domains'][domain]
-    kv_ns_id = d.get('quota_kv_namespace_id')
+    kv_ns_id = cfg['domains'][domain].get('quota_kv_namespace_id')
     if not kv_ns_id:
         return jsonify({'status': 'no_kv'}), 200
-    quota_bytes = d.get('mailboxes', {}).get(address, {}).get('quota_bytes', 0)
-    if not quota_bytes or quota_bytes <= 0:
-        return jsonify({'status': 'unlimited'}), 200
-    grace = max(int(quota_bytes * 0.15), 10 * 1024 * 1024)
     try:
-        email_manager.update_kv_entry(kv_ns_id, address, {
-            "hard_limit_bytes": quota_bytes + grace,
-            "current_size_bytes": current_size_bytes,
-        })
+        if action == 'block':
+            email_manager.update_kv_entry(kv_ns_id, address, {"blocked": True})
+        else:
+            email_manager.delete_kv_entry(kv_ns_id, address)
     except Exception as e:
-        logging.warning(f"quota-kv-sync failed for {address}: {e}")
+        logging.warning(f"quota-kv-sync {action} failed for {address}: {e}")
         return jsonify({'error': str(e)}), 500
-    return jsonify({'status': 'ok'})
+    return jsonify({'status': 'ok', 'action': action})
 
 
 def _restart_mail_container():

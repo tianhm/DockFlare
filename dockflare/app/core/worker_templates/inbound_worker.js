@@ -42,14 +42,10 @@ export default {
       // Check quota KV before accepting — reject at SMTP level so sender gets a bounce
       if (typeof env.QUOTA_KV !== 'undefined') {
         try {
-          const quota = await env.QUOTA_KV.get(message.to, "json");
-          if (quota && quota.hard_limit_bytes > 0) {
-            const currentSize = quota.current_size_bytes || 0;
-            const msgSize = message.rawSize || 0;
-            if (currentSize + msgSize > quota.hard_limit_bytes) {
-              message.setReject("550 5.2.2 Mailbox full");
-              return;
-            }
+          const state = await env.QUOTA_KV.get(message.to, "json");
+          if (state?.blocked) {
+            message.setReject("550 5.2.2 Mailbox full");
+            return;
           }
         } catch (kvErr) {
           // KV unavailable — fall through, webhook safety net handles enforcement
@@ -84,16 +80,24 @@ export default {
 
       try {
         const webhookResponse = await dispatchWebhook(env, payload);
-        if (!webhookResponse.ok) {
+        if (webhookResponse.ok) {
+          const body = await webhookResponse.json().catch(() => ({}));
+          if (body.reason === 'over_hard_quota') {
+            // Mail Manager rejected the email (hard quota exceeded) and already cleaned
+            // up R2 + the DB entry. Reject at SMTP level so sender gets an NDR bounce.
+            message.setReject("550 5.2.2 Mailbox full");
+            return;
+          }
+          // On success the mail-manager deletes the R2 file itself after processing.
+        } else {
           // DockFlare returned an error — leave email in R2 for cron retry.
           // The email is safely buffered and will be delivered
           // automatically when DockFlare is healthy again.
           console.warn(`Webhook returned ${webhookResponse.status} for ${messageId} — buffered in R2 for retry`);
         }
-        // On success the mail-manager deletes the R2 file itself after processing.
       } catch (webhookErr) {
         // DockFlare is unreachable (offline, timeout, network error).
-        // Email is already in R2. Cron will retry. Do NOT reject. best showerthought
+        // Email is already in R2. Cron will retry. Do NOT reject.
         console.warn(`Webhook unreachable for ${messageId} — buffered in R2 for retry: ${webhookErr.message}`);
       }
 
@@ -136,8 +140,16 @@ export default {
         try {
           const response = await dispatchWebhook(env, payload);
           if (response.ok) {
-            console.log(`Cron: delivered buffered email ${messageId} to DockFlare`);
-            processed++;
+            const body = await response.json().catch(() => ({}));
+            if (body.reason === 'over_hard_quota') {
+              // Mailbox was full when cron retried — webhook already cleaned R2 + set KV block.
+              // Count as processed (not a retry-able failure).
+              console.warn(`Cron: buffered email ${messageId} rejected (over_hard_quota) — R2 cleaned by Mail Manager`);
+              processed++;
+            } else {
+              console.log(`Cron: delivered buffered email ${messageId} to DockFlare`);
+              processed++;
+            }
           } else {
             const body = await response.text().catch(() => '');
             console.warn(`Cron: webhook returned ${response.status} for ${messageId}: ${body.slice(0, 100)}`);

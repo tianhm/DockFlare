@@ -23,6 +23,21 @@ _EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 _MAX_BODY_LEN = 1_000_000
 
 
+def _post_quota_kv_action(address, action):
+    master_url = os.environ.get('DOCKFLARE_MASTER_URL', '').rstrip('/')
+    if not master_url:
+        return
+    try:
+        http_requests.post(
+            f"{master_url}/email/internal/quota-kv-sync",
+            json={'domain': address.split('@')[1], 'address': address, 'action': action},
+            headers={'X-Bootstrap-Token': os.environ.get('INTERNAL_BOOTSTRAP_SECRET', '')},
+            timeout=3,
+        )
+    except Exception:
+        pass
+
+
 def _paginated(items, total, page, per_page):
     return jsonify({
         "items": items,
@@ -400,12 +415,20 @@ def delete_message(address, msg_id):
         if msg['has_attachments']:
             shutil.rmtree(os.path.join(config.ATTACHMENTS_PATH, str(msg_id)), ignore_errors=True)
         db.execute("DELETE FROM messages WHERE id=?", (msg_id,))
+        db.commit()
+        quota_row = db.execute("SELECT quota_bytes FROM mailboxes WHERE address=?", (address,)).fetchone()
+        if quota_row and quota_row['quota_bytes'] and quota_row['quota_bytes'] > 0:
+            new_size = int(db.execute(
+                "SELECT COALESCE(SUM(size_bytes),0) FROM messages WHERE mailbox_address=? AND is_system=0",
+                (address,)
+            ).fetchone()[0])
+            if new_size < quota_row['quota_bytes']:
+                _post_quota_kv_action(address, 'unblock')
     else:
         db.execute(
             "UPDATE messages SET folder_id=? WHERE id=?", (trash_id, msg_id)
         )
-
-    db.commit()
+        db.commit()
     return jsonify({"status": "deleted"})
 
 
@@ -626,6 +649,14 @@ def empty_folder(address, fid):
         shutil.rmtree(os.path.join(config.ATTACHMENTS_PATH, str(msg['id'])), ignore_errors=True)
     db.execute("DELETE FROM messages WHERE folder_id=? AND mailbox_address=?", (fid, address))
     db.commit()
+    quota_row = db.execute("SELECT quota_bytes FROM mailboxes WHERE address=?", (address,)).fetchone()
+    if quota_row and quota_row['quota_bytes'] and quota_row['quota_bytes'] > 0:
+        new_size = int(db.execute(
+            "SELECT COALESCE(SUM(size_bytes),0) FROM messages WHERE mailbox_address=? AND is_system=0",
+            (address,)
+        ).fetchone()[0])
+        if new_size < quota_row['quota_bytes']:
+            _post_quota_kv_action(address, 'unblock')
     return jsonify({"status": "emptied"})
 
 

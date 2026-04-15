@@ -381,6 +381,17 @@ def inbound():
                     delete_from_r2(r2_key, domain_cfg)
                 except Exception:
                     pass
+                master_url = os.environ.get('DOCKFLARE_MASTER_URL', '').rstrip('/')
+                if master_url:
+                    try:
+                        _http_requests.post(
+                            f"{master_url}/email/internal/quota-kv-sync",
+                            json={'domain': to_address.split('@')[1], 'address': to_address, 'action': 'block'},
+                            headers={'X-Bootstrap-Token': os.environ.get('INTERNAL_BOOTSTRAP_SECRET', '')},
+                            timeout=3,
+                        )
+                    except Exception:
+                        pass
                 return jsonify({"status": "rejected", "reason": "over_hard_quota"}), 200
 
         send_push_notifications(to_address, {
@@ -390,26 +401,6 @@ def inbound():
             'mailbox': to_address,
         })
         _check_and_send_auto_reply(db, to_address, parsed, domain_cfg)
-
-        master_url = os.environ.get('DOCKFLARE_MASTER_URL', '').rstrip('/')
-        if master_url:
-            try:
-                current_size = db.execute(
-                    "SELECT COALESCE(SUM(size_bytes),0) FROM messages WHERE mailbox_address=? AND is_system=0",
-                    (to_address,)
-                ).fetchone()[0]
-                _http_requests.post(
-                    f"{master_url}/email/internal/quota-kv-sync",
-                    json={
-                        'domain': to_address.split('@')[1],
-                        'address': to_address,
-                        'current_size_bytes': int(current_size),
-                    },
-                    headers={'X-Bootstrap-Token': os.environ.get('INTERNAL_BOOTSTRAP_SECRET', '')},
-                    timeout=3,
-                )
-            except Exception:
-                pass
 
         delete_from_r2(r2_key, domain_cfg)
 
