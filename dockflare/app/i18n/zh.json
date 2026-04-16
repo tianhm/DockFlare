@@ -764,6 +764,7 @@
     "email.container_stopped": "Mail Manager or Webmail stopped",
     "email.container_missing_title": "Email Services Not Found",
     "email.container_missing_desc": "The email services are not present in your Docker setup. Update your docker-compose.yml to include the email profile services.",
+    "email.container_missing_compose_btn": "Copy latest docker-compose.yml",
     "email.webmail_link": "Open Webmail",
     "email.container_status": "Container Status",
     "email.statistics": "Statistics",

@@ -2070,6 +2070,14 @@ async function deleteIdP(friendlyName) {
     }
 }
 
+async function emailCopyCompose(btn) {
+    const content = document.getElementById('composeContent').innerText;
+    await navigator.clipboard.writeText(content);
+    const original = btn.innerText;
+    btn.innerText = 'Copied!';
+    setTimeout(() => { btn.innerText = original; }, 2000);
+}
+
 async function emailCheckPermissions() {
     try {
         const response = await fetch('/email/check-permissions', {
