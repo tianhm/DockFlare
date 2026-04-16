@@ -85,7 +85,7 @@ pygments==2.20.0
     # via
     #   -r dockflare/requirements.in
     #   rich
-pymdown-extensions==10.16.1
+pymdown-extensions==10.21.2
     # via -r dockflare/requirements.in
 python-dotenv==1.1.1
     # via -r dockflare/requirements.in
