@@ -20,10 +20,9 @@ from flask import request
 from app import config
 
 def is_safe_url(target):
-    """
-    Checks if a URL is safe for redirection.
-    """
     if not target:
+        return False
+    if len(target) > 1 and target[0] == '/' and target[1] == '/':
         return False
     ref_url = urlparse(request.host_url)
     test_url = urlparse(urljoin(request.host_url, target))
