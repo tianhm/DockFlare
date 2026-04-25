@@ -611,3 +611,17 @@ function formatDate(iso: string | null) {
     <p class="text-sm text-muted-foreground">Additional settings are managed in DockFlare Master.</p>
   </div>
 </template>
+
+<style scoped>
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground));
+}
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: hsl(var(--muted-foreground));
+  opacity: 1;
+}
+</style>

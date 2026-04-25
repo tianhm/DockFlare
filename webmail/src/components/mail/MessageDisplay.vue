@@ -541,7 +541,6 @@ const sendInlineReply = async () => {
 
       <AttachmentBar :attachments="message.attachments" />
 
-      <Separator class="mt-auto print-hide" />
 
       <div class="p-4 print-hide">
         <form @submit.prevent="sendInlineReply">
@@ -586,12 +585,16 @@ const sendInlineReply = async () => {
 .df-reply-wrapper :deep(textarea) {
   background: transparent !important;
 }
-:global(.dark) .df-reply-wrapper {
+.dark .df-reply-wrapper {
   background: rgba(255, 255, 255, 0.09);
   border: 1px solid rgba(255, 255, 255, 0.13);
 }
-:global(.dark) .df-reply-wrapper :deep(textarea) {
+.dark .df-reply-wrapper :deep(textarea) {
   color: hsl(210 40% 92%);
   caret-color: hsl(210 40% 92%);
+}
+.dark .df-reply-wrapper :deep(textarea)::placeholder {
+  color: hsl(210 30% 70%);
+  opacity: 1;
 }
 </style>

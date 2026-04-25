@@ -38,7 +38,7 @@ const store = useMailStore()
 .fade-leave-to {
   opacity: 0;
 }
-:global(.dark) .df-settings-dialog {
+.dark .df-settings-dialog {
   background: rgba(10, 20, 44, 0.90) !important;
   border-color: rgba(255,255,255,0.08) !important;
 }

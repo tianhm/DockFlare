@@ -1,6 +1,6 @@
 /// <reference types="../../../node_modules/.vue-global-types/vue_3.5_0_0_0.d.ts" />
 import { computed, ref } from 'vue';
-import { Inbox, FileText, Send, Trash2, AlertCircle, Archive, Folder, FolderPlus, } from 'lucide-vue-next';
+import { Inbox, FileText, Send, Trash2, AlertCircle, Archive, Folder, FolderOpen, FolderPlus, } from 'lucide-vue-next';
 import { TooltipRoot, TooltipTrigger, TooltipContent, TooltipPortal } from 'radix-vue';
 import { cn } from '../../lib/utils';
 import { useMailStore } from '../../stores/mail';
@@ -18,7 +18,7 @@ const PALETTE = [
     '#ef4444', '#f97316', '#eab308', '#22c55e',
     '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6',
 ];
-const getIcon = (name) => iconMap[name] || Folder;
+const getIcon = (name, active = false) => iconMap[name] || (active ? FolderOpen : Folder);
 const systemFolders = computed(() => store.folders.filter((f) => f.system_folder));
 const customFolders = computed(() => store.folders.filter((f) => !f.system_folder));
 const selectFolder = (name) => {
@@ -155,7 +155,7 @@ for (const [f] of __VLS_getVForSourceType(((__VLS_ctx.isCollapsed ? __VLS_ctx.st
                     ? 'df-folder-active'
                     : 'text-muted-foreground')) },
         });
-        const __VLS_8 = ((__VLS_ctx.getIcon(f.name)));
+        const __VLS_8 = ((__VLS_ctx.getIcon(f.name, __VLS_ctx.store.currentFolder === f.name)));
         // @ts-ignore
         const __VLS_9 = __VLS_asFunctionalComponent(__VLS_8, new __VLS_8({
             ...{ class: "size-4" },
@@ -274,15 +274,15 @@ for (const [f] of __VLS_getVForSourceType(((__VLS_ctx.isCollapsed ? __VLS_ctx.st
                 } },
             ...{ class: "flex flex-1 items-center gap-3 px-3 py-2 text-left min-w-0" },
         });
-        const __VLS_20 = ((__VLS_ctx.getIcon(f.name)));
+        const __VLS_20 = ((__VLS_ctx.getIcon(f.name, __VLS_ctx.store.currentFolder === f.name)));
         // @ts-ignore
         const __VLS_21 = __VLS_asFunctionalComponent(__VLS_20, new __VLS_20({
             ...{ class: "size-4 flex-shrink-0" },
-            ...{ style: (f.color ? `color:${f.color}` : '') },
+            ...{ style: (f.color && __VLS_ctx.store.currentFolder !== f.name ? `color:${f.color}` : '') },
         }));
         const __VLS_22 = __VLS_21({
             ...{ class: "size-4 flex-shrink-0" },
-            ...{ style: (f.color ? `color:${f.color}` : '') },
+            ...{ style: (f.color && __VLS_ctx.store.currentFolder !== f.name ? `color:${f.color}` : '') },
         }, ...__VLS_functionalComponentArgsRest(__VLS_21));
         __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
             ...{ class: "truncate" },
@@ -306,7 +306,7 @@ for (const [f] of __VLS_getVForSourceType(((__VLS_ctx.isCollapsed ? __VLS_ctx.st
         }
         if (!f.system_folder) {
             __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-                ...{ class: (__VLS_ctx.cn('absolute right-1 flex gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity rounded px-0.5', __VLS_ctx.store.currentFolder === f.name ? 'bg-primary' : 'bg-accent')) },
+                ...{ class: (__VLS_ctx.cn('absolute right-1 flex gap-0.5 opacity-0 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity rounded px-0.5', __VLS_ctx.store.currentFolder === f.name ? 'bg-primary' : 'bg-accent')) },
             });
             __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElements.button)({
                 ...{ onClick: (...[$event]) => {
@@ -360,9 +360,6 @@ for (const [f] of __VLS_getVForSourceType(((__VLS_ctx.isCollapsed ? __VLS_ctx.st
     }
 }
 if (!__VLS_ctx.isCollapsed && __VLS_ctx.customFolders.length) {
-    __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)({
-        ...{ class: "px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 select-none" },
-    });
     for (const [f] of __VLS_getVForSourceType((__VLS_ctx.customFolders))) {
         (f.name + '-custom');
         if (__VLS_ctx.editingFolder?.id === f.id) {
@@ -431,15 +428,15 @@ if (!__VLS_ctx.isCollapsed && __VLS_ctx.customFolders.length) {
                     } },
                 ...{ class: "flex flex-1 items-center gap-3 px-3 py-2 text-left min-w-0" },
             });
-            const __VLS_28 = ((__VLS_ctx.getIcon(f.name)));
+            const __VLS_28 = ((__VLS_ctx.getIcon(f.name, __VLS_ctx.store.currentFolder === f.name)));
             // @ts-ignore
             const __VLS_29 = __VLS_asFunctionalComponent(__VLS_28, new __VLS_28({
                 ...{ class: "size-4 flex-shrink-0" },
-                ...{ style: (f.color ? `color:${f.color}` : '') },
+                ...{ style: (f.color && __VLS_ctx.store.currentFolder !== f.name ? `color:${f.color}` : '') },
             }));
             const __VLS_30 = __VLS_29({
                 ...{ class: "size-4 flex-shrink-0" },
-                ...{ style: (f.color ? `color:${f.color}` : '') },
+                ...{ style: (f.color && __VLS_ctx.store.currentFolder !== f.name ? `color:${f.color}` : '') },
             }, ...__VLS_functionalComponentArgsRest(__VLS_29));
             __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
                 ...{ class: "truncate" },
@@ -696,15 +693,6 @@ if (!__VLS_ctx.isCollapsed) {
 /** @type {__VLS_StyleScopedClasses['rounded']} */ ;
 /** @type {__VLS_StyleScopedClasses['hover:text-destructive']} */ ;
 /** @type {__VLS_StyleScopedClasses['size-3']} */ ;
-/** @type {__VLS_StyleScopedClasses['px-3']} */ ;
-/** @type {__VLS_StyleScopedClasses['pt-3']} */ ;
-/** @type {__VLS_StyleScopedClasses['pb-1']} */ ;
-/** @type {__VLS_StyleScopedClasses['text-[10px]']} */ ;
-/** @type {__VLS_StyleScopedClasses['font-semibold']} */ ;
-/** @type {__VLS_StyleScopedClasses['uppercase']} */ ;
-/** @type {__VLS_StyleScopedClasses['tracking-widest']} */ ;
-/** @type {__VLS_StyleScopedClasses['text-muted-foreground/60']} */ ;
-/** @type {__VLS_StyleScopedClasses['select-none']} */ ;
 /** @type {__VLS_StyleScopedClasses['rounded-md']} */ ;
 /** @type {__VLS_StyleScopedClasses['border']} */ ;
 /** @type {__VLS_StyleScopedClasses['bg-muted']} */ ;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, type Component } from 'vue'
 import {
-  Inbox, FileText, Send, Trash2, AlertCircle, Archive, Folder,
+  Inbox, FileText, Send, Trash2, AlertCircle, Archive, Folder, FolderOpen,
   FolderPlus, X,
 } from 'lucide-vue-next'
 import { TooltipRoot, TooltipTrigger, TooltipContent, TooltipPortal } from 'radix-vue'
@@ -26,7 +26,7 @@ const PALETTE = [
   '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6',
 ]
 
-const getIcon = (name: string): Component => iconMap[name] || Folder
+const getIcon = (name: string, active = false): Component => iconMap[name] || (active ? FolderOpen : Folder)
 
 const systemFolders = computed(() => store.folders.filter((f: any) => f.system_folder))
 const customFolders = computed(() => store.folders.filter((f: any) => !f.system_folder))
@@ -142,7 +142,7 @@ const confirmEdit = async () => {
               )"
               @click="selectFolder(f.name)"
             >
-              <component :is="getIcon(f.name)" class="size-4" :style="f.color && store.currentFolder !== f.name ? `color:${f.color}` : ''" />
+              <component :is="getIcon(f.name, store.currentFolder === f.name)" class="size-4" :style="f.color && store.currentFolder !== f.name ? `color:${f.color}` : ''" />
               <span class="sr-only">{{ f.name }}</span>
             </button>
           </TooltipTrigger>
@@ -203,7 +203,7 @@ const confirmEdit = async () => {
             class="flex flex-1 items-center gap-3 px-3 py-2 text-left min-w-0"
             @click="selectFolder(f.name)"
           >
-            <component :is="getIcon(f.name)" class="size-4 flex-shrink-0" :style="f.color ? `color:${f.color}` : ''" />
+            <component :is="getIcon(f.name, store.currentFolder === f.name)" class="size-4 flex-shrink-0" :style="f.color && store.currentFolder !== f.name ? `color:${f.color}` : ''" />
             <span class="truncate">{{ f.name }}</span>
             <span
               v-if="f.total_count > 0"
@@ -246,9 +246,8 @@ const confirmEdit = async () => {
         </div>
       </template>
 
-      <!-- Section label: Custom (expanded only) -->
+      <!-- Custom folders (expanded only) -->
       <template v-if="!isCollapsed && customFolders.length">
-        <p class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 select-none">Custom</p>
         <template v-for="f in customFolders" :key="f.name + '-custom'">
           <!-- Expanded row — inline edit mode -->
           <div v-if="editingFolder?.id === f.id" class="rounded-md border bg-muted p-2 flex flex-col gap-2">
@@ -271,7 +270,7 @@ const confirmEdit = async () => {
             )"
           >
             <button class="flex flex-1 items-center gap-3 px-3 py-2 text-left min-w-0" @click="selectFolder(f.name)">
-              <component :is="getIcon(f.name)" class="size-4 flex-shrink-0" :style="f.color ? `color:${f.color}` : ''" />
+              <component :is="getIcon(f.name, store.currentFolder === f.name)" class="size-4 flex-shrink-0" :style="f.color && store.currentFolder !== f.name ? `color:${f.color}` : ''" />
               <span class="truncate">{{ f.name }}</span>
               <span v-if="f.total_count > 0" :class="cn('ml-auto text-xs flex-shrink-0 flex gap-1', store.currentFolder === f.name ? 'opacity-90' : 'text-muted-foreground')">
                 <span v-if="f.unread_count" class="rounded-full px-1.5 py-0.5 text-[10.5px] font-bold leading-none flex items-center" style="background: rgba(251,166,18,0.12); color: #FBA612;">{{ f.unread_count }}</span>

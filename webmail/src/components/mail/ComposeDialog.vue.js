@@ -541,7 +541,8 @@ if (__VLS_ctx.store.isComposeOpen && (__VLS_ctx.effectivePanelMode || !__VLS_ctx
         ...{ onBlur: (__VLS_ctx.toHandlers.onBlur) },
         ...{ onPaste: (__VLS_ctx.toHandlers.onPaste) },
         placeholder: "Add recipient…",
-        ...{ class: "flex-1 min-w-[120px] bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none py-0.5" },
+        ...{ class: "flex-1 min-w-[120px] bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none py-0.5" },
+        ...{ style: {} },
     });
     (__VLS_ctx.toInput);
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -674,7 +675,8 @@ if (__VLS_ctx.store.isComposeOpen && (__VLS_ctx.effectivePanelMode || !__VLS_ctx
         });
         __VLS_asFunctionalElement(__VLS_intrinsicElements.select, __VLS_intrinsicElements.select)({
             value: (__VLS_ctx.fromAddress),
-            ...{ class: "flex-1 px-2 py-2 text-sm bg-background text-foreground focus:outline-none" },
+            ...{ class: "flex-1 px-2 py-2 bg-transparent text-foreground focus:outline-none" },
+            ...{ style: {} },
         });
         __VLS_asFunctionalElement(__VLS_intrinsicElements.option, __VLS_intrinsicElements.option)({
             value: (__VLS_ctx.store.currentMailbox),
@@ -690,7 +692,8 @@ if (__VLS_ctx.store.isComposeOpen && (__VLS_ctx.effectivePanelMode || !__VLS_ctx
     }
     __VLS_asFunctionalElement(__VLS_intrinsicElements.input)({
         placeholder: "Subject",
-        ...{ class: "w-full px-4 py-2 text-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none" },
+        ...{ class: "w-full px-4 py-2 bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none" },
+        ...{ style: {} },
     });
     (__VLS_ctx.subject);
     const __VLS_32 = {}.EditorContent;
@@ -1332,7 +1335,6 @@ if (__VLS_ctx.store.isComposeOpen && (__VLS_ctx.effectivePanelMode || !__VLS_ctx
 /** @type {__VLS_StyleScopedClasses['flex-1']} */ ;
 /** @type {__VLS_StyleScopedClasses['min-w-[120px]']} */ ;
 /** @type {__VLS_StyleScopedClasses['bg-transparent']} */ ;
-/** @type {__VLS_StyleScopedClasses['text-sm']} */ ;
 /** @type {__VLS_StyleScopedClasses['text-foreground']} */ ;
 /** @type {__VLS_StyleScopedClasses['placeholder:text-muted-foreground']} */ ;
 /** @type {__VLS_StyleScopedClasses['focus:outline-none']} */ ;
@@ -1443,15 +1445,13 @@ if (__VLS_ctx.store.isComposeOpen && (__VLS_ctx.effectivePanelMode || !__VLS_ctx
 /** @type {__VLS_StyleScopedClasses['flex-1']} */ ;
 /** @type {__VLS_StyleScopedClasses['px-2']} */ ;
 /** @type {__VLS_StyleScopedClasses['py-2']} */ ;
-/** @type {__VLS_StyleScopedClasses['text-sm']} */ ;
-/** @type {__VLS_StyleScopedClasses['bg-background']} */ ;
+/** @type {__VLS_StyleScopedClasses['bg-transparent']} */ ;
 /** @type {__VLS_StyleScopedClasses['text-foreground']} */ ;
 /** @type {__VLS_StyleScopedClasses['focus:outline-none']} */ ;
 /** @type {__VLS_StyleScopedClasses['w-full']} */ ;
 /** @type {__VLS_StyleScopedClasses['px-4']} */ ;
 /** @type {__VLS_StyleScopedClasses['py-2']} */ ;
-/** @type {__VLS_StyleScopedClasses['text-sm']} */ ;
-/** @type {__VLS_StyleScopedClasses['bg-background']} */ ;
+/** @type {__VLS_StyleScopedClasses['bg-transparent']} */ ;
 /** @type {__VLS_StyleScopedClasses['text-foreground']} */ ;
 /** @type {__VLS_StyleScopedClasses['placeholder:text-muted-foreground']} */ ;
 /** @type {__VLS_StyleScopedClasses['focus:outline-none']} */ ;

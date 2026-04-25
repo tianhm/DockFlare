@@ -183,56 +183,15 @@ const mobileTitle = computed(() => {
         <div class="absolute top-0 left-0 right-0 h-px pointer-events-none z-10" style="background: rgba(255,255,255,0.62)" />
 
         <!-- Header: wordmark + collapse toggle -->
-        <div class="h-[54px] flex items-center px-[14px] flex-shrink-0">
+        <div class="h-[54px] flex items-center justify-center px-[14px] flex-shrink-0">
           <template v-if="!store.isCollapsed">
-            <span class="font-['Outfit'] font-extrabold text-[17px] tracking-[-0.01em] leading-none select-none whitespace-nowrap">
-              <span class="text-[#194466] dark:text-[#5EB1E5]">Dock</span><span class="text-[#FBA612]">Flare</span>
-            </span>
-            <div class="ml-auto flex items-center gap-1">
-              <TooltipRoot :delay-duration="0">
-                <TooltipTrigger as-child>
-                  <button class="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/60 transition-colors" @click="store.toggleViewMode()">
-                    <Columns2 v-if="store.viewMode === 'full'" class="size-3.5" />
-                    <Maximize2 v-else class="size-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipPortal>
-                  <TooltipContent side="bottom" class="z-50 rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
-                    {{ store.viewMode === 'full' ? 'Split view' : 'Full view' }}
-                  </TooltipContent>
-                </TooltipPortal>
-              </TooltipRoot>
-              <TooltipRoot :delay-duration="0">
-                <TooltipTrigger as-child>
-                  <button class="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/60 transition-colors" @click="store.isCollapsed = true">
-                    <PanelLeftClose class="size-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipPortal>
-                  <TooltipContent side="bottom" class="z-50 rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">Collapse sidebar</TooltipContent>
-                </TooltipPortal>
-              </TooltipRoot>
-            </div>
+            <img src="/logo.gif" alt="DockFlare" class="h-7 w-auto select-none" draggable="false" />
           </template>
           <template v-else>
             <span class="font-['Outfit'] font-extrabold text-[15px] leading-none select-none mx-auto">
               <span class="text-[#194466] dark:text-[#5EB1E5]">D</span><span class="text-[#FBA612]">F</span>
             </span>
           </template>
-        </div>
-
-        <!-- Expand button — only when collapsed, below DF logo -->
-        <div v-if="store.isCollapsed" class="flex justify-center pb-1 flex-shrink-0">
-          <TooltipRoot :delay-duration="0">
-            <TooltipTrigger as-child>
-              <button class="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/60 transition-colors" @click="store.isCollapsed = false">
-                <PanelLeftOpen class="size-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipPortal>
-              <TooltipContent side="right" class="z-50 rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">Expand sidebar</TooltipContent>
-            </TooltipPortal>
-          </TooltipRoot>
         </div>
 
         <!-- Mailbox selector — only when multiple mailboxes -->
@@ -273,9 +232,15 @@ const mobileTitle = computed(() => {
           :class="store.isCollapsed
             ? 'flex flex-col items-center gap-1 px-2 py-3 flex-shrink-0'
             : 'px-3 py-3 flex-shrink-0 space-y-0.5'"
-          style="border-top: 1px solid rgba(128,128,128,0.1);"
         >
           <template v-if="!store.isCollapsed">
+            <button
+              class="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors"
+              @click="store.isCollapsed = true"
+            >
+              <PanelLeftClose class="size-4" />
+              Collapse sidebar
+            </button>
             <button
               class="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors"
               @click="store.toggleTheme()"
@@ -300,6 +265,16 @@ const mobileTitle = computed(() => {
             </button>
           </template>
           <template v-else>
+            <TooltipRoot :delay-duration="0">
+              <TooltipTrigger as-child>
+                <button class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent transition-colors" @click="store.isCollapsed = false">
+                  <PanelLeftOpen class="size-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipPortal>
+                <TooltipContent side="right" class="z-50 rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">Expand sidebar</TooltipContent>
+              </TooltipPortal>
+            </TooltipRoot>
             <TooltipRoot :delay-duration="0">
               <TooltipTrigger as-child>
                 <button class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent transition-colors" @click="store.toggleTheme()">
@@ -347,7 +322,7 @@ const mobileTitle = computed(() => {
             :default-size="35"
             :min-size="25"
             class="flex flex-col overflow-hidden"
-            style="background: var(--df-list-bg); backdrop-filter: var(--df-list-blur); box-shadow: 2px 0 10px rgba(0,0,0,0.035);"
+            style="background: var(--df-list-bg); backdrop-filter: var(--df-list-blur);"
           >
             <MessageList />
           </SplitterPanel>

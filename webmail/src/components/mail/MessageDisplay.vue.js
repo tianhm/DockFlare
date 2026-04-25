@@ -334,6 +334,11 @@ let __VLS_components;
 let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['df-reply-wrapper']} */ ;
 /** @type {__VLS_StyleScopedClasses['df-reply-wrapper']} */ ;
+/** @type {__VLS_StyleScopedClasses['df-reply-wrapper']} */ ;
+/** @type {__VLS_StyleScopedClasses['dark']} */ ;
+/** @type {__VLS_StyleScopedClasses['df-reply-wrapper']} */ ;
+/** @type {__VLS_StyleScopedClasses['dark']} */ ;
+/** @type {__VLS_StyleScopedClasses['df-reply-wrapper']} */ ;
 // CSS variable injection 
 // CSS variable injection end 
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -1231,14 +1236,6 @@ if (__VLS_ctx.message) {
     const __VLS_300 = __VLS_299({
         attachments: (__VLS_ctx.message.attachments),
     }, ...__VLS_functionalComponentArgsRest(__VLS_299));
-    /** @type {[typeof Separator, ]} */ ;
-    // @ts-ignore
-    const __VLS_302 = __VLS_asFunctionalComponent(Separator, new Separator({
-        ...{ class: "mt-auto print-hide" },
-    }));
-    const __VLS_303 = __VLS_302({
-        ...{ class: "mt-auto print-hide" },
-    }, ...__VLS_functionalComponentArgsRest(__VLS_302));
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "p-4 print-hide" },
     });
@@ -1253,36 +1250,36 @@ if (__VLS_ctx.message) {
     });
     /** @type {[typeof Textarea, ]} */ ;
     // @ts-ignore
-    const __VLS_305 = __VLS_asFunctionalComponent(Textarea, new Textarea({
+    const __VLS_302 = __VLS_asFunctionalComponent(Textarea, new Textarea({
         modelValue: (__VLS_ctx.replyText),
         ...{ class: "p-2 min-h-[80px] bg-transparent border-0 shadow-none focus-visible:ring-0" },
         placeholder: (`Reply ${__VLS_ctx.message.from_name || __VLS_ctx.message.from_address}...`),
     }));
-    const __VLS_306 = __VLS_305({
+    const __VLS_303 = __VLS_302({
         modelValue: (__VLS_ctx.replyText),
         ...{ class: "p-2 min-h-[80px] bg-transparent border-0 shadow-none focus-visible:ring-0" },
         placeholder: (`Reply ${__VLS_ctx.message.from_name || __VLS_ctx.message.from_address}...`),
-    }, ...__VLS_functionalComponentArgsRest(__VLS_305));
+    }, ...__VLS_functionalComponentArgsRest(__VLS_302));
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: "flex items-center" },
     });
     /** @type {[typeof Button, typeof Button, ]} */ ;
     // @ts-ignore
-    const __VLS_308 = __VLS_asFunctionalComponent(Button, new Button({
+    const __VLS_305 = __VLS_asFunctionalComponent(Button, new Button({
         type: "submit",
         size: "sm",
         ...{ class: "ml-auto" },
         disabled: (__VLS_ctx.sendingReply || !__VLS_ctx.replyText.trim()),
     }));
-    const __VLS_309 = __VLS_308({
+    const __VLS_306 = __VLS_305({
         type: "submit",
         size: "sm",
         ...{ class: "ml-auto" },
         disabled: (__VLS_ctx.sendingReply || !__VLS_ctx.replyText.trim()),
-    }, ...__VLS_functionalComponentArgsRest(__VLS_308));
-    __VLS_310.slots.default;
+    }, ...__VLS_functionalComponentArgsRest(__VLS_305));
+    __VLS_307.slots.default;
     (__VLS_ctx.sendingReply ? 'Sending...' : 'Send');
-    var __VLS_310;
+    var __VLS_307;
 }
 else {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -1515,8 +1512,6 @@ else {
 /** @type {__VLS_StyleScopedClasses['p-4']} */ ;
 /** @type {__VLS_StyleScopedClasses['text-sm']} */ ;
 /** @type {__VLS_StyleScopedClasses['whitespace-pre-wrap']} */ ;
-/** @type {__VLS_StyleScopedClasses['mt-auto']} */ ;
-/** @type {__VLS_StyleScopedClasses['print-hide']} */ ;
 /** @type {__VLS_StyleScopedClasses['p-4']} */ ;
 /** @type {__VLS_StyleScopedClasses['print-hide']} */ ;
 /** @type {__VLS_StyleScopedClasses['grid']} */ ;

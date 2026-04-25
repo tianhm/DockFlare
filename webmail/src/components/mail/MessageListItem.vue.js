@@ -1,7 +1,7 @@
 /// <reference types="../../../node_modules/.vue-global-types/vue_3.5_0_0_0.d.ts" />
 import { computed } from 'vue';
 import { formatDistanceToNow, format } from 'date-fns';
-import { Paperclip, Star } from 'lucide-vue-next';
+import { Paperclip, Star, Check } from 'lucide-vue-next';
 import { TooltipRoot, TooltipTrigger, TooltipContent, TooltipPortal } from 'radix-vue';
 import { cn } from '../../lib/utils';
 import Badge from '../ui/Badge.vue';
@@ -10,6 +10,8 @@ const props = defineProps({
     message: { type: Object, required: true },
     selected: { type: Boolean, default: false },
     folderColor: { type: String, default: '' },
+    bulkSelectMode: { type: Boolean, default: false },
+    isChecked: { type: Boolean, default: false },
 });
 const initials = computed(() => {
     const name = props.message.from_name || props.message.from_address || '?';
@@ -54,6 +56,23 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.button, __VLS_intrinsicElement
     ...{ class: (__VLS_ctx.cn('df-msg-item flex items-start gap-3 rounded-xl p-3 text-left text-sm w-full', __VLS_ctx.selected && 'df-msg-selected')) },
     ...{ style: (__VLS_ctx.folderColor ? `border-left: 3px solid ${__VLS_ctx.folderColor}; border-radius: 12px 0 0 12px;` : '') },
 });
+if (__VLS_ctx.bulkSelectMode) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center mt-2 transition-all" },
+        ...{ class: (__VLS_ctx.isChecked ? 'bg-[#FBA612] border-[#FBA612]' : 'border-muted-foreground/50') },
+    });
+    if (__VLS_ctx.isChecked) {
+        const __VLS_0 = {}.Check;
+        /** @type {[typeof __VLS_components.Check, ]} */ ;
+        // @ts-ignore
+        const __VLS_1 = __VLS_asFunctionalComponent(__VLS_0, new __VLS_0({
+            ...{ class: "size-3 text-white" },
+        }));
+        const __VLS_2 = __VLS_1({
+            ...{ class: "size-3 text-white" },
+        }, ...__VLS_functionalComponentArgsRest(__VLS_1));
+    }
+}
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center text-[13px] font-semibold text-white select-none mt-0.5" },
     ...{ style: {} },
@@ -75,62 +94,62 @@ if (!__VLS_ctx.message.is_read) {
     });
 }
 if (__VLS_ctx.message.is_starred) {
-    const __VLS_0 = {}.Star;
+    const __VLS_4 = {}.Star;
     /** @type {[typeof __VLS_components.Star, ]} */ ;
     // @ts-ignore
-    const __VLS_1 = __VLS_asFunctionalComponent(__VLS_0, new __VLS_0({
-        ...{ class: "flex-shrink-0 size-3 fill-yellow-400 text-yellow-400" },
-    }));
-    const __VLS_2 = __VLS_1({
-        ...{ class: "flex-shrink-0 size-3 fill-yellow-400 text-yellow-400" },
-    }, ...__VLS_functionalComponentArgsRest(__VLS_1));
-}
-if (__VLS_ctx.timestamp) {
-    const __VLS_4 = {}.TooltipRoot;
-    /** @type {[typeof __VLS_components.TooltipRoot, typeof __VLS_components.TooltipRoot, ]} */ ;
-    // @ts-ignore
     const __VLS_5 = __VLS_asFunctionalComponent(__VLS_4, new __VLS_4({
-        delayDuration: (300),
+        ...{ class: "flex-shrink-0 size-3 fill-yellow-400 text-yellow-400" },
     }));
     const __VLS_6 = __VLS_5({
-        delayDuration: (300),
+        ...{ class: "flex-shrink-0 size-3 fill-yellow-400 text-yellow-400" },
     }, ...__VLS_functionalComponentArgsRest(__VLS_5));
-    __VLS_7.slots.default;
-    const __VLS_8 = {}.TooltipTrigger;
-    /** @type {[typeof __VLS_components.TooltipTrigger, typeof __VLS_components.TooltipTrigger, ]} */ ;
+}
+if (__VLS_ctx.timestamp) {
+    const __VLS_8 = {}.TooltipRoot;
+    /** @type {[typeof __VLS_components.TooltipRoot, typeof __VLS_components.TooltipRoot, ]} */ ;
     // @ts-ignore
     const __VLS_9 = __VLS_asFunctionalComponent(__VLS_8, new __VLS_8({
-        asChild: true,
+        delayDuration: (300),
     }));
     const __VLS_10 = __VLS_9({
-        asChild: true,
+        delayDuration: (300),
     }, ...__VLS_functionalComponentArgsRest(__VLS_9));
     __VLS_11.slots.default;
+    const __VLS_12 = {}.TooltipTrigger;
+    /** @type {[typeof __VLS_components.TooltipTrigger, typeof __VLS_components.TooltipTrigger, ]} */ ;
+    // @ts-ignore
+    const __VLS_13 = __VLS_asFunctionalComponent(__VLS_12, new __VLS_12({
+        asChild: true,
+    }));
+    const __VLS_14 = __VLS_13({
+        asChild: true,
+    }, ...__VLS_functionalComponentArgsRest(__VLS_13));
+    __VLS_15.slots.default;
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
         ...{ class: (__VLS_ctx.cn('flex-shrink-0 text-xs cursor-default', __VLS_ctx.selected ? 'text-foreground' : 'text-muted-foreground')) },
     });
     (__VLS_ctx.relativeTime);
-    var __VLS_11;
-    const __VLS_12 = {}.TooltipPortal;
+    var __VLS_15;
+    const __VLS_16 = {}.TooltipPortal;
     /** @type {[typeof __VLS_components.TooltipPortal, typeof __VLS_components.TooltipPortal, ]} */ ;
     // @ts-ignore
-    const __VLS_13 = __VLS_asFunctionalComponent(__VLS_12, new __VLS_12({}));
-    const __VLS_14 = __VLS_13({}, ...__VLS_functionalComponentArgsRest(__VLS_13));
-    __VLS_15.slots.default;
-    const __VLS_16 = {}.TooltipContent;
+    const __VLS_17 = __VLS_asFunctionalComponent(__VLS_16, new __VLS_16({}));
+    const __VLS_18 = __VLS_17({}, ...__VLS_functionalComponentArgsRest(__VLS_17));
+    __VLS_19.slots.default;
+    const __VLS_20 = {}.TooltipContent;
     /** @type {[typeof __VLS_components.TooltipContent, typeof __VLS_components.TooltipContent, ]} */ ;
     // @ts-ignore
-    const __VLS_17 = __VLS_asFunctionalComponent(__VLS_16, new __VLS_16({
+    const __VLS_21 = __VLS_asFunctionalComponent(__VLS_20, new __VLS_20({
         ...{ class: "z-50 rounded-md border bg-popover px-3 py-1.5 text-xs text-popover-foreground shadow-md" },
     }));
-    const __VLS_18 = __VLS_17({
+    const __VLS_22 = __VLS_21({
         ...{ class: "z-50 rounded-md border bg-popover px-3 py-1.5 text-xs text-popover-foreground shadow-md" },
-    }, ...__VLS_functionalComponentArgsRest(__VLS_17));
-    __VLS_19.slots.default;
+    }, ...__VLS_functionalComponentArgsRest(__VLS_21));
+    __VLS_23.slots.default;
     (__VLS_ctx.exactTime);
+    var __VLS_23;
     var __VLS_19;
-    var __VLS_15;
-    var __VLS_7;
+    var __VLS_11;
 }
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "text-xs font-medium truncate" },
@@ -146,26 +165,38 @@ if (__VLS_ctx.message.has_attachments) {
     });
     /** @type {[typeof Badge, typeof Badge, ]} */ ;
     // @ts-ignore
-    const __VLS_20 = __VLS_asFunctionalComponent(Badge, new Badge({
+    const __VLS_24 = __VLS_asFunctionalComponent(Badge, new Badge({
         variant: "secondary",
         ...{ class: "gap-1" },
-    }));
-    const __VLS_21 = __VLS_20({
-        variant: "secondary",
-        ...{ class: "gap-1" },
-    }, ...__VLS_functionalComponentArgsRest(__VLS_20));
-    __VLS_22.slots.default;
-    const __VLS_23 = {}.Paperclip;
-    /** @type {[typeof __VLS_components.Paperclip, ]} */ ;
-    // @ts-ignore
-    const __VLS_24 = __VLS_asFunctionalComponent(__VLS_23, new __VLS_23({
-        ...{ class: "size-3" },
     }));
     const __VLS_25 = __VLS_24({
-        ...{ class: "size-3" },
+        variant: "secondary",
+        ...{ class: "gap-1" },
     }, ...__VLS_functionalComponentArgsRest(__VLS_24));
-    var __VLS_22;
+    __VLS_26.slots.default;
+    const __VLS_27 = {}.Paperclip;
+    /** @type {[typeof __VLS_components.Paperclip, ]} */ ;
+    // @ts-ignore
+    const __VLS_28 = __VLS_asFunctionalComponent(__VLS_27, new __VLS_27({
+        ...{ class: "size-3" },
+    }));
+    const __VLS_29 = __VLS_28({
+        ...{ class: "size-3" },
+    }, ...__VLS_functionalComponentArgsRest(__VLS_28));
+    var __VLS_26;
 }
+/** @type {__VLS_StyleScopedClasses['flex-shrink-0']} */ ;
+/** @type {__VLS_StyleScopedClasses['h-5']} */ ;
+/** @type {__VLS_StyleScopedClasses['w-5']} */ ;
+/** @type {__VLS_StyleScopedClasses['rounded']} */ ;
+/** @type {__VLS_StyleScopedClasses['border-2']} */ ;
+/** @type {__VLS_StyleScopedClasses['flex']} */ ;
+/** @type {__VLS_StyleScopedClasses['items-center']} */ ;
+/** @type {__VLS_StyleScopedClasses['justify-center']} */ ;
+/** @type {__VLS_StyleScopedClasses['mt-2']} */ ;
+/** @type {__VLS_StyleScopedClasses['transition-all']} */ ;
+/** @type {__VLS_StyleScopedClasses['size-3']} */ ;
+/** @type {__VLS_StyleScopedClasses['text-white']} */ ;
 /** @type {__VLS_StyleScopedClasses['flex-shrink-0']} */ ;
 /** @type {__VLS_StyleScopedClasses['h-9']} */ ;
 /** @type {__VLS_StyleScopedClasses['w-9']} */ ;
@@ -224,6 +255,7 @@ const __VLS_self = (await import('vue')).defineComponent({
         return {
             Paperclip: Paperclip,
             Star: Star,
+            Check: Check,
             TooltipRoot: TooltipRoot,
             TooltipTrigger: TooltipTrigger,
             TooltipContent: TooltipContent,
@@ -241,6 +273,8 @@ const __VLS_self = (await import('vue')).defineComponent({
         message: { type: Object, required: true },
         selected: { type: Boolean, default: false },
         folderColor: { type: String, default: '' },
+        bulkSelectMode: { type: Boolean, default: false },
+        isChecked: { type: Boolean, default: false },
     },
 });
 export default (await import('vue')).defineComponent({
@@ -251,6 +285,8 @@ export default (await import('vue')).defineComponent({
         message: { type: Object, required: true },
         selected: { type: Boolean, default: false },
         folderColor: { type: String, default: '' },
+        bulkSelectMode: { type: Boolean, default: false },
+        isChecked: { type: Boolean, default: false },
     },
 });
 ; /* PartiallyEnd: #4569/main.vue */

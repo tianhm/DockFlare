@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { formatDistanceToNow, format } from 'date-fns'
-import { Paperclip, Star } from 'lucide-vue-next'
+import { Paperclip, Star, Check } from 'lucide-vue-next'
 import { TooltipRoot, TooltipTrigger, TooltipContent, TooltipPortal } from 'radix-vue'
 import { cn } from '../../lib/utils'
 import Badge from '../ui/Badge.vue'
@@ -11,6 +11,8 @@ const props = defineProps({
   message: { type: Object, required: true },
   selected: { type: Boolean, default: false },
   folderColor: { type: String, default: '' },
+  bulkSelectMode: { type: Boolean, default: false },
+  isChecked: { type: Boolean, default: false },
 })
 
 const initials = computed(() => {
@@ -53,6 +55,15 @@ const recipientLabel = computed(() => {
     )"
     :style="folderColor ? `border-left: 3px solid ${folderColor}; border-radius: 12px 0 0 12px;` : ''"
   >
+    <!-- Bulk select checkbox -->
+    <div
+      v-if="bulkSelectMode"
+      class="flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center mt-2 transition-all"
+      :class="isChecked ? 'bg-[#FBA612] border-[#FBA612]' : 'border-muted-foreground/50'"
+    >
+      <Check v-if="isChecked" class="size-3 text-white" />
+    </div>
+
     <!-- Avatar -->
     <div
       class="flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center text-[13px] font-semibold text-white select-none mt-0.5"
