@@ -81,10 +81,14 @@ Detailed architecture guide: [https://dockflare.app/architecture](https://dockfl
 ### One-Liner Install
 
 ```bash
-curl -fsSL https://dockflare.app/install.sh | bash
+bash <(curl -fsSL https://dockflare.app/install.sh)
 ```
 
-The script checks prerequisites, creates `~/dockflare/`, writes a production-ready `docker-compose.yml`, and starts all services. Open `http://<your-server-ip>:5000` when it finishes and follow the setup wizard.
+The script will guide you through:
+1. Choosing an install directory (default: `~/dockflare/`).
+2. Choosing a local UI port (default: `5000`).
+3. Optionally configuring a Cloudflare Tunnel for DockFlare itself.
+4. Optionally enabling the Email profile (dockflare-mail-manager + dockflare-webmail).
 
 For full setup documentation, use the project docs site:
 
