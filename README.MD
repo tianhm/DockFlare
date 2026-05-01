@@ -269,6 +269,14 @@ networks:
 docker compose up -d
 ```
 
+The Email Suite is an optional, opt-in feature and will not start by default. To include email services, add the `email` profile:
+
+```bash
+docker compose --profile email up -d
+```
+
+Email setup and provisioning guide: [Email Overview](https://github.com/ChrispyBacon-dev/DockFlare/blob/stable/dockflare/app/templates/docs/en/Email-Overview.md)
+
 3. Open `http://your-server-ip:5000` and complete the setup wizard.
 
 If you are migrating from older environment-based setups, DockFlare can import existing values during onboarding.
