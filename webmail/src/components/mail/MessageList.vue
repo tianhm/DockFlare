@@ -257,7 +257,7 @@ async function bulkMoveToFolder(folderId: number, folderName: string) {
         <button
           class="inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors"
           :class="bulkSelectMode
-            ? 'bg-accent text-[#FBA612]'
+            ? 'bg-accent text-df-accent'
             : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'"
           title="Select messages"
           @click="toggleBulkSelect"
@@ -279,17 +279,17 @@ async function bulkMoveToFolder(folderId: number, folderName: string) {
           <TabsTrigger
             value="all"
             class="inline-flex items-center justify-center whitespace-nowrap rounded-full py-1.5 px-3 text-sm font-medium transition-all data-[state=active]:font-semibold data-[state=inactive]:text-muted-foreground focus-visible:outline-none min-h-[36px]"
-            :style="store.activeTab === 'all' ? 'background: rgba(251,166,18,0.12); color: #FBA612;' : ''"
+            :style="store.activeTab === 'all' ? 'background: hsl(var(--df-accent) / 0.12); color: hsl(var(--df-accent));' : ''"
           >All</TabsTrigger>
           <TabsTrigger
             value="unread"
             class="inline-flex items-center justify-center whitespace-nowrap rounded-full py-1.5 px-3 text-sm font-medium transition-all data-[state=active]:font-semibold data-[state=inactive]:text-muted-foreground focus-visible:outline-none min-h-[36px]"
-            :style="store.activeTab === 'unread' ? 'background: rgba(251,166,18,0.12); color: #FBA612;' : ''"
+            :style="store.activeTab === 'unread' ? 'background: hsl(var(--df-accent) / 0.12); color: hsl(var(--df-accent));' : ''"
           >Unread</TabsTrigger>
           <TabsTrigger
             value="starred"
             class="inline-flex items-center justify-center whitespace-nowrap rounded-full py-1.5 px-3 text-sm font-medium transition-all data-[state=active]:font-semibold data-[state=inactive]:text-muted-foreground focus-visible:outline-none min-h-[36px]"
-            :style="store.activeTab === 'starred' ? 'background: rgba(251,166,18,0.12); color: #FBA612;' : ''"
+            :style="store.activeTab === 'starred' ? 'background: hsl(var(--df-accent) / 0.12); color: hsl(var(--df-accent));' : ''"
           >Starred</TabsTrigger>
         </TabsList>
       </div>

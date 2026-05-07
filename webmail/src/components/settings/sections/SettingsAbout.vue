@@ -48,7 +48,7 @@ async function installApp() {
           href="https://dockflare.app"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center gap-1.5 text-xs text-[#FBA612] hover:underline"
+          class="inline-flex items-center gap-1.5 text-xs text-df-accent hover:underline"
         >
           dockflare.app
         </a>
@@ -56,7 +56,7 @@ async function installApp() {
           href="https://github.com/ChrispyBacon-dev/DockFlare"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center gap-1.5 text-xs text-[#FBA612] hover:underline"
+          class="inline-flex items-center gap-1.5 text-xs text-df-accent hover:underline"
         >
           GitHub
         </a>

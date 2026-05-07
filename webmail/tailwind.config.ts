@@ -49,6 +49,7 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        'df-accent': 'hsl(var(--df-accent) / <alpha-value>)',
       },
       borderRadius: {
         xl: 'calc(var(--radius) + 4px)',

@@ -576,7 +576,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onEmojiClickOutside)
       <!-- Bottom Action Bar -->
       <div class="flex items-center justify-between gap-2 border-t border-border px-4 py-2.5 flex-shrink-0">
         <div class="flex items-center gap-1">
-          <Button as="button" type="button" size="sm" class="rounded-full px-5 font-semibold tracking-wide" style="background: #FBA612; color: white; box-shadow: 0 2px 10px rgba(251,166,18,0.32); border: none;" @click.prevent="send" :disabled="sending || (!toTags.length && !toInput)">
+          <Button as="button" type="button" size="sm" class="rounded-full px-5 font-semibold tracking-wide" style="background: hsl(var(--df-accent)); color: white; box-shadow: 0 2px 10px hsl(var(--df-accent) / 0.32); border: none;" @click.prevent="send" :disabled="sending || (!toTags.length && !toInput)">
             {{ sending ? 'Sending…' : 'Send' }}
           </Button>
           <button type="button" class="ml-1 rounded p-1.5 transition-colors" :class="savedDraft ? 'text-green-500' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'" :disabled="savingDraft" title="Save draft" @click="saveDraft">

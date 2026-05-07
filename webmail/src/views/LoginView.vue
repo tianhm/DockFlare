@@ -2,11 +2,14 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
+import { useMailStore } from '../stores/mail'
 import { authApi } from '../api/auth'
 import Button from '../components/ui/Button.vue'
+import { Sun, Moon } from 'lucide-vue-next'
 
 const route = useRoute()
 const { login } = useAuth()
+const store = useMailStore()
 
 const email = ref('')
 const password = ref('')
@@ -56,10 +59,20 @@ const redirectToMaster = async () => {
 
 <template>
   <div class="flex h-screen w-screen items-center justify-center">
+
+    <!-- Theme toggle -->
+    <button
+      class="df-theme-btn fixed top-4 right-4 z-10 h-9 w-9 rounded-full flex items-center justify-center transition-all"
+      :title="store.isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+      @click="store.toggleTheme()"
+    >
+      <Sun v-if="store.isDark" class="size-4" />
+      <Moon v-else class="size-4" />
+    </button>
+
     <div class="df-login-card w-full max-w-sm space-y-6 p-8">
       <div class="flex flex-col items-center space-y-1 text-center">
-        <img src="/logo.gif" alt="DockFlare" class="h-12 w-auto select-none mb-1" draggable="false" />
-        <p class="text-sm text-muted-foreground">Webmail</p>
+        <img :src="store.isDark ? '/logo-dark.svg' : '/logo-light.svg'" alt="DockFlare" class="h-16 w-auto select-none" draggable="false" />
       </div>
 
       <form @submit.prevent="handleLogin" class="space-y-3">
@@ -68,14 +81,14 @@ const redirectToMaster = async () => {
           type="email"
           placeholder="you@example.com"
           required
-          class="df-login-input w-full rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[rgba(251,166,18,0.4)]"
+          class="df-login-input w-full rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:outline-none focus:ring-2 focus:ring-df-accent/40"
         />
         <input
           v-model="password"
           type="password"
           placeholder="Password"
           required
-          class="df-login-input w-full rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[rgba(251,166,18,0.4)]"
+          class="df-login-input w-full rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:outline-none focus:ring-2 focus:ring-df-accent/40"
         />
         <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
         <button
@@ -128,12 +141,12 @@ const redirectToMaster = async () => {
 }
 
 .df-login-submit {
-  background: #FBA612;
+  background: hsl(var(--df-accent));
   color: white;
-  box-shadow: 0 2px 10px rgba(251, 166, 18, 0.32);
+  box-shadow: 0 2px 10px hsl(var(--df-accent) / 0.32);
 }
 .df-login-submit:hover:not(:disabled) {
-  box-shadow: 0 4px 16px rgba(251, 166, 18, 0.45);
+  box-shadow: 0 4px 16px hsl(var(--df-accent) / 0.45);
 }
 
 .df-login-sso {
@@ -151,5 +164,24 @@ const redirectToMaster = async () => {
 }
 .dark .df-login-sso:hover {
   background: rgba(94, 177, 229, 0.18);
+}
+
+.df-theme-btn {
+  background: rgba(255, 255, 255, 0.70);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #374151;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.df-theme-btn:hover {
+  background: rgba(255, 255, 255, 0.90);
+}
+.dark .df-theme-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: hsl(210 40% 80%);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.30);
+}
+.dark .df-theme-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
 }
 </style>

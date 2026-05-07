@@ -28,14 +28,14 @@ const DATE_FORMAT_OPTIONS: { key: DateFormatKey; label: string; example: string;
           v-for="opt in DATE_FORMAT_OPTIONS"
           :key="opt.key"
           class="flex items-center gap-4 cursor-pointer rounded-lg px-3 py-3 hover:bg-accent/50 transition-colors border border-transparent"
-          :class="mailStore.dateFormat === opt.key ? 'border-[#FBA612]/40 bg-[#FBA612]/5' : ''"
+          :class="mailStore.dateFormat === opt.key ? 'border-df-accent/40 bg-df-accent/5' : ''"
         >
           <input
             type="radio"
             name="dateFormat"
             :value="opt.key"
             :checked="mailStore.dateFormat === opt.key"
-            class="accent-[#FBA612]"
+            class="accent-df-accent"
             @change="mailStore.setDateFormat(opt.key)"
           />
           <div class="flex-1 min-w-0">

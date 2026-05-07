@@ -215,7 +215,7 @@ const confirmEdit = async () => {
               <span
                 v-if="f.unread_count"
                 class="rounded-full px-1.5 py-0.5 text-[10.5px] font-bold leading-none flex items-center"
-                style="background: rgba(251,166,18,0.12); color: #FBA612;"
+                style="background: hsl(var(--df-accent) / 0.12); color: hsl(var(--df-accent));"
               >{{ f.unread_count }}</span>
               <span v-if="!f.unread_count">{{ f.total_count }}</span>
             </span>
@@ -273,7 +273,7 @@ const confirmEdit = async () => {
               <component :is="getIcon(f.name, store.currentFolder === f.name)" class="size-4 flex-shrink-0" :style="f.color && store.currentFolder !== f.name ? `color:${f.color}` : ''" />
               <span class="truncate">{{ f.name }}</span>
               <span v-if="f.total_count > 0" :class="cn('ml-auto text-xs flex-shrink-0 flex gap-1', store.currentFolder === f.name ? 'opacity-90' : 'text-muted-foreground')">
-                <span v-if="f.unread_count" class="rounded-full px-1.5 py-0.5 text-[10.5px] font-bold leading-none flex items-center" style="background: rgba(251,166,18,0.12); color: #FBA612;">{{ f.unread_count }}</span>
+                <span v-if="f.unread_count" class="rounded-full px-1.5 py-0.5 text-[10.5px] font-bold leading-none flex items-center" style="background: hsl(var(--df-accent) / 0.12); color: hsl(var(--df-accent));">{{ f.unread_count }}</span>
                 <span v-if="!f.unread_count">{{ f.total_count }}</span>
               </span>
             </button>
