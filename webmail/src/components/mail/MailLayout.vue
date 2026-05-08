@@ -76,7 +76,7 @@ const mobileTitle = computed(() => {
           <ChevronLeft class="size-5" />
         </button>
         <span v-else class="font-['Outfit'] font-extrabold text-[19px] tracking-[-0.01em] leading-none select-none h-10 flex items-center px-1">
-          <span class="text-[#194466] dark:text-[#5EB1E5]">Dock</span><span class="text-[#FBA612]">Flare</span>
+          <span class="text-[#194466] dark:text-[#5EB1E5]">Dock</span><span class="text-df-accent">Flare</span>
         </span>
 
         <!-- Center: title (only for list/detail, not folders since wordmark is there) -->
@@ -138,7 +138,7 @@ const mobileTitle = computed(() => {
         <button
           class="flex flex-col items-center gap-1 px-6 py-2 rounded-xl transition-colors min-h-[44px] justify-center"
           :class="mobilePanel === 'folders' ? '' : 'text-muted-foreground'"
-          :style="mobilePanel === 'folders' ? 'color: #FBA612;' : ''"
+          :style="mobilePanel === 'folders' ? 'color: hsl(var(--df-accent))' : ''"
           @click="mobilePanel = 'folders'"
         >
           <Menu class="size-5" />
@@ -147,7 +147,7 @@ const mobileTitle = computed(() => {
 
         <button
           class="flex items-center justify-center h-12 w-12 rounded-full shadow-lg transition-colors flex-shrink-0"
-          style="background: #FBA612; color: white; box-shadow: 0 2px 10px rgba(251,166,18,0.38);"
+          style="background: hsl(var(--df-accent)); color: white; box-shadow: 0 2px 10px hsl(var(--df-accent) / 0.38);"
           @click="compose"
         >
           <PenSquare class="size-5" />
@@ -156,7 +156,7 @@ const mobileTitle = computed(() => {
         <button
           class="flex flex-col items-center gap-1 px-6 py-2 rounded-xl transition-colors min-h-[44px] justify-center"
           :class="mobilePanel === 'list' ? '' : 'text-muted-foreground'"
-          :style="mobilePanel === 'list' ? 'color: #FBA612;' : ''"
+          :style="mobilePanel === 'list' ? 'color: hsl(var(--df-accent))' : ''"
           @click="mobilePanel = 'list'"
         >
           <Columns2 class="size-5" />
@@ -184,11 +184,11 @@ const mobileTitle = computed(() => {
         <!-- Header: wordmark + collapse toggle -->
         <div class="h-[54px] flex items-center justify-center px-[14px] flex-shrink-0">
           <template v-if="!store.isCollapsed">
-            <img src="/logo.gif" alt="DockFlare" class="h-7 w-auto select-none" draggable="false" />
+            <img :src="store.isDark ? '/logo-dark.svg' : '/logo-light.svg'" alt="DockFlare" class="h-10 w-auto select-none" draggable="false" />
           </template>
           <template v-else>
             <span class="font-['Outfit'] font-extrabold text-[15px] leading-none select-none mx-auto">
-              <span class="text-[#194466] dark:text-[#5EB1E5]">D</span><span class="text-[#FBA612]">F</span>
+              <span class="text-[#194466] dark:text-[#5EB1E5]">D</span><span style="color: var(--df-accent)">F</span>
             </span>
           </template>
         </div>
@@ -414,11 +414,11 @@ const mobileTitle = computed(() => {
   transition: width 0.22s ease;
 }
 .df-compose-btn {
-  background: #FBA612;
+  background: hsl(var(--df-accent));
   color: white;
-  box-shadow: 0 2px 10px rgba(251,166,18,0.32);
+  box-shadow: 0 2px 10px hsl(var(--df-accent) / 0.32);
 }
 .df-compose-btn:hover {
-  box-shadow: 0 4px 16px rgba(251,166,18,0.45);
+  box-shadow: 0 4px 16px hsl(var(--df-accent) / 0.45);
 }
 </style>

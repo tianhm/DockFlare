@@ -57,7 +57,7 @@ const recipientLabel = computed(() => {
     <div
       v-if="bulkSelectMode"
       class="flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center mt-2 transition-all"
-      :class="isChecked ? 'bg-[#FBA612] border-[#FBA612]' : 'border-muted-foreground/50'"
+      :class="isChecked ? 'bg-df-accent border-df-accent' : 'border-muted-foreground/50'"
     >
       <Check v-if="isChecked" class="size-3 text-white" />
     </div>
@@ -72,7 +72,7 @@ const recipientLabel = computed(() => {
     <div class="flex flex-col gap-1 min-w-0 flex-1">
       <div class="flex items-center gap-2">
         <div class="font-semibold truncate flex-1">{{ recipientLabel ?? (message.from_name || message.from_address) }}</div>
-        <span v-if="!message.is_read" class="flex-shrink-0 h-2 w-2 rounded-full bg-[#FBA612]" />
+        <span v-if="!message.is_read" class="flex-shrink-0 h-2 w-2 rounded-full bg-df-accent" />
         <Star v-if="message.is_starred" class="flex-shrink-0 size-3 fill-yellow-400 text-yellow-400" />
         <TooltipRoot v-if="timestamp" :delay-duration="300">
           <TooltipTrigger as-child>

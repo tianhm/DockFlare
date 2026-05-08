@@ -71,82 +71,47 @@ function initializeAllTomSelects() {
 }
 
 const themeManager = (function() {
-    let themeMenuScoped;
-    const htmlElementScoped = document.documentElement;
-    const availableThemes = [
-        "light", "dark", "cupcake", "bumblebee", "emerald", "corporate",
-        "synthwave", "retro", "cyberpunk", "valentine", "halloween", "garden",
-        "forest", "aqua", "lofi", "pastel", "fantasy", "wireframe", "black",
-        "luxury", "dracula", "cmyk", "autumn", "business", "acid",
-        "lemonade", "night", "coffee", "winter"
-    ];
+    const html = document.documentElement;
+
+    const sunIcon = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" /></svg>';
+    const moonIcon = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" /></svg>';
+
+    function updateToggleIcon(dark) {
+        document.querySelectorAll('[data-df-theme-toggle]').forEach(btn => {
+            btn.innerHTML = dark ? sunIcon : moonIcon;
+        });
+    }
+
+    function updateLogos(dark) {
+        document.querySelectorAll('[data-df-logo]').forEach(img => {
+            img.src = dark ? img.dataset.darkSrc : img.dataset.lightSrc;
+        });
+    }
 
     function setTheme(theme) {
-        if (!availableThemes.includes(theme)) {
-            console.warn(t('js.text.theme_not_available', {theme: theme}));
-            theme = 'light';
-        }
+        const dark = theme === 'dark';
         localStorage.setItem('theme', theme);
-        htmlElementScoped.setAttribute('data-theme', theme);
-
-        if (themeMenuScoped) updateSelectedThemeInMenu(theme);
-    }
-
-    function populateThemeMenu() {
-        if (!themeMenuScoped) return;
-        themeMenuScoped.innerHTML = '';
-        availableThemes.forEach(themeName => {
-            const listItem = document.createElement('li');
-            listItem.classList.add('w-full');
-            const link = document.createElement('a');
-            link.textContent = themeName.charAt(0).toUpperCase() + themeName.slice(1);
-            link.setAttribute('data-theme-value', themeName);
-            link.href = "#";
-            link.classList.add('flex', 'items-center', 'flex-grow', 'w-full', 'px-4', 'py-2');
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const selectedTheme = e.target.getAttribute('data-theme-value');
-                setTheme(selectedTheme);
-                if (document.activeElement && typeof document.activeElement.blur === 'function') {
-                    document.activeElement.blur();
-                }
-            });
-            listItem.appendChild(link);
-            themeMenuScoped.appendChild(listItem);
-        });
-    }
-
-    function updateSelectedThemeInMenu(currentTheme) {
-        if (!themeMenuScoped) return;
-        themeMenuScoped.querySelectorAll('li a').forEach(a => {
-            if (a.getAttribute('data-theme-value') === currentTheme) {
-                a.parentElement.classList.add('font-bold', 'text-primary');
-                a.classList.add('active');
-            } else {
-                a.parentElement.classList.remove('font-bold', 'text-primary');
-                a.classList.remove('active');
-            }
-        });
+        html.setAttribute('data-theme', theme);
+        updateToggleIcon(dark);
+        updateLogos(dark);
     }
 
     function initTheme() {
-        const savedTheme = localStorage.getItem('theme');
-        const defaultTheme = 'light';
-        setTheme(savedTheme || defaultTheme);
+        const saved = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        setTheme(saved || (prefersDark ? 'dark' : 'light'));
     }
 
     return {
         initialize: function() {
-            themeMenuScoped = document.getElementById('theme-menu');
-            const themeSelectorBtn = document.getElementById('theme-selector-btn');
-
-            if (themeMenuScoped && themeSelectorBtn) {
-                populateThemeMenu();
-                initTheme();
-            } else {
-                console.error("DockFlare Theme Error: UI elements for theme selector not found.");
-            }
-        }
+            document.querySelectorAll('[data-df-theme-toggle]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    setTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+                });
+            });
+            initTheme();
+        },
+        setTheme
     };
 })();
 

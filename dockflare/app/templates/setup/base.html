@@ -4,17 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }} - DockFlare Setup</title>
+    <script>(function(){var t=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
-    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fonts/inter.css') }}">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        [data-theme="dark"] {
+            --b1: 10.5% 0.03 262;
+            --b2: 5.4% 0.02 270;
+            --b3: 3.3% 0.015 270;
+            --bc: 85% 0.01 264;
+            --n: 14% 0.04 260;
+            --nc: 85% 0.01 264;
+            --p: 60.6% 0.207 264;
+            --pc: 100% 0 0;
+        }
+        [data-theme="light"] body { background: radial-gradient(110% 55% at 50% 0%, rgba(59,130,246,0.09) 0%, #f8f9fb 55%) !important; }
+        [data-theme="dark"] body { background: #0a0a1a !important; }
+        [data-theme="dark"] .card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.02) 100%) !important;
+            border: 1px solid rgba(255,255,255,0.10) !important;
+            border-top-color: rgba(255,255,255,0.06) !important;
+            border-left-color: rgba(255,255,255,0.06) !important;
+            box-shadow: 0 8px 30px rgba(12,12,20,0.55), inset 0 1px 0 rgba(255,255,255,0.02) !important;
+            backdrop-filter: blur(12px) saturate(140%) !important;
+            -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+        }
+        .df-aurora-layer {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background: conic-gradient(from 230deg at 51% 52%, #8b5cf6 0deg, #3b82f6 67deg, transparent 160deg, transparent 360deg);
+            opacity: 0.06; filter: blur(48px) saturate(140%);
+            animation: df-aurora-move 30s ease-in-out infinite alternate;
+        }
+        [data-theme="dark"] .df-aurora-layer { opacity: 0.12; }
+        @keyframes df-aurora-move { from { transform: translateX(-10%); } to { transform: translateX(10%); } }
+        @media (prefers-reduced-motion: reduce) { .df-aurora-layer { animation: none; } }
     </style>
 </head>
-<body class="bg-base-200 min-h-screen flex items-center justify-center p-4">
-    <div class="card w-full max-w-lg bg-base-100 shadow-xl">
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="df-aurora-layer" aria-hidden="true"></div>
+    <div class="card w-full max-w-lg bg-base-100 shadow-xl" style="z-index: 1;">
         <div class="card-body">
             <div class="text-center mb-6">
-                <img src="{{ url_for('static', filename='images/logo.gif') }}" alt="DockFlare Logo" class="h-16 mx-auto">
+                <img data-df-logo
+                     data-light-src="{{ url_for('static', filename='images/logo-light.svg') }}"
+                     data-dark-src="{{ url_for('static', filename='images/logo-dark.svg') }}"
+                     src="{{ url_for('static', filename='images/logo-light.svg') }}"
+                     alt="DockFlare Logo" class="h-16 mx-auto">
                 <h1 class="text-2xl font-bold mt-4">{{ title }}</h1>
             </div>
 
@@ -39,5 +75,12 @@
             </div>
         </div>
     </div>
+    <script>
+        (function() {
+            var html = document.documentElement;
+            var dark = html.getAttribute('data-theme') === 'dark';
+            document.querySelectorAll('[data-df-logo]').forEach(function(img) { img.src = dark ? img.dataset.darkSrc : img.dataset.lightSrc; });
+        })();
+    </script>
 </body>
 </html>

@@ -23,7 +23,7 @@ const categories = [
       :key="cat.key"
       class="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm transition-colors text-left"
       :class="store.settingsCategory === cat.key
-        ? 'bg-[#FBA612]/10 text-[#FBA612] font-medium'
+        ? 'bg-df-accent/10 text-df-accent font-medium'
         : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'"
       @click="store.settingsCategory = cat.key"
     >

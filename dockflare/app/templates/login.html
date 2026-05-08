@@ -4,138 +4,612 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ t('login.title') }}</title>
+    <script>(function(){var t=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
-    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fonts/inter.css') }}">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0; padding: 0;
+            min-height: 100vh;
+            display: flex;
+        }
+
+        .df-panel-left {
+            display: none;
+            position: relative;
+            width: 50%;
+            min-height: 100vh;
+            background: #0d0d1a;
+            overflow: hidden;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+        @media (min-width: 768px) { .df-panel-left { display: flex; } }
+        [data-theme="dark"] .df-panel-left { background: #eef2ff; }
+
+        .df-aurora {
+            position: absolute; inset: 0; z-index: 1;
+            pointer-events: none; overflow: hidden;
+            mix-blend-mode: screen;
+        }
+        [data-theme="dark"] .df-aurora { mix-blend-mode: multiply; }
+
+        .df-aurora-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            animation: auroradrift 18s ease-in-out infinite alternate;
+        }
+        .df-aurora-blob:nth-child(1) {
+            width: 60%; height: 60%;
+            top: -12%; left: -12%;
+            background: radial-gradient(circle, rgba(99,102,241,0.18), transparent 70%);
+            animation-duration: 20s;
+        }
+        .df-aurora-blob:nth-child(2) {
+            width: 55%; height: 55%;
+            bottom: -10%; right: -10%;
+            background: radial-gradient(circle, rgba(249,115,22,0.14), transparent 70%);
+            animation-duration: 24s;
+            animation-delay: -8s;
+        }
+        .df-aurora-blob:nth-child(3) {
+            width: 45%; height: 45%;
+            top: 30%; left: 28%;
+            background: radial-gradient(circle, rgba(59,130,246,0.12), transparent 70%);
+            animation-duration: 30s;
+            animation-delay: -14s;
+        }
+        [data-theme="dark"] .df-aurora-blob:nth-child(1) {
+            background: radial-gradient(circle, rgba(99,102,241,0.14), transparent 70%);
+        }
+        [data-theme="dark"] .df-aurora-blob:nth-child(2) {
+            background: radial-gradient(circle, rgba(249,115,22,0.12), transparent 70%);
+        }
+        [data-theme="dark"] .df-aurora-blob:nth-child(3) {
+            background: radial-gradient(circle, rgba(59,130,246,0.10), transparent 70%);
+        }
+        @keyframes auroradrift {
+            0%   { transform: translate(0, 0) scale(1); }
+            33%  { transform: translate(6%, -8%) scale(1.08); }
+            66%  { transform: translate(-5%, 6%) scale(0.95); }
+            100% { transform: translate(4%, 5%) scale(1.05); }
+        }
+
+        #df-portal-canvas {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+        }
+
+        .df-panel-left-content {
+            position: relative; z-index: 2;
+            display: flex; flex-direction: column;
+            align-items: center;
+            pointer-events: none;
+            width: 100%;
+            height: 100%;
+            justify-content: center;
+        }
+
+        .df-portal-logo-center {
+            width: 230px;
+            filter: drop-shadow(0 0 18px rgba(99,102,241,0.45));
+        }
+        [data-theme="dark"] .df-portal-logo-center {
+            filter: none;
+        }
+
+        .df-tagline {
+            position: absolute;
+            bottom: 2.5rem;
+            left: 0; right: 0;
+            text-align: center;
+            color: rgba(255,255,255,0.55);
+            font-size: 0.875rem;
+            line-height: 1.65;
+            padding: 0 2rem;
+            transition: opacity 2.8s ease, color 0.3s;
+        }
+        [data-theme="dark"] .df-tagline { color: #4338ca; }
+
+        .df-panel-right {
+            flex: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1.5rem;
+            position: relative;
+            background: radial-gradient(ellipse at 55% 45%, #f0eeff 0%, #f8f8ff 45%, #ffffff 100%);
+            transition: background 0.2s;
+        }
+        [data-theme="dark"] .df-panel-right {
+            background: radial-gradient(ellipse at 55% 45%, #1a1033 0%, #141020 40%, #111827 100%);
+        }
+
+        .df-form-container {
+            width: 100%; max-width: 380px;
+            background: linear-gradient(to bottom, #ffffff 0%, #f7f8ff 100%);
+            border: 1px solid #cbd5e1;
+            border-radius: 1rem;
+            padding: 2.25rem 2rem;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,1),
+                0 8px 24px rgba(0,0,0,0.10),
+                0 2px 8px rgba(99,102,241,0.07);
+        }
+        [data-theme="dark"] .df-form-container {
+            background: linear-gradient(160deg, rgba(255,255,255,0.04) 0%, transparent 35%), #1e2433;
+            border-color: #2d3748;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.07),
+                0 4px 6px -1px rgba(0,0,0,0.30),
+                0 2px 4px -2px rgba(0,0,0,0.20);
+        }
+
+        .df-mobile-logo {
+            display: block;
+            margin: 0 auto 2rem;
+            height: 46px;
+        }
+        @media (min-width: 768px) { .df-mobile-logo { display: none; } }
+
+        .df-form-heading {
+            font-size: 1.5rem; font-weight: 700;
+            color: #111827; margin: 0 0 0.3rem;
+            letter-spacing: -0.02em;
+        }
+        [data-theme="dark"] .df-form-heading { color: #f9fafb; }
+
+        .df-form-sub { font-size: 0.875rem; color: #6b7280; margin: 0 0 1.75rem; }
+        [data-theme="dark"] .df-form-sub { color: #9ca3af; }
+
+        .df-input {
+            width: 100%; padding: 0.65rem 0.875rem;
+            border-radius: 0.5rem; border: 1.5px solid #e5e7eb;
+            background: #fff; color: #111827;
+            font-size: 0.9375rem; font-family: inherit;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            margin-bottom: 0.75rem; display: block;
+        }
+        .df-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+        [data-theme="dark"] .df-input { background: #1f2937; border-color: #374151; color: #f9fafb; }
+        [data-theme="dark"] .df-input:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(129,140,248,0.14); }
+        .df-input::placeholder { color: #9ca3af; }
+
+        .df-btn-primary {
+            width: 100%; display: block; padding: 0.7rem 1rem;
+            border-radius: 0.5rem;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #7c3aed 100%);
+            color: #fff;
+            font-size: 0.9375rem; font-weight: 600; font-family: inherit;
+            border: none; cursor: pointer;
+            box-shadow: 0 2px 8px rgba(99,102,241,0.35);
+            transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+        }
+        .df-btn-primary:hover { opacity: 0.92; box-shadow: 0 4px 14px rgba(99,102,241,0.45); }
+        .df-btn-primary:active { transform: scale(0.99); }
+
+        .df-or {
+            display: flex; align-items: center; gap: 0.75rem;
+            margin: 1.25rem 0; color: #9ca3af;
+            font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase;
+        }
+        .df-or::before, .df-or::after { content: ''; flex: 1; height: 1px; background: #e5e7eb; }
+        [data-theme="dark"] .df-or::before,
+        [data-theme="dark"] .df-or::after { background: #374151; }
+
+        .df-btn-outline {
+            width: 100%; display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.65rem 1rem; border-radius: 0.5rem;
+            background: transparent; color: #374151;
+            font-size: 0.9375rem; font-weight: 500; font-family: inherit;
+            border: 1.5px solid #e5e7eb; cursor: pointer; text-decoration: none;
+            transition: background 0.12s, border-color 0.12s; margin-bottom: 0.6rem;
+        }
+        .df-btn-outline:hover { background: #f9fafb; border-color: #d1d5db; }
+        [data-theme="dark"] .df-btn-outline { color: #f3f4f6; border-color: #374151; }
+        [data-theme="dark"] .df-btn-outline:hover { background: #1f2937; border-color: #4b5563; }
+        .df-btn-outline svg { flex-shrink: 0; width: 1.125rem; height: 1.125rem; }
+        .df-btn-outline-label { flex: 1; text-align: center; }
+
+        .df-btn-webmail {
+            display: block; width: 100%; padding: 0.65rem 1rem;
+            border-radius: 0.5rem; background: transparent; color: #6366f1;
+            font-size: 0.875rem; font-weight: 500; font-family: inherit;
+            border: 1.5px solid #e0e7ff; cursor: pointer; text-decoration: none;
+            text-align: center; transition: background 0.12s, border-color 0.12s;
+        }
+        .df-btn-webmail:hover { background: #eef2ff; border-color: #c7d2fe; }
+        [data-theme="dark"] .df-btn-webmail { color: #a5b4fc; border-color: #312e81; }
+        [data-theme="dark"] .df-btn-webmail:hover { background: #1e1b4b; border-color: #4338ca; }
+
+        .df-flash {
+            padding: 0.65rem 0.875rem; border-radius: 0.5rem;
+            font-size: 0.875rem; margin-bottom: 1rem;
+            border-width: 1px; border-style: solid;
+        }
+        .df-flash-success { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+        .df-flash-error   { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+        .df-flash-warning { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+        .df-flash-info    { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+        [data-theme="dark"] .df-flash-success { background: #064e3b; color: #a7f3d0; border-color: #065f46; }
+        [data-theme="dark"] .df-flash-error   { background: #7f1d1d; color: #fca5a5; border-color: #991b1b; }
+        [data-theme="dark"] .df-flash-warning { background: #78350f; color: #fde68a; border-color: #92400e; }
+        [data-theme="dark"] .df-flash-info    { background: #1e3a5f; color: #bfdbfe; border-color: #1e40af; }
+
+        .df-theme-btn {
+            position: fixed; top: 1rem; right: 1rem; z-index: 50;
+            width: 2.25rem; height: 2.25rem; border-radius: 9999px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.82); border: 1px solid rgba(0,0,0,0.08);
+            color: #374151; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            cursor: pointer; transition: background 0.2s;
+        }
+        .df-theme-btn:hover { background: rgba(255,255,255,0.96); }
+        [data-theme="dark"] .df-theme-btn {
+            background: rgba(31,41,55,0.90); border-color: rgba(255,255,255,0.10);
+            color: #d1d5db; box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+        }
+        [data-theme="dark"] .df-theme-btn:hover { background: rgba(55,65,81,0.95); }
     </style>
 </head>
-<body class="bg-base-200 min-h-screen flex items-center justify-center p-4">
-    <div class="card w-full {% if oauth_providers and password_login_enabled %}max-w-4xl{% else %}max-w-sm{% endif %} bg-base-100 shadow-xl relative overflow-hidden">
-        <div class="card-body">
-            <div class="text-center mb-8">
-                <img src="{{ url_for('static', filename='images/logo.gif') }}" alt="DockFlare Logo" class="h-16 mx-auto">
-            </div>
+<body>
+    <button type="button" data-df-theme-toggle class="df-theme-btn" title="Toggle theme"></button>
+
+    <div class="df-panel-left" aria-hidden="true">
+        <div class="df-aurora">
+            <div class="df-aurora-blob"></div>
+            <div class="df-aurora-blob"></div>
+            <div class="df-aurora-blob"></div>
+        </div>
+        <canvas id="df-portal-canvas"></canvas>
+        <div class="df-panel-left-content">
+            <img data-df-panel-logo
+                 data-light-src="{{ url_for('static', filename='images/logo-dark.svg') }}"
+                 data-dark-src="{{ url_for('static', filename='images/logo-light.svg') }}"
+                 src="{{ url_for('static', filename='images/logo-dark.svg') }}"
+                 alt="" class="df-portal-logo-center">
+            <div class="df-tagline" id="df-tagline"></div>
+        </div>
+    </div>
+
+    <div class="df-panel-right">
+        <div class="df-form-container">
+
+            <img data-df-logo
+                 data-light-src="{{ url_for('static', filename='images/logo-light.svg') }}"
+                 data-dark-src="{{ url_for('static', filename='images/logo-dark.svg') }}"
+                 src="{{ url_for('static', filename='images/logo-light.svg') }}"
+                 alt="DockFlare" class="df-mobile-logo">
+
+            <h1 class="df-form-heading">{{ t('login.submit') }}</h1>
+            <p class="df-form-sub">DockFlare</p>
 
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
-                    <div class="space-y-2 mb-4">
                     {% for category, message in messages %}
-                        <div class="alert alert-{{ category if category in ['success', 'error', 'warning', 'info'] else 'info' }} shadow-lg text-sm">
-                            <div>
-                                <span>{{ message }}</span>
-                            </div>
-                        </div>
+                        <div class="df-flash df-flash-{{ category if category in ['success', 'error', 'warning', 'info'] else 'info' }}">{{ message }}</div>
                     {% endfor %}
-                    </div>
                 {% endif %}
             {% endwith %}
 
-            {% if oauth_providers and password_login_enabled %}
-            <!-- 2-column layout: left = password, right = OAuth -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-start relative">
-                <!-- Left: Password Login -->
-                <div class="flex flex-col justify-start">
-                    <form method="POST" action="{{ url_for('web.login') }}">
-                        {% if form %}{{ form.hidden_tag() }}{% endif %}
+            {% set logos = {
+                'google': '<svg aria-hidden="true" viewBox="0 0 488 512" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 111.8 512 0 400.2 0 261.8 0 123.8 111.8 14 244 14c77.3 0 143.3 31.4 191.1 82.1l-73.3 73.3c-24.5-23.2-58.3-37.2-97.8-37.2-80.3 0-146.1 65.7-146.1 146.1s65.8 146.1 146.1 146.1c92.8 0 131.3-74.4 136.8-109.9H244v-89.9h239.1c4.9 26.9 7.9 54.9 7.9 84.9z"></path></svg>',
+                'github': '<svg aria-hidden="true" viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3.3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.3zm37.4 2.6c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.3zM496 256c0 137-111 248-248 248S0 393 0 256 111 8 248 8s248 111 248 248zM248 40c-118.7 0-216 96.1-216 216 0 94.8 61.5 175.2 146.5 203.8 10.8 2.3 14.6-4.6 14.6-10.6 0-5.2-.2-21.5-.3-42.1-60 13.1-72.7-28.7-72.7-28.7-9.8-24.9-24-31.5-24-31.5-19.5-13.3 1.5-13.1 1.5-13.1 21.5 1.5 32.8 22.1 32.8 22.1 19.1 32.8 50.1 23.3 62.3 17.8 2-13.9 7.5-23.3 13.9-28.7-47.5-5.5-97.5-23.6-97.5-105.8 0-23.3 8.4-42.4 22.1-57.4-2.3-5.5-9.6-27.2 2.6-56.5 0 0 18-5.8 59 22.1 17.1-4.8 35.5-7.2 53.9-7.2 18.4 0 36.8 2.4 53.9 7.2 41-27.9 59-22.1 59-22.1 12.2 29.3 4.9 51 2.6 56.5 13.7 15 22.1 34.1 22.1 57.4 0 82.4-50.1 100.3-97.7 105.6 7.7 6.5 14.6 19.5 14.6 39.2 0 28.5-.3 51.5-.3 58.5 0 6.1 3.8 12.9 14.8 10.6 85-28.6 146.5-109 146.5-203.8 0-119.9-97.3-216-216-216z"></path></svg>'
+            } %}
 
-                        <div class="form-control mb-3">
-                            {% if form %}
-                                {{ form.username.label(class="label hidden") }}
-                                {{ form.username(class="input input-bordered w-full", placeholder=t('login.username_placeholder')) }}
-                            {% else %}
-                                <input type="text" name="username" class="input input-bordered w-full" placeholder="{{ t('login.username_placeholder') }}" required>
-                            {% endif %}
-                        </div>
-
-                        <div class="form-control mb-4">
-                            {% if form %}
-                                {{ form.password.label(class="label hidden") }}
-                                {{ form.password(class="input input-bordered w-full", placeholder=t('login.password_placeholder')) }}
-                            {% else %}
-                                <input type="password" name="password" class="input input-bordered w-full" placeholder="{{ t('login.password_placeholder') }}" required>
-                            {% endif %}
-                        </div>
-
-                        <div class="form-control">
-                            {% if form %}
-                                <button type="submit" name="submit" class="btn btn-primary w-full">{{ t('login.submit') }}</button>
-                            {% else %}
-                                <input type="submit" value="{{ t('login.submit') }}" class="btn btn-primary w-full">
-                            {% endif %}
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Right: OAuth Login -->
-                <div class="md:pl-16 md:border-l md:border-base-300 flex flex-col justify-start md:pt-1">
-                    {% set logos = {
-                        'google': '<svg class="w-5 h-5" aria-hidden="true" focusable="false" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 111.8 512 0 400.2 0 261.8 0 123.8 111.8 14 244 14c77.3 0 143.3 31.4 191.1 82.1l-73.3 73.3c-24.5-23.2-58.3-37.2-97.8-37.2-80.3 0-146.1 65.7-146.1 146.1s65.8 146.1 146.1 146.1c92.8 0 131.3-74.4 136.8-109.9H244v-89.9h239.1c4.9 26.9 7.9 54.9 7.9 84.9z"></path></svg>',
-                        'github': '<svg class="w-5 h-5" aria-hidden="true" focusable="false" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path fill="currentColor" d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3.3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.3zm37.4 2.6c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.3zM496 256c0 137-111 248-248 248S0 393 0 256 111 8 248 8s248 111 248 248zM248 40c-118.7 0-216 96.1-216 216 0 94.8 61.5 175.2 146.5 203.8 10.8 2.3 14.6-4.6 14.6-10.6 0-5.2-.2-21.5-.3-42.1-60 13.1-72.7-28.7-72.7-28.7-9.8-24.9-24-31.5-24-31.5-19.5-13.3 1.5-13.1 1.5-13.1 21.5 1.5 32.8 22.1 32.8 22.1 19.1 32.8 50.1 23.3 62.3 17.8 2-13.9 7.5-23.3 13.9-28.7-47.5-5.5-97.5-23.6-97.5-105.8 0-23.3 8.4-42.4 22.1-57.4-2.3-5.5-9.6-27.2 2.6-56.5 0 0 18-5.8 59 22.1 17.1-4.8 35.5-7.2 53.9-7.2 18.4 0 36.8 2.4 53.9 7.2 41-27.9 59-22.1 59-22.1 12.2 29.3 4.9 51 2.6 56.5 13.7 15 22.1 34.1 22.1 57.4 0 82.4-50.1 100.3-97.7 105.6 7.7 6.5 14.6 19.5 14.6 39.2 0 28.5-.3 51.5-.3 58.5 0 6.1 3.8 12.9 14.8 10.6 85-28.6 146.5-109 146.5-203.8 0-119.9-97.3-216-216-216z"></path></svg>'
-                    } %}
-
-                    <div class="flex flex-col w-full space-y-2">
-                        {% for provider in oauth_providers %}
-                            <a href="{{ url_for('web.login_provider', provider_id=provider.id) }}" class="btn btn-outline justify-start w-full font-medium">
-                                <span class="w-6 text-center">
-                                    {{ logos[provider.type] | safe if provider.type in logos else '' }}
-                                </span>
-                                <span class="flex-grow text-center">
-                                    {{ t('login.sign_in_with', provider=provider.name) }}
-                                </span>
-                            </a>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-
-            {% elif oauth_providers %}
-            <div class="flex flex-col w-full">
-                {% for provider in oauth_providers %}
-                    <a href="{{ url_for('web.login_provider', provider_id=provider.id) }}" class="btn btn-outline justify-start w-full mb-2 font-medium">
-                        <span class="flex-grow text-center">
-                            {{ t('login.sign_in_with', provider=provider.name) }}
-                        </span>
-                    </a>
-                {% endfor %}
-            </div>
-
-            {% elif password_login_enabled %}
+            {% if password_login_enabled %}
             <form method="POST" action="{{ url_for('web.login') }}">
                 {% if form %}{{ form.hidden_tag() }}{% endif %}
-                <div class="form-control mb-3">
-                    {% if form %}
-                        {{ form.username.label(class="label hidden") }}
-                        {{ form.username(class="input input-bordered w-full", placeholder=t('login.username_placeholder')) }}
-                    {% else %}
-                        <input type="text" name="username" class="input input-bordered w-full" placeholder="{{ t('login.username_placeholder') }}" required>
-                    {% endif %}
-                </div>
-                <div class="form-control mb-4">
-                    {% if form %}
-                        {{ form.password.label(class="label hidden") }}
-                        {{ form.password(class="input input-bordered w-full", placeholder=t('login.password_placeholder')) }}
-                    {% else %}
-                        <input type="password" name="password" class="input input-bordered w-full" placeholder="{{ t('login.password_placeholder') }}" required>
-                    {% endif %}
-                </div>
-                <div class="form-control">
-                    {% if form %}
-                        <button type="submit" name="submit" class="btn btn-primary w-full">{{ t('login.submit') }}</button>
-                    {% else %}
-                        <input type="submit" value="{{ t('login.submit') }}" class="btn btn-primary w-full">
-                    {% endif %}
-                </div>
+                {% if form %}
+                    {{ form.username(class="df-input", placeholder=t('login.username_placeholder')) }}
+                    {{ form.password(class="df-input", placeholder=t('login.password_placeholder')) }}
+                    <button type="submit" name="submit" class="df-btn-primary">{{ t('login.submit') }}</button>
+                {% else %}
+                    <input type="text" name="username" class="df-input" placeholder="{{ t('login.username_placeholder') }}" required>
+                    <input type="password" name="password" class="df-input" placeholder="{{ t('login.password_placeholder') }}" required>
+                    <input type="submit" value="{{ t('login.submit') }}" class="df-btn-primary">
+                {% endif %}
             </form>
             {% endif %}
 
-            {% if email_enabled and webmail_available %}
-            <div class="divider">OR</div>
-            <a href="{{ webmail_url }}" class="btn btn-outline w-full mb-4">
-                {{ t('email.webmail_link') }}
-            </a>
+            {% if oauth_providers %}
+                {% if password_login_enabled %}
+                <div class="df-or">or continue with</div>
+                {% endif %}
+                {% for provider in oauth_providers %}
+                    <a href="{{ url_for('web.login_provider', provider_id=provider.id) }}" class="df-btn-outline">
+                        {% if provider.type in logos %}{{ logos[provider.type] | safe }}{% endif %}
+                        <span class="df-btn-outline-label">{{ t('login.sign_in_with', provider=provider.name) }}</span>
+                    </a>
+                {% endfor %}
             {% endif %}
+
+            {% if not password_login_enabled and not oauth_providers %}
+                <p style="color:#9ca3af;font-size:0.875rem;text-align:center;margin:0;">No login methods configured.</p>
+            {% endif %}
+
+            {% if email_enabled and webmail_available %}
+            <div class="df-or">or</div>
+            <a href="{{ webmail_url }}" class="df-btn-webmail">{{ t('email.webmail_link') }}</a>
+            {% endif %}
+
         </div>
     </div>
+
+    <script>
+    (function() {
+        var html = document.documentElement;
+        var sunIcon  = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:1.25rem;height:1.25rem"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" /></svg>';
+        var moonIcon = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:1.25rem;height:1.25rem"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" /></svg>';
+        function applyTheme(theme) {
+            var dark = theme === 'dark';
+            html.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            document.querySelectorAll('[data-df-theme-toggle]').forEach(function(btn) { btn.innerHTML = dark ? sunIcon : moonIcon; });
+            document.querySelectorAll('[data-df-logo]').forEach(function(img) { img.src = dark ? img.dataset.darkSrc : img.dataset.lightSrc; });
+            document.querySelectorAll('[data-df-panel-logo]').forEach(function(img) { img.src = dark ? img.dataset.darkSrc : img.dataset.lightSrc; });
+        }
+        document.querySelectorAll('[data-df-theme-toggle]').forEach(function(btn) {
+            btn.addEventListener('click', function() { applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); });
+        });
+        applyTheme(html.getAttribute('data-theme'));
+    })();
+
+    (function() {
+        var lines = [
+            'Manage OAuth/OIDC providers directly in DockFlare.',
+            'Zone Default Policies protect all subdomains automatically.',
+            'Security-audited with CSRF, XSS, and injection protection.',
+            'Deploy agents across your multi-server infrastructure.',
+            "Now you're thinking with Zero Trust security."
+        ];
+        var el = document.getElementById('df-tagline');
+        if (!el) return;
+        var DISPLAY_MS = 5500, FADE_MS = 2800, idx = 0;
+        el.textContent = lines[0];
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        function cycle() {
+            el.style.opacity = '0';
+            setTimeout(function() {
+                idx = (idx + 1) % lines.length;
+                el.textContent = lines[idx];
+                el.style.opacity = '1';
+                setTimeout(cycle, DISPLAY_MS);
+            }, FADE_MS);
+        }
+        setTimeout(cycle, DISPLAY_MS);
+    })();
+
+    (function() {
+        var canvas = document.getElementById('df-portal-canvas');
+        if (!canvas) return;
+        var ctx = canvas.getContext('2d');
+        var W, H, events = [];
+
+        function resize() {
+            W = canvas.width  = canvas.parentElement.clientWidth;
+            H = canvas.height = canvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        var dockerWhite = new Image();
+        dockerWhite.src = "{{ url_for('static', filename='images/docker-white.svg') }}";
+        var dockerBlue = new Image();
+        dockerBlue.src = "{{ url_for('static', filename='images/docker-blue.svg') }}";
+
+        function easeIn3(t)  { return t * t * t; }
+        function easeOut3(t) { return 1 - Math.pow(1 - t, 3); }
+        function easeIn5(t)  { return t * t * t * t * t; }
+        function easeOut5(t) { return 1 - Math.pow(1 - t, 5); }
+
+        var RX = 11, RY = 27;
+
+        var LOGO_R = 165;
+        function safePt(pad) {
+            var cx = W / 2, cy = H / 2, x, y, dx, dy;
+            do {
+                x = pad + Math.random() * (W - pad * 2);
+                y = pad + Math.random() * (H - pad * 2);
+                dx = x - cx; dy = y - cy;
+            } while (dx * dx + dy * dy < LOGO_R * LOGO_R);
+            return { x: x, y: y };
+        }
+
+        function PortalEvent() {
+            var pad = 100;
+            var s = safePt(pad), e = safePt(pad);
+            this.sx = s.x; this.sy = s.y;
+            this.ex = e.x; this.ey = e.y;
+            this.aIn  = Math.PI * (0.3 + Math.random() * 0.4);
+            this.aOut = Math.PI * (0.3 + Math.random() * 0.4);
+            this.phase  = 0;
+            this.timer  = 0;
+            this.bScale = 0;
+            this.oScale = 0;
+            this.prog   = 0;
+            this.OPEN_MS      = 533;
+            this.READY_MS     = 750;
+            this.TRAVEL_MS    = 1000;
+            this.TRANSIT_MS   = 300;
+            this.PRECLOSE_MS  = 667;
+            this.CLOSE_MS     = 467;
+            this.isDead = false;
+        }
+
+        PortalEvent.prototype.update = function(delta) {
+            this.timer += delta;
+            switch (this.phase) {
+                case 0:
+                    this.bScale = Math.min(1, this.timer / this.OPEN_MS);
+                    if (this.bScale === 1) { this.phase = 1; this.timer = 0; }
+                    break;
+                case 1:
+                    this.oScale = Math.min(1, this.timer / this.OPEN_MS);
+                    if (this.oScale === 1) { this.phase = 2; this.timer = 0; }
+                    break;
+                case 2:
+                    if (this.timer >= this.READY_MS) { this.phase = 3; this.timer = 0; }
+                    break;
+                case 3:
+                    this.prog = Math.min(1, this.timer / this.TRAVEL_MS);
+                    if (this.prog === 1) { this.phase = 4; this.timer = 0; }
+                    break;
+                case 4:
+                    if (this.timer >= this.TRANSIT_MS) { this.phase = 5; this.timer = 0; }
+                    break;
+                case 5:
+                    this.prog = Math.min(1, this.timer / this.TRAVEL_MS);
+                    if (this.prog === 1) { this.phase = 6; this.timer = 0; }
+                    break;
+                case 6:
+                    if (this.timer >= this.PRECLOSE_MS) { this.phase = 7; this.timer = 0; }
+                    break;
+                case 7: {
+                    var t6 = this.timer / this.CLOSE_MS;
+                    this.bScale = Math.max(0, 1 - t6);
+                    this.oScale = Math.max(0, 1 - t6);
+                    if (this.bScale === 0) this.isDead = true;
+                    break;
+                }
+            }
+        };
+
+        PortalEvent.prototype.readyPulse = function() {
+            if (this.phase !== 2) return 1;
+            return 1 + 0.18 * Math.sin((this.timer / this.READY_MS) * Math.PI);
+        };
+
+        PortalEvent.prototype.drawPortal = function(x, y, angle, scale, type, pulse) {
+            if (scale <= 0) return;
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle + Math.PI / 2);
+            ctx.scale(1, scale);
+
+            var ga = (type === 'blue' ? 0.22 : 0.20) * pulse;
+            var grd = ctx.createRadialGradient(0, 0, 0, 0, 0, RY);
+            if (type === 'blue') {
+                grd.addColorStop(0, 'rgba(59,130,246,' + ga + ')');
+                grd.addColorStop(1, 'rgba(59,130,246,0)');
+            } else {
+                grd.addColorStop(0, 'rgba(249,115,22,' + ga + ')');
+                grd.addColorStop(1, 'rgba(249,115,22,0)');
+            }
+            ctx.fillStyle = grd;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, RX, RY, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            var a = Math.min(1, (isDark ? 0.70 : 0.75) * pulse);
+            var glowColor = type === 'blue' ? '96,165,250' : '249,115,22';
+            ctx.lineWidth = 2.5;
+            ctx.shadowBlur  = 18;
+            ctx.shadowColor = 'rgba(' + glowColor + ',' + (a * 0.9) + ')';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, RX, RY, 0, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(' + glowColor + ',' + a + ')';
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        };
+
+        PortalEvent.prototype.drawContainer = function(px, py, angle, alpha) {
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            var img = isDark ? dockerBlue : dockerWhite;
+            if (!img.complete || !img.naturalWidth) return;
+            var SIZE = 40;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+            ctx.translate(px, py);
+            ctx.rotate(angle);
+            ctx.shadowColor = isDark ? 'rgba(36,150,237,0.45)' : 'rgba(36,150,237,0.55)';
+            ctx.shadowBlur  = 10;
+            ctx.drawImage(img, -SIZE / 2, -SIZE / 2, SIZE, SIZE);
+            ctx.restore();
+        };
+
+        PortalEvent.prototype.wiggle = function(x, y, angle, prog, entering) {
+            var AMP  = 5, FREQ = 2.0;
+            var fade;
+            if (entering) {
+                var rampUp   = Math.min(1, prog / 0.20);
+                var rampDown = Math.min(1, (1 - prog) / 0.28);
+                fade = rampUp * rampDown;
+            } else {
+                fade = Math.min(1, prog / 0.25);
+            }
+            var wave  = Math.sin(prog * FREQ * Math.PI * 2);
+            var dwave = Math.cos(prog * FREQ * Math.PI * 2);
+            var offset = AMP * wave * fade;
+            var tilt   = 0.30 * dwave * fade;
+            var perp   = angle + Math.PI / 2;
+            return { wx: x + Math.cos(perp) * offset, wy: y + Math.sin(perp) * offset, tilt: tilt };
+        };
+
+        PortalEvent.prototype.draw = function() {
+            var pulse = this.readyPulse();
+            this.drawPortal(this.sx, this.sy, this.aIn,  this.bScale, 'blue',   pulse);
+            if (this.phase >= 1)
+                this.drawPortal(this.ex, this.ey, this.aOut, this.oScale, 'orange', pulse);
+
+            if (this.phase === 3) {
+                var dist3    = 145 * (1 - easeIn5(this.prog));
+                var alpha3   = this.prog < 0.15 ? this.prog / 0.15 : 1 - Math.max(0, (this.prog - 0.78) / 0.22);
+                var tAngle3  = this.aIn + Math.PI / 2;
+                var w3 = this.wiggle(this.sx + Math.sin(this.aIn) * dist3, this.sy - Math.cos(this.aIn) * dist3, tAngle3, this.prog, true);
+                this.drawContainer(w3.wx, w3.wy, tAngle3 + w3.tilt + Math.PI, alpha3);
+            }
+            if (this.phase === 5) {
+                var dist5    = 145 * easeOut5(this.prog);
+                var alpha5   = this.prog < 0.12 ? this.prog / 0.12 : 1 - Math.max(0, (this.prog - 0.80) / 0.20);
+                var tAngle5  = this.aOut + Math.PI / 2;
+                var w5 = this.wiggle(this.ex - Math.sin(this.aOut) * dist5, this.ey + Math.cos(this.aOut) * dist5, tAngle5, this.prog, false);
+                this.drawContainer(w5.wx, w5.wy, tAngle5 + w5.tilt + Math.PI, alpha5);
+            }
+        };
+
+        var nextSpawn = 0;
+        var SPAWN_PAUSE_MS = 3500;
+        var lastTime = 0;
+
+        function animate(now) {
+            var delta = lastTime ? Math.min(now - lastTime, 50) : 16.67;
+            lastTime = now;
+
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            ctx.fillStyle = isDark ? 'rgba(238,242,255,0.32)' : 'rgba(13,13,26,0.32)';
+            ctx.fillRect(0, 0, W, H);
+
+            for (var i = events.length - 1; i >= 0; i--) {
+                events[i].update(delta);
+                events[i].draw();
+                if (events[i].isDead) {
+                    events.splice(i, 1);
+                    nextSpawn = now + SPAWN_PAUSE_MS;
+                }
+            }
+            if (events.length < 1 && now >= nextSpawn) {
+                events.push(new PortalEvent());
+                nextSpawn = Infinity;
+            }
+            requestAnimationFrame(animate);
+        }
+
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            requestAnimationFrame(animate);
+        }
+    })();
+    </script>
 </body>
 </html>

@@ -6,6 +6,7 @@ const { needRefresh, updateServiceWorker } = useRegisterSW()
 </script>
 
 <template>
+  <div class="aurora-layer" aria-hidden="true" />
   <RouterView />
   <Transition name="slide-up">
     <div

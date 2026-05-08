@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>{% block title %}DockFlare{% endblock %} {{ app_version }} - Cloudflare Tunnel Manager</title>
+    <script>(function(){var t=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
     {% if master_api_key %}
     <meta name="dockflare-api-key" content="{{ master_api_key }}">
     {% endif %}
@@ -16,12 +17,11 @@
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon/favicon.ico') }}">
  
     <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
-    <link rel="preconnect" href="https://rsms.me" crossorigin>
-    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" crossorigin="anonymous">
-    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fonts/inter.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tom-select.css') }}">
     
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
         .container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
         pre { font-family: monospace; }
         #log-output::-webkit-scrollbar { width: 8px; }
@@ -31,30 +31,363 @@
         html[data-theme="dark"] #log-output::-webkit-scrollbar-thumb { background-color: rgba(107, 114, 128, 0.5); }
         html[data-theme="dark"] #log-output::-webkit-scrollbar-thumb:hover { background-color: rgba(107, 114, 128, 0.7); }
 
-        /* Mobile Responsive Table Support */
+        [data-theme="dark"] {
+            --b1: 10.5% 0.03 262;
+            --b2: 5.4% 0.02 270;
+            --b3: 3.3% 0.015 270;
+            --bc: 85% 0.01 264;
+            --n: 14% 0.04 260;
+            --nc: 85% 0.01 264;
+            --p: 60.6% 0.207 264;
+            --pc: 100% 0 0;
+        }
+        [data-theme="light"] body {
+            background:
+                radial-gradient(ellipse 100% 45% at 50% 0%, rgba(59,130,246,0.07) 0%, transparent 60%),
+                #f7f8fc !important;
+        }
+        [data-theme="light"] .df-aurora-layer { opacity: 0.04; filter: blur(60px); }
+        [data-theme="dark"] body { background: #0a0a1a !important; }
+
+        .btn {
+            border-radius: 0.75rem !important;
+            font-weight: 600 !important;
+            transition: transform 220ms ease, box-shadow 220ms ease, background 220ms ease !important;
+        }
+        .btn:not(.btn-ghost):not(.btn-link):not([disabled]):not(.btn-disabled):hover {
+            transform: translateY(-2px) !important;
+        }
+
+        .btn.btn-primary, .btn.btn-secondary, .btn.btn-accent,
+        .btn.btn-warning, .btn.btn-error, .btn.btn-success, .btn.btn-info,
+        .btn-primary, .btn-secondary, .btn-accent,
+        .btn-warning, .btn-error, .btn-success, .btn-info {
+            color: #ffffff !important;
+        }
+        .btn.btn-primary *, .btn.btn-secondary *, .btn.btn-accent *,
+        .btn.btn-warning *, .btn.btn-error *, .btn.btn-success *, .btn.btn-info * {
+            color: #ffffff !important;
+        }
+
+        .btn-primary {
+            background: linear-gradient(180deg, #3b82f6 0%, #4f46e5 100%) !important;
+            border-color: rgba(59,130,246,0.4) !important;
+            box-shadow: 0 6px 20px rgba(59,130,246,0.20), inset 0 -2px 6px rgba(0,0,0,0.20) !important;
+        }
+        .btn-primary:hover {
+            box-shadow: 0 12px 32px rgba(59,130,246,0.35), inset 0 -2px 6px rgba(0,0,0,0.20) !important;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(180deg, #ec4899 0%, #a855f7 100%) !important;
+            border-color: rgba(236,72,153,0.4) !important;
+            box-shadow: 0 6px 20px rgba(236,72,153,0.20), inset 0 -2px 6px rgba(0,0,0,0.20) !important;
+        }
+        .btn-secondary:hover {
+            box-shadow: 0 12px 32px rgba(236,72,153,0.35), inset 0 -2px 6px rgba(0,0,0,0.20) !important;
+        }
+
+        .btn-accent {
+            background: linear-gradient(180deg, #f97316 0%, #ea580c 100%) !important;
+            border-color: rgba(249,115,22,0.4) !important;
+            box-shadow: 0 6px 20px rgba(249,115,22,0.20), inset 0 -2px 6px rgba(0,0,0,0.20) !important;
+        }
+        .btn-accent:hover {
+            box-shadow: 0 12px 32px rgba(249,115,22,0.35), inset 0 -2px 6px rgba(0,0,0,0.20) !important;
+        }
+
+        .btn-warning {
+            background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%) !important;
+            border-color: rgba(245,158,11,0.4) !important;
+            box-shadow: 0 6px 20px rgba(245,158,11,0.20), inset 0 -2px 6px rgba(0,0,0,0.20) !important;
+        }
+        .btn-warning:hover {
+            box-shadow: 0 12px 32px rgba(245,158,11,0.35), inset 0 -2px 6px rgba(0,0,0,0.20) !important;
+        }
+        .btn-error {
+            background: linear-gradient(180deg, #f87171 0%, #dc2626 100%) !important;
+            border-color: rgba(239,68,68,0.4) !important;
+            box-shadow: 0 6px 20px rgba(239,68,68,0.20), inset 0 -2px 6px rgba(0,0,0,0.20) !important;
+        }
+        .btn-error:hover {
+            box-shadow: 0 12px 32px rgba(239,68,68,0.35), inset 0 -2px 6px rgba(0,0,0,0.20) !important;
+        }
+        .btn-success {
+            background: linear-gradient(180deg, #4ade80 0%, #16a34a 100%) !important;
+            border-color: rgba(34,197,94,0.4) !important;
+            box-shadow: 0 6px 20px rgba(34,197,94,0.20), inset 0 -2px 6px rgba(0,0,0,0.20) !important;
+        }
+        .btn-success:hover {
+            box-shadow: 0 12px 32px rgba(34,197,94,0.35), inset 0 -2px 6px rgba(0,0,0,0.20) !important;
+        }
+        .btn-info {
+            background: linear-gradient(180deg, #22d3ee 0%, #0891b2 100%) !important;
+            border-color: rgba(6,182,212,0.4) !important;
+            box-shadow: 0 6px 20px rgba(6,182,212,0.20), inset 0 -2px 6px rgba(0,0,0,0.20) !important;
+        }
+        .btn-info:hover {
+            box-shadow: 0 12px 32px rgba(6,182,212,0.35), inset 0 -2px 6px rgba(0,0,0,0.20) !important;
+        }
+
+        [data-theme="light"] .btn-ghost {
+            color: #334155 !important;
+        }
+        [data-theme="light"] .btn-ghost:hover {
+            background: rgba(15,23,42,0.06) !important;
+            color: #0f172a !important;
+        }
+        [data-theme="light"] .btn-outline {
+            border-color: rgba(15,23,42,0.15) !important;
+            color: #334155 !important;
+        }
+        [data-theme="light"] .btn-outline:hover {
+            background: rgba(15,23,42,0.05) !important;
+            border-color: rgba(15,23,42,0.25) !important;
+            color: #0f172a !important;
+        }
+
+        header .menu a {
+            position: relative;
+            transition: color 350ms ease;
+        }
+        header .menu a:hover {
+            color: #60a5fa !important;
+            background: transparent !important;
+        }
+        header .menu a.active {
+            background: transparent !important;
+        }
+        header .menu a.active::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: 1rem; right: 1rem;
+            height: 2px;
+            border-radius: 9999px;
+            background: #fb923c;
+        }
+        [data-theme="light"] header .menu a {
+            color: #334155;
+        }
+        [data-theme="light"] header .menu a.active {
+            color: #0f172a !important;
+        }
+        [data-theme="light"] header .menu a:hover {
+            color: #3b82f6 !important;
+        }
+
+        [data-theme="light"] header {
+            background: rgba(255,255,255,0.60) !important;
+            backdrop-filter: blur(20px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+            box-shadow: 0 1px 0 rgba(59,130,246,0.10) !important;
+        }
+        [data-theme="dark"] header {
+            background: rgba(13, 18, 32, 0.90) !important;
+            backdrop-filter: blur(16px) saturate(160%) !important;
+            -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.08) !important;
+        }
+
+        [data-theme="light"] .card {
+            background:
+                radial-gradient(120% 100% at 50% 0%, rgba(59,130,246,0.10), transparent 60%),
+                linear-gradient(160deg, rgba(255,255,255,1) 0%, rgba(248,249,251,0.9) 100%) !important;
+            border: 1px solid rgba(15,23,42,0.08) !important;
+            box-shadow: 0 2px 16px rgba(15,23,42,0.07), 0 1px 3px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.8) !important;
+        }
+
+        [data-theme="dark"] .card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%) !important;
+            border: 1px solid rgba(255,255,255,0.14) !important;
+            border-top-color: rgba(255,255,255,0.07) !important;
+            border-left-color: rgba(255,255,255,0.07) !important;
+            box-shadow: 0 8px 30px rgba(12,12,20,0.60), inset 0 1px 0 rgba(255,255,255,0.03) !important;
+            backdrop-filter: blur(12px) saturate(140%) !important;
+            -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+        }
+
+        [data-theme="dark"] .card :where(.bg-base-200),
+        [data-theme="dark"] .card :where(.bg-base-300) {
+            background: rgba(255,255,255,0.03) !important;
+        }
+
+        .table :where(thead tr),
+        .table :where(tbody tr) {
+            border-color: transparent !important;
+        }
+        .table tbody tr:nth-child(even) td,
+        .table tbody tr:nth-child(even) th {
+            background: transparent !important;
+        }
+        [data-theme="light"] .table tbody tr:nth-child(even) {
+            background: rgba(0,0,0,0.025) !important;
+        }
+        [data-theme="dark"] .table tbody tr:nth-child(even) {
+            background: rgba(255,255,255,0.03) !important;
+        }
+        .table tbody tr:nth-child(even) td:first-child,
+        .table tbody tr:nth-child(even) th:first-child {
+            border-radius: 0.5rem 0 0 0.5rem;
+        }
+        .table tbody tr:nth-child(even) td:last-child,
+        .table tbody tr:nth-child(even) th:last-child {
+            border-radius: 0 0.5rem 0.5rem 0;
+        }
+        [data-theme="dark"] .table :where(tbody tr:hover td),
+        [data-theme="dark"] .table :where(tbody tr:hover th) {
+            background: rgba(59,130,246,0.06) !important;
+        }
+
+        [data-theme="dark"] .dropdown-content {
+            background: rgba(13, 18, 32, 0.97) !important;
+            border: 1px solid rgba(255,255,255,0.12) !important;
+            box-shadow: 0 18px 60px rgba(0,0,0,0.50) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+        }
+
+        [data-theme="dark"] .modal-box {
+            background: rgba(13,18,32,0.94) !important;
+            border: 1px solid rgba(255,255,255,0.12) !important;
+            box-shadow: 0 18px 60px rgba(0,0,0,0.55) !important;
+            backdrop-filter: blur(16px) saturate(140%) !important;
+            -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+        }
+
+        [data-theme="dark"] dialog::backdrop {
+            background: rgba(0,0,10,0.65) !important;
+        }
+
+        [data-theme="dark"] .alert {
+            border: 1px solid rgba(255,255,255,0.08) !important;
+        }
+
+        [data-theme="dark"] .input,
+        [data-theme="dark"] .select,
+        [data-theme="dark"] .textarea {
+            background: rgba(13,18,32,0.80) !important;
+            border-color: rgba(255,255,255,0.12) !important;
+            color: hsl(var(--bc)) !important;
+        }
+        [data-theme="dark"] .input:focus,
+        [data-theme="dark"] .select:focus,
+        [data-theme="dark"] .textarea:focus {
+            border-color: rgba(59,130,246,0.60) !important;
+            outline-color: rgba(59,130,246,0.30) !important;
+        }
+        [data-theme="dark"] .input::placeholder,
+        [data-theme="dark"] .textarea::placeholder {
+            color: rgba(209,213,219,0.35) !important;
+        }
+
+        [data-theme="dark"] .join-item.btn-disabled,
+        [data-theme="dark"] .join-item[disabled] {
+            background: rgba(255,255,255,0.04) !important;
+            border-color: rgba(255,255,255,0.10) !important;
+            color: rgba(209,213,219,0.45) !important;
+        }
+
+        [data-theme="dark"] .border-base-300,
+        [data-theme="dark"] [class*="border-base-3"] {
+            border-color: rgba(255,255,255,0.08) !important;
+        }
+
+        [data-theme="dark"] .bg-base-200 {
+            background: rgba(13,18,32,0.80) !important;
+        }
+        [data-theme="dark"] .bg-base-200\/50,
+        [data-theme="dark"] .bg-base-200\/60,
+        [data-theme="dark"] .bg-base-200\/30,
+        [data-theme="dark"] .bg-base-200\/70 {
+            background: rgba(255,255,255,0.04) !important;
+        }
+        [data-theme="dark"] .bg-base-300 {
+            background: rgba(6,6,16,0.90) !important;
+        }
+
+        [data-theme="dark"] .divider::before,
+        [data-theme="dark"] .divider::after {
+            background-color: rgba(255,255,255,0.08) !important;
+        }
+
+        [data-theme="dark"] .ts-control {
+            background: rgba(13,18,32,0.80) !important;
+            border-color: rgba(255,255,255,0.12) !important;
+            color: hsl(var(--bc)) !important;
+        }
+        [data-theme="dark"] .ts-control input::placeholder {
+            color: rgba(209,213,219,0.35) !important;
+        }
+        [data-theme="dark"] .ts-control.focus,
+        [data-theme="dark"] .ts-wrapper.focus .ts-control {
+            border-color: rgba(59,130,246,0.60) !important;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15) !important;
+        }
+        [data-theme="dark"] .ts-dropdown {
+            background: rgba(13,18,32,0.97) !important;
+            border-color: rgba(255,255,255,0.12) !important;
+            box-shadow: 0 16px 48px rgba(0,0,10,0.60) !important;
+        }
+        [data-theme="dark"] .ts-dropdown .option {
+            color: hsl(var(--bc)) !important;
+        }
+        [data-theme="dark"] .ts-dropdown .option:hover,
+        [data-theme="dark"] .ts-dropdown .option.active {
+            background: rgba(59,130,246,0.18) !important;
+            color: hsl(var(--bc)) !important;
+        }
+        [data-theme="dark"] .ts-dropdown .option.selected {
+            background: rgba(59,130,246,0.30) !important;
+            color: hsl(var(--bc)) !important;
+        }
+        [data-theme="dark"] .ts-control .item {
+            background: rgba(59,130,246,0.20) !important;
+            border-color: rgba(59,130,246,0.35) !important;
+            color: hsl(var(--bc)) !important;
+        }
+
+        .df-aurora-layer {
+            position: fixed; inset: -20% -10%; z-index: 0; pointer-events: none;
+            background: conic-gradient(from 120deg at 50% 50%, rgba(139,92,246,0.10), rgba(59,130,246,0.06), transparent 30%, rgba(139,92,246,0.10));
+            filter: blur(60px);
+            animation: df-aurora-move 30s linear infinite;
+        }
+        [data-theme="light"] .df-aurora-layer {
+            background: conic-gradient(from 120deg at 50% 50%, rgba(139,92,246,0.04), rgba(59,130,246,0.03), transparent 30%, rgba(139,92,246,0.04));
+        }
+        .df-vignette-layer {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background: radial-gradient(60% 50% at 50% 10%, rgba(0,0,0,0), rgba(0,0,0,0.45));
+            mix-blend-mode: multiply;
+        }
+        [data-theme="light"] .df-vignette-layer { display: none; }
+        @keyframes df-aurora-move { from { transform: translateX(-10%); } to { transform: translateX(10%); } }
+        @media (prefers-reduced-motion: reduce) { .df-aurora-layer { animation: none; } }
+
         @media (max-width: 768px) {
             .table-responsive thead { display: none; }
-            .table-responsive tr { 
-                display: block; 
-                margin-bottom: 1rem; 
+            .table-responsive tr {
+                display: block;
+                margin-bottom: 1rem;
                 border: 1px solid hsl(var(--bc) / 0.1);
                 border-radius: var(--rounded-box, 1rem);
                 background-color: hsl(var(--b1));
                 padding: 0.5rem;
                 box-shadow: var(--shadow);
             }
-            .table-responsive td { 
-                display: flex; 
-                justify-content: flex-end; 
+            .table-responsive td {
+                display: flex;
+                justify-content: flex-end;
                 align-items: center;
-                text-align: right; 
+                text-align: right;
                 padding: 0.5rem 1rem !important;
                 border: none !important;
                 position: relative;
                 min-height: 2.5rem;
             }
-            .table-responsive td::before { 
-                content: attr(data-label); 
+            .table-responsive td::before {
+                content: attr(data-label);
                 position: absolute;
                 left: 1rem;
                 font-weight: 700;
@@ -63,14 +396,14 @@
                 opacity: 0.6;
             }
             .table-responsive td:last-child { border-bottom: 0; }
-            
-            /* Specific overrides for status badges and links */
             .table-responsive td > * { max-width: 60%; }
         }
     </style>
 </head>
 
 <body class="min_h-screen flex flex-col font-sans transition-colors duration-300 bg-base-200/50">
+    <div class="df-aurora-layer" aria-hidden="true"></div>
+    <div class="df-vignette-layer" aria-hidden="true"></div>
     
     <header class="sticky top-0 z-40 w-full backdrop-blur-sm shadow-sm bg-base-100/90">
         <div class="navbar mx-auto px-4 sm:px-6 lg:px-8 max-w-screen-2xl">
@@ -90,7 +423,11 @@
                     </ul>
                 </div>
                 <a href="{{ url_for('web.status_page') }}" class="px-2" title="Now you're thinking with tunnels">
-                    <img src="{{ url_for('static', filename='images/logo.gif') }}" alt="Dockflare Logo Banner" class="h-10 sm:h-12 block align-middle">
+                    <img data-df-logo
+                         data-light-src="{{ url_for('static', filename='images/logo-light.svg') }}"
+                         data-dark-src="{{ url_for('static', filename='images/logo-dark.svg') }}"
+                         src="{{ url_for('static', filename='images/logo-light.svg') }}"
+                         alt="DockFlare Logo" class="h-10 sm:h-12 block align-middle">
                 </a>
             </div>
     
@@ -108,19 +445,19 @@
             <div class="navbar-end">
                 {% set _cur_lang = session.get('lang', 'en') %}
                 {% set _lang_data = [
-                    ('en',             '🇬🇧', 'EN'),
-                    ('de',             '🇩🇪', 'DE'),
-                    ('ch-barnduetsch', '🇨🇭', 'CH'),
-                    ('fr',             '🇫🇷', 'FR'),
-                    ('it',             '🇮🇹', 'IT'),
-                    ('es',             '🇪🇸', 'ES'),
-                    ('pl',             '🇵🇱', 'PL'),
-                    ('zh',             '🇨🇳', 'ZH'),
-                    ('ja',             '🇯🇵', 'JA'),
-                    ('id',             '🇮🇩', 'ID')
+                    ('en',             'gb', 'EN'),
+                    ('de',             'de', 'DE'),
+                    ('ch-barnduetsch', 'ch', 'CH'),
+                    ('fr',             'fr', 'FR'),
+                    ('it',             'it', 'IT'),
+                    ('es',             'es', 'ES'),
+                    ('pl',             'pl', 'PL'),
+                    ('zh',             'cn', 'ZH'),
+                    ('ja',             'jp', 'JA'),
+                    ('id',             'id', 'ID')
                 ] %}
-                {% set _cur_flag = namespace(v='🌐') %}
-                {% set _cur_code = namespace(v=_cur_lang|upper) %}
+                {% set _cur_flag = namespace(v='gb') %}
+                {% set _cur_code = namespace(v='EN') %}
                 {% for _lc, _lf, _ll in _lang_data %}
                     {% if _lc == _cur_lang %}
                         {% set _cur_flag.v = _lf %}
@@ -129,7 +466,7 @@
                 {% endfor %}
                 <div class="dropdown dropdown-end">
                     <button tabindex="0" role="button" class="btn btn-ghost btn-sm gap-1.5 px-2" title="{{ t('common.change_language') }}">
-                        <span class="text-lg leading-none">{{ _cur_flag.v }}</span>
+                        <img src="{{ url_for('static', filename='images/flags/' ~ _cur_flag.v ~ '.svg') }}" alt="{{ _cur_code.v }}" style="width:1.25rem;height:auto;border-radius:2px;">
                         <span class="text-xs font-bold tracking-wide">{{ _cur_code.v }}</span>
                     </button>
                     <div tabindex="0" class="dropdown-content z-[51] p-2 shadow-lg bg-base-200 rounded-box mt-2 w-36">
@@ -137,7 +474,7 @@
                             {% for _lc, _lf, _ll in _lang_data %}
                             <a href="{{ url_for('web.set_language', lang=_lc) }}"
                                class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-base-300 transition-colors {{ 'bg-primary text-primary-content' if _lc == _cur_lang else '' }}">
-                                <span class="text-base leading-none">{{ _lf }}</span>
+                                <img src="{{ url_for('static', filename='images/flags/' ~ _lf ~ '.svg') }}" alt="{{ _ll }}" style="width:1.25rem;height:auto;border-radius:2px;">
                                 <span class="text-xs font-semibold">{{ _ll }}</span>
                             </a>
                             {% endfor %}
@@ -145,16 +482,7 @@
                     </div>
                 </div>
 
-                <div class="dropdown dropdown-end">
-
-                    <button tabindex="0" role="button" id="theme-selector-btn" class="btn btn-ghost">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42" />
-                        </svg>
-                    </button>
-                    <ul tabindex="0" id="theme-menu" class="dropdown-content z-[51] menu p-2 shadow bg-base-200 rounded-box w-52 max-h-96 overflow-y-auto mt-4 flex-nowrap min-h-0">
-                    </ul>
-                </div>
+                <button type="button" data-df-theme-toggle class="btn btn-ghost btn-circle" title="Toggle theme"></button>
                 <!-- Help Button -->
                 <a href="{{ url_for('help.help_page') }}" class="btn btn-ghost btn-circle" title="{{ t('nav.help') }}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -353,7 +681,7 @@
             return val;
         };
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+    <script src="{{ url_for('static', filename='js/tom-select.complete.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>

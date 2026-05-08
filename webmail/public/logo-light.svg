@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="100 0 700 240" width="700" height="240" role="img" aria-label="DockFlare">
+  <defs>
+    <style>
+      @font-face {
+        font-family: 'Inter';
+        font-weight: 900;
+        src: url('data:font/woff2;base64,d09GMgABAAAAAAVQABAAAAAACbwAAATzAAQAQgAAAAAAAAAAAAAAAAAAAAAAAAAAGhYbgXwcKgZgP1NUQVRaAGwRCAqGQIUvATYCJAMoCxYABCAFhBoHIAwHG/sHIC4G7Ib6IkyQNiyKFqOD0LAvfi4evuz479yengc4+pDWGc1IQggx39pIPf951k8xCyhTwak0Ylqn6Uo+ATiZJ/jd4f851x8WWNKAJxS2i35+ApHNu6OgBV1zV+UCVzr7yOG08/CDnGdPNIR/vkYW4Hv+rHlAAYaRpIFAb2NYxAA7nmql3n1JgTZAEkKzEGixRhJp8y19UTD6gClYDjAOwTqygHFkC14ADCQoRQixnnTEQVgB9EfaoYAAnOpD1qxJlA9JaJLsjIR9TdZDjdjowzBVUt6FKx8rK18WZTpKrLPSoAbXkzldZ5bMzqRKnzANC0HeP2X4yA46n+s51YVQUy/O7+Emlia958/Usaur5MG5s/zw7XdAIuCazWGN1/7vAZq+S0UgIO9dP8aUvkJoUqEPEXMQjjm2MhVSAacc0o1DkDjsxJYcZELQoMd4EFKs1B8hiOXVhUAlSbER2BLR4vJg60l2BfQYOOHU5hxatOmQU4Sl3qGGZD+hvFrU0i+90i2NUisVgZhClKKTumVLgR2kv4jjJ/NvKNgORSXcMZBbZvQwWD1yzl1dQwe0Ve1X7Hbh225b2uHHwblf3k8/re+01mm9hI7U2Wn2u9xuCd+OJLsUzQchVA1vY/GFSu2vtLQmNrVWbouWNz79dJe1LMiNIzhJe+ZdBc599Jb38nfH8J1eI6M77bvzuT6bgxrnKuhaE2tjx+73VPnpA97l0BXdO0bEq4Jm2xkkXHJI1eeQ9u4W/Ix+U9rTh6DTpvSd5kMYu2r3dESOfGi71kgDUy7dZ3hQvq2aXFzcbg8d2bY9cmS3ozo3ufmT8NRp5Ov/GcF7fORnH6s/vrHT2rf9XUNbzg/aDLb/bu0+Yr+jblWxXj/nmPB63s7khoZSLwMmjf9x4nTGsys8KHXAXmdseW27ddI1/tIDXPOR/6fe1nNib98kqurfvG3pEoe0/tvqy+6vfOrq4yZfLzWr90y6Nkp4RFlMSNdO8Ivay48Obe+177GK7GjLDEetHNFyptTXcaYhBnmtc+XoLepL8l4HbLdzSemS1ozek+nSGPTsYCnhv8yjs+6K161HnoTtn86zXp67ObMeEWk0iIhZb9vtETTHBGq2Zfjv1/aTjmlbsfal5F7jdUX7Ke9MtzlePQSQP74e6o+ninr87S9MXvSxMunc3ueqCAGV8Qwkctj9Y+4Sj5k5PZFkTvEYZXKvkdUkE6rnes2gc++Fzwn65Pm51GjlpPhruWnC6gaZrNHkAAAC2aazp634s0+n7u+mqgn8fPIlq6Fhx/9j/5/oO9B8mvAJBKda03/iAMQ/H85qQota6g3hqm/aNx/qWK9blD+xLn+NPDg1amogIqpT60BosTvIyagG8gpt7e4SmnIzruUihQGrSUmH+0iVOU5N5mGk2jJviA0GYqAoQlvMAdJyvWMFaYWRsYm0Us/YnbRB39j/tTbqHUezKiqZAoPq0g0HkxARU4BFdesAcyvAdcDAgjBFGR3a4GBmVbhuRZgKGEs3HK6kQkNIqAt6r65qJdCmKE84wZpXATXqYJrt7LRFTos2WWEdulRV+RgZAVGY2VphEUg3qYVJ/mRAnO9sPqqoAEZBaHY+xYteRqmNSOsgywESog/VabAGlFQoVNupHFgEaqoOYjIjxg3nDZKH039biwIi8P/H/kS5L0S56AnSVQAAAA==') format('woff2');
+      }
+    </style>
+    <linearGradient id="flareGrad" x1="48%" y1="0" x2="100%" y2="0">
+      <stop offset="0%"   stop-color="#3b82f6"/>
+      <stop offset="50%"  stop-color="#c026d3"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+    <linearGradient id="portalGradL" gradientUnits="userSpaceOnUse" x1="153" y1="0" x2="217" y2="0">
+      <stop offset="0%"   stop-color="#3b82f6" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#2563eb" stop-opacity="0.30"/>
+    </linearGradient>
+    <linearGradient id="portalGradR" gradientUnits="userSpaceOnUse" x1="690" y1="0" x2="754" y2="0">
+      <stop offset="0%"   stop-color="#ea580c" stop-opacity="0"/>
+      <stop offset="35%"  stop-color="#ea580c" stop-opacity="0.88"/>
+      <stop offset="100%" stop-color="#f97316" stop-opacity="0.95"/>
+    </linearGradient>
+  </defs>
+  <!-- Left portal — intersects D at midpoint, inner arc dissolves -->
+  <ellipse cx="185" cy="110" rx="32" ry="78" fill="none" stroke="url(#portalGradL)" stroke-width="9"/>
+  <!-- Wordmark -->
+  <text x="170" y="148" font-family="Inter,system-ui,sans-serif" font-weight="900" font-size="120" letter-spacing="-5" fill="#0f172a">Dock<tspan fill="url(#flareGrad)">Flare</tspan></text>
+  <!-- Right portal — intersects e at midpoint, inner arc dissolves -->
+  <ellipse cx="722" cy="110" rx="32" ry="78" fill="none" stroke="url(#portalGradR)" stroke-width="9"/>
+</svg>
